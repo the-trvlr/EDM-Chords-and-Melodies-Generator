@@ -45,6 +45,8 @@ export default function App() {
   const [activeChordIndex, setActiveChordIndex] = useState(0);
   const [selectedChordForView, setSelectedChordForView] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [loop, setLoop] = useState(true);
+  const [doubleTime, setDoubleTime] = useState(false);
   const [customProgression, setCustomProgression] = useState<ChordInfo[] | null>(null);
 
   const availableChords = getChordsInKey(selectedKey, selectedScale);
@@ -82,8 +84,10 @@ export default function App() {
       selectedRhythm,
       (idx) => setActiveChordIndex(idx),
       () => setIsPlaying(false),
+      loop,
+      doubleTime,
     );
-  }, [progression, selectedSynth, bpm, selectedRhythm]);
+  }, [progression, selectedSynth, bpm, selectedRhythm, loop, doubleTime]);
 
   const handleStop = useCallback(() => {
     stopPlayback();
@@ -199,10 +203,14 @@ export default function App() {
               bpm={bpm}
               bpmRange={selectedGenre.bpmRange}
               volume={volume}
+              loop={loop}
+              doubleTime={doubleTime}
               onPlay={handlePlay}
               onStop={handleStop}
               onBpmChange={setBpm}
               onVolumeChange={handleVolumeChange}
+              onLoopChange={setLoop}
+              onDoubleTimeChange={setDoubleTime}
               onExportMidi={handleExportMidi}
             />
 

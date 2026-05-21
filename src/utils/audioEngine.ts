@@ -117,13 +117,16 @@ export function playProgression(
   rhythm: RhythmPattern,
   onChordChange?: (index: number) => void,
   onStop?: () => void,
+  loop = false,
+  doubleTime = false,
 ): void {
   stopPlayback();
   Tone.getTransport().bpm.value = bpm;
 
   const synth = getSynth(presetId);
   let chordIndex = 0;
-  const stepsPerChord = rhythm.subdivisions;
+  const barsPerChord = doubleTime ? 2 : 1;
+  const stepsPerChord = rhythm.subdivisions * barsPerChord;
   let stepInChord = 0;
 
   const sixteenthDuration = Tone.Time('16n').toSeconds();
@@ -156,11 +159,13 @@ export function playProgression(
         Tone.getDraw().schedule(() => onChordChange(chordIndex), time);
       }
       if (chordIndex === 0 && stepInChord === 0) {
-        Tone.getDraw().schedule(() => {
-          if (onStop) onStop();
-        }, time);
-        stopPlayback();
-        return;
+        if (!loop) {
+          Tone.getDraw().schedule(() => {
+            if (onStop) onStop();
+          }, time);
+          stopPlayback();
+          return;
+        }
       }
     }
   }, '16n');

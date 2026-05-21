@@ -42,6 +42,7 @@ export const GENRES: Genre[] = [
       { name: 'Vocal House', degrees: [5, 3, 0, 4], description: 'VI - IV - i - V (pop-influenced)' },
     ],
     rhythmPatterns: [
+      { name: 'Whole Note', pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], subdivisions: 16, description: 'One chord per bar' },
       { name: 'Straight', pattern: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], subdivisions: 16, description: 'Quarter notes' },
       { name: 'Off-beat', pattern: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], subdivisions: 16, description: 'Classic house off-beat chords' },
       { name: 'Pumping', pattern: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], subdivisions: 16, description: 'Eighth note pump' },
@@ -65,6 +66,7 @@ export const GENRES: Genre[] = [
       { name: 'Acid', degrees: [0, 2, 0, 6], description: 'i - III - i - VII (acid movement)' },
     ],
     rhythmPatterns: [
+      { name: 'Whole Note', pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], subdivisions: 16, description: 'One chord per bar' },
       { name: 'Driving', pattern: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], subdivisions: 16, description: 'Steady quarter notes' },
       { name: 'Minimal', pattern: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], subdivisions: 16, description: 'Half notes' },
       { name: 'Syncopated', pattern: [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0], subdivisions: 16, description: 'Off-grid hits' },
@@ -88,6 +90,7 @@ export const GENRES: Genre[] = [
       { name: 'Progressive Trance', degrees: [0, 3, 5, 2], description: 'i - iv - VI - III (progressive build)' },
     ],
     rhythmPatterns: [
+      { name: 'Whole Note', pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], subdivisions: 16, description: 'One chord per bar' },
       { name: 'Gated', pattern: [1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0], subdivisions: 16, description: 'Gated pad' },
       { name: 'Arpeggio', pattern: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], subdivisions: 16, description: 'Rolling arpeggio feel' },
       { name: 'Sustained', pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], subdivisions: 16, description: 'Long sustained chords' },
@@ -111,6 +114,7 @@ export const GENRES: Genre[] = [
       { name: 'Jump Up', degrees: [0, 5, 0, 6], description: 'i - VI - i - VII (bouncy energy)' },
     ],
     rhythmPatterns: [
+      { name: 'Whole Note', pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], subdivisions: 16, description: 'One chord per bar' },
       { name: 'Half-time', pattern: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], subdivisions: 16, description: 'Half-time feel' },
       { name: 'Chopped', pattern: [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0], subdivisions: 16, description: 'Chopped pads' },
       { name: 'Rolling', pattern: [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1], subdivisions: 16, description: 'Triplet-ish rolling' },
@@ -134,6 +138,7 @@ export const GENRES: Genre[] = [
       { name: 'Tearout', degrees: [0, 1, 0, 6], description: 'i - ii° - i - VII (aggressive)' },
     ],
     rhythmPatterns: [
+      { name: 'Whole Note', pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], subdivisions: 16, description: 'One chord per bar' },
       { name: 'Half-time', pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], subdivisions: 16, description: 'Half-time sustained' },
       { name: 'Wobble', pattern: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], subdivisions: 16, description: 'Quarter note wobble' },
       { name: 'Choppy', pattern: [1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0], subdivisions: 16, description: 'Choppy stabs' },
@@ -157,6 +162,7 @@ export const GENRES: Genre[] = [
       { name: 'Chill', degrees: [0, 3, 4, 5], chordTypes: ['maj9', 'major', 'major', 'minor'], description: 'Imaj9 - IV - V - vi (chill vibes)' },
     ],
     rhythmPatterns: [
+      { name: 'Whole Note', pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], subdivisions: 16, description: 'One chord per bar' },
       { name: 'Sidechain', pattern: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], subdivisions: 16, description: 'Sidechained chords' },
       { name: 'Staccato', pattern: [1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1], subdivisions: 16, description: 'Short staccato hits' },
       { name: 'Swung', pattern: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0], subdivisions: 16, description: 'Swung rhythm' },
@@ -180,6 +186,7 @@ export const GENRES: Genre[] = [
       { name: 'Peak Time', degrees: [5, 6, 0, 0], description: 'VI - VII - i - i (peak-time energy)' },
     ],
     rhythmPatterns: [
+      { name: 'Whole Note', pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], subdivisions: 16, description: 'One chord per bar' },
       { name: 'Building', pattern: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], subdivisions: 16, description: 'Building half notes' },
       { name: 'Pluck', pattern: [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0], subdivisions: 16, description: 'Plucky pattern' },
       { name: 'Off-beat', pattern: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], subdivisions: 16, description: 'Off-beat stabs' },
@@ -203,6 +210,7 @@ export const GENRES: Genre[] = [
       { name: 'Reverse Bass', degrees: [0, 4, 5, 0], description: 'i - v - VI - i (reverse bass feel)' },
     ],
     rhythmPatterns: [
+      { name: 'Whole Note', pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], subdivisions: 16, description: 'One chord per bar' },
       { name: 'Kick Pattern', pattern: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], subdivisions: 16, description: 'Quarter note kicks' },
       { name: 'Lead Melody', pattern: [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0], subdivisions: 16, description: 'Melodic lead rhythm' },
       { name: 'Sustained', pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], subdivisions: 16, description: 'Sustained for buildups' },
