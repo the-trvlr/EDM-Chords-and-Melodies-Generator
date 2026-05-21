@@ -106,8 +106,8 @@ export default function App() {
   }, [audioReady, selectedSynth]);
 
   const handleExportMidi = useCallback(() => {
-    exportProgressionToMidi(progression, bpm, selectedRhythm, selectedKey, selectedScale);
-  }, [progression, bpm, selectedRhythm, selectedKey, selectedScale]);
+    exportProgressionToMidi(progression, bpm, selectedRhythm, selectedKey, selectedScale, doubleTime);
+  }, [progression, bpm, selectedRhythm, selectedKey, selectedScale, doubleTime]);
 
   const handleAddChord = useCallback((chord: ChordInfo) => {
     const current = customProgression || [...templateProgression];

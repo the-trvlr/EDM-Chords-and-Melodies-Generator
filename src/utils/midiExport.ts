@@ -9,6 +9,7 @@ export function exportProgressionToMidi(
   rhythm: RhythmPattern,
   keyName: string,
   scaleName: string,
+  doubleTime = false,
 ): void {
   const track = new MidiWriter.Track();
   track.setTempo(bpm);
@@ -17,6 +18,8 @@ export function exportProgressionToMidi(
 
   const ticksPer16th = 32;
   const barSteps = rhythm.pattern.length;
+
+  const repetitions = doubleTime ? 2 : 1;
 
   for (const chord of chords) {
     const pitches = chord.midiNotes.map(
@@ -28,34 +31,36 @@ export function exportProgressionToMidi(
       if (rhythm.pattern[i]) hits.push(i);
     }
 
-    if (hits.length === 0) {
-      track.addEvent(new MidiWriter.NoteEvent({
-        pitch: pitches as MidiWriter.Pitch[],
-        duration: `T${barSteps * ticksPer16th}` as MidiWriter.Duration,
-        velocity: 0,
-      }));
-      continue;
-    }
-
-    let cursor = 0;
-    for (let h = 0; h < hits.length; h++) {
-      const hitPos = hits[h];
-      const nextPos = h + 1 < hits.length ? hits[h + 1] : barSteps;
-
-      const waitSteps = hitPos - cursor;
-      const durationSteps = nextPos - hitPos;
-
-      const opts: Record<string, unknown> = {
-        pitch: pitches,
-        duration: `T${durationSteps * ticksPer16th}`,
-        velocity: 80,
-      };
-      if (waitSteps > 0) {
-        opts.wait = `T${waitSteps * ticksPer16th}`;
+    for (let rep = 0; rep < repetitions; rep++) {
+      if (hits.length === 0) {
+        track.addEvent(new MidiWriter.NoteEvent({
+          pitch: pitches as MidiWriter.Pitch[],
+          duration: `T${barSteps * ticksPer16th}` as MidiWriter.Duration,
+          velocity: 0,
+        }));
+        continue;
       }
 
-      track.addEvent(new MidiWriter.NoteEvent(opts));
-      cursor = nextPos;
+      let cursor = 0;
+      for (let h = 0; h < hits.length; h++) {
+        const hitPos = hits[h];
+        const nextPos = h + 1 < hits.length ? hits[h + 1] : barSteps;
+
+        const waitSteps = hitPos - cursor;
+        const durationSteps = nextPos - hitPos;
+
+        const opts: Record<string, unknown> = {
+          pitch: pitches,
+          duration: `T${durationSteps * ticksPer16th}`,
+          velocity: 80,
+        };
+        if (waitSteps > 0) {
+          opts.wait = `T${waitSteps * ticksPer16th}`;
+        }
+
+        track.addEvent(new MidiWriter.NoteEvent(opts));
+        cursor = nextPos;
+      }
     }
   }
 
