@@ -316,8 +316,7 @@ export default function App() {
             rootKey={selectedKey}
             scaleType={selectedScale}
             bpm={bpm}
-            rhythm={selectedRhythm}
-            doubleTime={doubleTime}
+            genreId={selectedGenre.id}
           />
         )}
       </main>

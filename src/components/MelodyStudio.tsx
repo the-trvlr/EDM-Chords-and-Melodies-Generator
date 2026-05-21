@@ -2,8 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import * as Tone from 'tone';
 import type { ChordInfo } from '../utils/musicTheory';
 import { midiNoteToToneName } from '../utils/musicTheory';
-import type { RhythmPattern } from '../data/genres';
-import { generateMelody, VARIATION_LABELS, type MelodyType, type MelodyVariation, type GeneratedMelody } from '../utils/melodyGenerator';
+import { generateMelody, getGenreMelodyStyles, type MelodyType, type MelodyStyle, type GeneratedMelody } from '../utils/melodyGenerator';
 // @ts-expect-error midi-writer-js has types but exports resolution fails
 import MidiWriter from 'midi-writer-js';
 
@@ -12,8 +11,7 @@ interface MelodyStudioProps {
   rootKey: string;
   scaleType: string;
   bpm: number;
-  rhythm: RhythmPattern;
-  doubleTime: boolean;
+  genreId: string;
 }
 
 function exportMelodyToMidi(melody: GeneratedMelody, bpm: number, label: string) {
@@ -52,16 +50,20 @@ function exportMelodyToMidi(melody: GeneratedMelody, bpm: number, label: string)
 function MelodyPanel({
   type,
   melody,
+  styles,
+  selectedStyleId,
   progression,
   bpm,
-  onVariationChange,
+  onStyleChange,
   onRegenerate,
 }: {
   type: MelodyType;
   melody: GeneratedMelody;
+  styles: MelodyStyle[];
+  selectedStyleId: string;
   progression: ChordInfo[];
   bpm: number;
-  onVariationChange: (v: MelodyVariation) => void;
+  onStyleChange: (styleId: string) => void;
   onRegenerate: () => void;
 }) {
   const synthRef = useRef<Tone.PolySynth | null>(null);
@@ -123,10 +125,18 @@ function MelodyPanel({
     setIsPlaying(true);
   }, [melody, bpm, progression, type, stopMelody]);
 
-  const labels = VARIATION_LABELS[type];
   const label = type === 'bass' ? 'Bass' : 'Lead';
 
   // Compute note range for visualization
+  if (melody.notes.length === 0) {
+    return (
+      <div className="flex flex-col gap-3">
+        <h3 className="text-sm font-semibold text-white">{label} Melody</h3>
+        <div className="text-xs text-gray-500">No notes generated. Try a different style or regenerate.</div>
+      </div>
+    );
+  }
+
   const midiValues = melody.notes.map(n => n.midi);
   const minMidi = Math.min(...midiValues);
   const maxMidi = Math.max(...midiValues);
@@ -157,19 +167,20 @@ function MelodyPanel({
         </div>
       </div>
 
-      {/* Variation selector */}
-      <div className="flex gap-1.5">
-        {labels.map((lbl, i) => (
+      {/* Style selector */}
+      <div className="flex gap-1.5 flex-wrap">
+        {styles.map((style) => (
           <button
-            key={i}
-            onClick={() => onVariationChange(i as MelodyVariation)}
+            key={style.id}
+            onClick={() => onStyleChange(style.id)}
+            title={style.description}
             className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
-              melody.variation === i
+              selectedStyleId === style.id
                 ? 'bg-purple-500/20 border border-purple-500 text-purple-300'
                 : 'border border-gray-700/50 text-gray-400 hover:border-gray-600 hover:text-gray-200'
             }`}
           >
-            {lbl}
+            {style.name}
           </button>
         ))}
       </div>
@@ -198,7 +209,7 @@ function MelodyPanel({
         {melody.notes.map((note, i) => {
           const x = (note.step / totalSteps) * 100;
           const w = (note.duration / totalSteps) * 100;
-          const y = ((maxMidi - note.midi) / range) * 80 + 10; // 10-90% vertical range
+          const y = ((maxMidi - note.midi) / range) * 80 + 10;
           return (
             <div
               key={i}
@@ -224,16 +235,25 @@ function MelodyPanel({
   );
 }
 
-export function MelodyStudio({ progression, rootKey, scaleType, bpm }: MelodyStudioProps) {
-  const [bassVariation, setBassVariation] = useState<MelodyVariation>(0);
-  const [leadVariation, setLeadVariation] = useState<MelodyVariation>(0);
-  const [seed, setSeed] = useState(0);
+export function MelodyStudio({ progression, rootKey, scaleType, bpm, genreId }: MelodyStudioProps) {
+  const bassStyles = getGenreMelodyStyles(genreId, 'bass');
+  const leadStyles = getGenreMelodyStyles(genreId, 'lead');
 
-  const bassMelody = generateMelody(progression, 'bass', bassVariation, rootKey, scaleType);
-  const leadMelody = generateMelody(progression, 'lead', leadVariation, rootKey, scaleType);
+  const [bassStyleId, setBassStyleId] = useState(bassStyles[0]?.id || '');
+  const [leadStyleId, setLeadStyleId] = useState(leadStyles[0]?.id || '');
+  const [bassSeed, setBassSeed] = useState(1);
+  const [leadSeed, setLeadSeed] = useState(1);
 
-  // Force re-render on seed change (for regenerate)
-  useEffect(() => { /* seed dependency triggers re-render */ }, [seed]);
+  // Reset styles when genre changes
+  useEffect(() => {
+    setBassStyleId(bassStyles[0]?.id || '');
+    setLeadStyleId(leadStyles[0]?.id || '');
+    setBassSeed(s => s + 1);
+    setLeadSeed(s => s + 1);
+  }, [genreId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const bassMelody = generateMelody(progression, 'bass', bassStyleId, rootKey, scaleType, bassSeed);
+  const leadMelody = generateMelody(progression, 'lead', leadStyleId, rootKey, scaleType, leadSeed);
 
   if (progression.length === 0) {
     return (
@@ -257,10 +277,12 @@ export function MelodyStudio({ progression, rootKey, scaleType, bpm }: MelodyStu
           <MelodyPanel
             type="bass"
             melody={bassMelody}
+            styles={bassStyles}
+            selectedStyleId={bassStyleId}
             progression={progression}
             bpm={bpm}
-            onVariationChange={setBassVariation}
-            onRegenerate={() => setSeed(s => s + 1)}
+            onStyleChange={setBassStyleId}
+            onRegenerate={() => setBassSeed(s => s + 1)}
           />
         </div>
 
@@ -268,10 +290,12 @@ export function MelodyStudio({ progression, rootKey, scaleType, bpm }: MelodyStu
           <MelodyPanel
             type="lead"
             melody={leadMelody}
+            styles={leadStyles}
+            selectedStyleId={leadStyleId}
             progression={progression}
             bpm={bpm}
-            onVariationChange={setLeadVariation}
-            onRegenerate={() => setSeed(s => s + 1)}
+            onStyleChange={setLeadStyleId}
+            onRegenerate={() => setLeadSeed(s => s + 1)}
           />
         </div>
       </div>
