@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { GENRES } from './data/genres';
 import type { Genre, RhythmPattern } from './data/genres';
 import { getChordsInKey, getChordNotes } from './utils/musicTheory';
-import type { ChordInfo } from './utils/musicTheory';
+import type { ChordInfo, ChordComplexity } from './utils/musicTheory';
 import { initAudio, playChord, playProgression, stopPlayback, setVolume } from './utils/audioEngine';
 import type { SynthPresetId } from './utils/audioEngine';
 import { exportProgressionToMidi } from './utils/midiExport';
@@ -16,9 +16,10 @@ import { TransportControls } from './components/TransportControls';
 import { PianoKeyboard } from './components/PianoKeyboard';
 import { StaffNotation } from './components/StaffNotation';
 import { ChordPalette } from './components/ChordPalette';
+import { MelodyStudio } from './components/MelodyStudio';
 
-function buildProgression(genre: Genre, progressionIdx: number, key: string, scale: string): ChordInfo[] {
-  const scaleChords = getChordsInKey(key, scale);
+function buildProgression(genre: Genre, progressionIdx: number, key: string, scale: string, complexity: ChordComplexity = 'basic'): ChordInfo[] {
+  const scaleChords = getChordsInKey(key, scale, complexity);
   const prog = genre.progressions[progressionIdx];
   if (!prog) return [];
 
@@ -45,16 +46,20 @@ export default function App() {
   const [activeChordIndex, setActiveChordIndex] = useState(0);
   const [selectedChordForView, setSelectedChordForView] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [loop, setLoop] = useState(true);
+  const [doubleTime, setDoubleTime] = useState(false);
+  const [chordComplexity, setChordComplexity] = useState<ChordComplexity>('basic');
+  const [activeTab, setActiveTab] = useState<'chords' | 'melodies'>('chords');
   const [customProgression, setCustomProgression] = useState<ChordInfo[] | null>(null);
 
-  const availableChords = getChordsInKey(selectedKey, selectedScale);
-  const templateProgression = buildProgression(selectedGenre, selectedProgressionIdx, selectedKey, selectedScale);
+  const availableChords = getChordsInKey(selectedKey, selectedScale, chordComplexity);
+  const templateProgression = buildProgression(selectedGenre, selectedProgressionIdx, selectedKey, selectedScale, chordComplexity);
   const progression = customProgression || templateProgression;
 
   useEffect(() => {
     setCustomProgression(null);
     setSelectedChordForView(null);
-  }, [selectedKey, selectedScale, selectedGenre, selectedProgressionIdx]);
+  }, [selectedKey, selectedScale, selectedGenre, selectedProgressionIdx, chordComplexity]);
 
   const handleInitAudio = useCallback(async () => {
     await initAudio();
@@ -82,8 +87,10 @@ export default function App() {
       selectedRhythm,
       (idx) => setActiveChordIndex(idx),
       () => setIsPlaying(false),
+      loop,
+      doubleTime,
     );
-  }, [progression, selectedSynth, bpm, selectedRhythm]);
+  }, [progression, selectedSynth, bpm, selectedRhythm, loop, doubleTime]);
 
   const handleStop = useCallback(() => {
     stopPlayback();
@@ -102,8 +109,8 @@ export default function App() {
   }, [audioReady, selectedSynth]);
 
   const handleExportMidi = useCallback(() => {
-    exportProgressionToMidi(progression, bpm, selectedRhythm, selectedKey, selectedScale);
-  }, [progression, bpm, selectedRhythm, selectedKey, selectedScale]);
+    exportProgressionToMidi(progression, bpm, selectedRhythm, selectedKey, selectedScale, doubleTime);
+  }, [progression, bpm, selectedRhythm, selectedKey, selectedScale, doubleTime]);
 
   const handleAddChord = useCallback((chord: ChordInfo) => {
     const current = customProgression || [...templateProgression];
@@ -158,6 +165,31 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto p-4">
+        {/* Tab Navigation */}
+        <div className="flex gap-1 mb-6 bg-gray-900/50 rounded-lg p-1 border border-gray-800 w-fit">
+          <button
+            onClick={() => setActiveTab('chords')}
+            className={`px-5 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === 'chords'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
+                : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            Chord Progression
+          </button>
+          <button
+            onClick={() => setActiveTab('melodies')}
+            className={`px-5 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === 'melodies'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
+                : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            Melody Studio
+          </button>
+        </div>
+
+        {activeTab === 'chords' ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Panel - Controls */}
           <div className="lg:col-span-1 flex flex-col gap-6">
@@ -169,6 +201,26 @@ export default function App() {
                 onScaleChange={(s) => { if (isPlaying) handleStop(); setSelectedScale(s); }}
               />
               <GenreSelector selectedGenre={selectedGenre} onGenreChange={handleGenreChange} />
+
+              {/* Chord Complexity */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-gray-400">Chord Complexity</label>
+                <div className="flex gap-1.5 flex-wrap">
+                  {(['basic', '7ths', '9ths', 'jazzy'] as ChordComplexity[]).map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => { if (isPlaying) handleStop(); setChordComplexity(level); }}
+                      className={`px-2.5 py-1 rounded text-xs font-medium transition-all capitalize ${
+                        chordComplexity === level
+                          ? 'bg-purple-500/20 border border-purple-500 text-purple-300'
+                          : 'border border-gray-700/50 text-gray-400 hover:border-gray-600 hover:text-gray-200'
+                      }`}
+                    >
+                      {level}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="p-4 rounded-xl bg-gray-900/50 border border-gray-800 flex flex-col gap-5">
@@ -199,10 +251,14 @@ export default function App() {
               bpm={bpm}
               bpmRange={selectedGenre.bpmRange}
               volume={volume}
+              loop={loop}
+              doubleTime={doubleTime}
               onPlay={handlePlay}
               onStop={handleStop}
               onBpmChange={setBpm}
               onVolumeChange={handleVolumeChange}
+              onLoopChange={setLoop}
+              onDoubleTimeChange={setDoubleTime}
               onExportMidi={handleExportMidi}
             />
 
@@ -254,6 +310,15 @@ export default function App() {
             </div>
           </div>
         </div>
+        ) : (
+          <MelodyStudio
+            progression={progression}
+            rootKey={selectedKey}
+            scaleType={selectedScale}
+            bpm={bpm}
+            genreId={selectedGenre.id}
+          />
+        )}
       </main>
 
       <footer className="border-t border-gray-800 mt-8 py-4 text-center text-xs text-gray-600">

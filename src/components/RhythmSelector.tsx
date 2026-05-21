@@ -15,13 +15,12 @@ export function RhythmSelector({ genre, selectedRhythm, onRhythmChange }: Rhythm
           <button
             key={`${genre.id}-rhythm-${i}`}
             onClick={() => onRhythmChange(rhythm)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all border text-left ${
+            className={`flex flex-col gap-1 px-3 py-2 rounded-lg text-sm transition-all border text-left ${
               selectedRhythm.name === rhythm.name
                 ? 'border-purple-500 bg-purple-500/10 text-white'
                 : 'border-gray-700/50 text-gray-400 hover:border-gray-600 hover:text-gray-200'
             }`}
           >
-            <span className="font-semibold min-w-[80px]">{rhythm.name}</span>
             <div className="flex gap-0.5">
               {rhythm.pattern.map((hit, j) => (
                 <div
@@ -32,7 +31,10 @@ export function RhythmSelector({ genre, selectedRhythm, onRhythmChange }: Rhythm
                 />
               ))}
             </div>
-            <span className="text-xs opacity-40 ml-auto">{rhythm.description}</span>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-xs">{rhythm.name}</span>
+              <span className="text-xs opacity-40">{rhythm.description}</span>
+            </div>
           </button>
         ))}
       </div>

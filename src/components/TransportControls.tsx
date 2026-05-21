@@ -3,10 +3,14 @@ interface TransportControlsProps {
   bpm: number;
   bpmRange: [number, number];
   volume: number;
+  loop: boolean;
+  doubleTime: boolean;
   onPlay: () => void;
   onStop: () => void;
   onBpmChange: (bpm: number) => void;
   onVolumeChange: (vol: number) => void;
+  onLoopChange: (loop: boolean) => void;
+  onDoubleTimeChange: (doubleTime: boolean) => void;
   onExportMidi: () => void;
 }
 
@@ -15,10 +19,14 @@ export function TransportControls({
   bpm,
   bpmRange,
   volume,
+  loop,
+  doubleTime,
   onPlay,
   onStop,
   onBpmChange,
   onVolumeChange,
+  onLoopChange,
+  onDoubleTimeChange,
   onExportMidi,
 }: TransportControlsProps) {
   return (
@@ -43,6 +51,26 @@ export function TransportControls({
           </>
         )}
       </button>
+
+      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={loop}
+          onChange={e => onLoopChange(e.target.checked)}
+          className="w-3.5 h-3.5 accent-purple-500 rounded"
+        />
+        <span className="text-xs text-gray-300">Loop</span>
+      </label>
+
+      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={doubleTime}
+          onChange={e => onDoubleTimeChange(e.target.checked)}
+          className="w-3.5 h-3.5 accent-purple-500 rounded"
+        />
+        <span className="text-xs text-gray-300">Double Time</span>
+      </label>
 
       <div className="flex items-center gap-2">
         <label className="text-xs text-gray-400">BPM</label>

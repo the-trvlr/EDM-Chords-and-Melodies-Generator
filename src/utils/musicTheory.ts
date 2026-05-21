@@ -40,12 +40,41 @@ export const SCALE_INTERVALS: Record<string, number[]> = {
   melodicMinor: [0, 2, 3, 5, 7, 9, 11],
 };
 
-export const SCALE_CHORD_TYPES: Record<string, string[]> = {
-  major: ['major', 'minor', 'minor', 'major', 'major', 'minor', 'dim'],
-  minor: ['minor', 'dim', 'major', 'minor', 'minor', 'major', 'major'],
-  harmonicMinor: ['minor', 'dim', 'aug', 'minor', 'major', 'major', 'dim'],
-  melodicMinor: ['minor', 'minor', 'aug', 'major', 'major', 'dim', 'dim'],
+export type ChordComplexity = 'basic' | '7ths' | '9ths' | 'jazzy';
+
+const SCALE_CHORD_TYPES_BY_COMPLEXITY: Record<ChordComplexity, Record<string, string[]>> = {
+  basic: {
+    major: ['major', 'minor', 'minor', 'major', 'major', 'minor', 'dim'],
+    minor: ['minor', 'dim', 'major', 'minor', 'minor', 'major', 'major'],
+    harmonicMinor: ['minor', 'dim', 'aug', 'minor', 'major', 'major', 'dim'],
+    melodicMinor: ['minor', 'minor', 'aug', 'major', 'major', 'dim', 'dim'],
+  },
+  '7ths': {
+    major: ['maj7', 'min7', 'min7', 'maj7', 'dom7', 'min7', 'dim7'],
+    minor: ['min7', 'dim7', 'maj7', 'min7', 'min7', 'maj7', 'dom7'],
+    harmonicMinor: ['min7', 'dim7', 'maj7', 'min7', 'dom7', 'maj7', 'dim7'],
+    melodicMinor: ['min7', 'min7', 'maj7', 'dom7', 'dom7', 'dim7', 'dim7'],
+  },
+  '9ths': {
+    major: ['maj9', 'min9', 'min7', 'maj9', 'dom7', 'min9', 'dim7'],
+    minor: ['min9', 'dim7', 'maj9', 'min9', 'min7', 'maj9', 'dom7'],
+    harmonicMinor: ['min9', 'dim7', 'maj9', 'min7', 'dom7', 'maj9', 'dim7'],
+    melodicMinor: ['min9', 'min9', 'maj9', 'dom7', 'dom7', 'dim7', 'dim7'],
+  },
+  jazzy: {
+    major: ['maj9', 'min9', 'sus4', 'maj7', 'dom7', 'min9', 'dim7'],
+    minor: ['min9', 'dim7', 'maj9', 'sus2', 'dom7', 'maj9', 'dom7'],
+    harmonicMinor: ['min9', 'dim7', 'maj9', 'sus4', 'dom7', 'maj9', 'dim7'],
+    melodicMinor: ['min9', 'sus2', 'maj9', 'dom7', 'dom7', 'dim7', 'dim7'],
+  },
 };
+
+export const SCALE_CHORD_TYPES: Record<string, string[]> = SCALE_CHORD_TYPES_BY_COMPLEXITY.basic;
+
+export function getScaleChordTypes(scaleType: string, complexity: ChordComplexity): string[] {
+  const map = SCALE_CHORD_TYPES_BY_COMPLEXITY[complexity];
+  return map[scaleType] || map.major;
+}
 
 export const ROMAN_NUMERALS_MAJOR = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
 export const ROMAN_NUMERALS_MINOR = ['i', 'ii°', 'III', 'iv', 'v', 'VI', 'VII'];
@@ -95,9 +124,9 @@ export function getChordNotes(root: string, chordType: string, octave = 4): Chor
   };
 }
 
-export function getChordsInKey(root: string, scaleType: string): ChordInfo[] {
+export function getChordsInKey(root: string, scaleType: string, complexity: ChordComplexity = 'basic'): ChordInfo[] {
   const scaleNotes = getScaleNotes(root, scaleType);
-  const chordTypes = SCALE_CHORD_TYPES[scaleType] || SCALE_CHORD_TYPES.major;
+  const chordTypes = getScaleChordTypes(scaleType, complexity);
 
   return scaleNotes.map((note, i) => getChordNotes(note, chordTypes[i]));
 }
