@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  base: process.env.GITHUB_ACTIONS ? '/Chords-New/' : '/',
+  base: process.env.GITHUB_ACTIONS ? '/EDM-Chords-and-Melodies-Generator/' : '/',
   plugins: [
     react(),
     tailwindcss(),
