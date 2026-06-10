@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import * as Tone from 'tone';
 import type { ChordInfo } from '../utils/musicTheory';
 import { midiNoteToToneName } from '../utils/musicTheory';
@@ -244,16 +244,25 @@ export function MelodyStudio({ progression, rootKey, scaleType, bpm, genreId }: 
   const [bassSeed, setBassSeed] = useState(1);
   const [leadSeed, setLeadSeed] = useState(1);
 
-  // Reset styles when genre changes
-  useEffect(() => {
+  // Reset styles when genre changes (render-time state adjustment instead of an
+  // effect — see https://react.dev/learn/you-might-not-need-an-effect).
+  const [prevGenreId, setPrevGenreId] = useState(genreId);
+  if (genreId !== prevGenreId) {
+    setPrevGenreId(genreId);
     setBassStyleId(bassStyles[0]?.id || '');
     setLeadStyleId(leadStyles[0]?.id || '');
     setBassSeed(s => s + 1);
     setLeadSeed(s => s + 1);
-  }, [genreId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
-  const bassMelody = generateMelody(progression, 'bass', bassStyleId, rootKey, scaleType, bassSeed);
-  const leadMelody = generateMelody(progression, 'lead', leadStyleId, rootKey, scaleType, leadSeed);
+  const bassMelody = useMemo(
+    () => generateMelody(progression, 'bass', bassStyleId, rootKey, scaleType, bassSeed),
+    [progression, bassStyleId, rootKey, scaleType, bassSeed],
+  );
+  const leadMelody = useMemo(
+    () => generateMelody(progression, 'lead', leadStyleId, rootKey, scaleType, leadSeed),
+    [progression, leadStyleId, rootKey, scaleType, leadSeed],
+  );
 
   if (progression.length === 0) {
     return (

@@ -79,6 +79,39 @@ export function getScaleChordTypes(scaleType: string, complexity: ChordComplexit
 export const ROMAN_NUMERALS_MAJOR = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
 export const ROMAN_NUMERALS_MINOR = ['i', 'ii°', 'III', 'iv', 'v', 'VI', 'VII'];
 
+// Conventional key names per scale family. Flat keys use flats, sharp keys use
+// sharps, matching standard music notation rather than always defaulting to sharps.
+export const MAJOR_KEY_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] as const;
+export const MINOR_KEY_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'] as const;
+
+// Pitch classes whose conventional key uses flats.
+const MAJOR_FLAT_PCS = new Set([1, 3, 5, 8, 10]); // Db, Eb, F, Ab, Bb
+const MINOR_FLAT_PCS = new Set([0, 2, 3, 5, 7, 10]); // Cm, Dm, Ebm, Fm, Gm, Bbm
+
+export function noteNameToPc(name: string): number {
+  const sharp = NOTE_NAMES.indexOf(name as NoteName);
+  if (sharp >= 0) return sharp;
+  const flat = FLAT_NAMES.indexOf(name as typeof FLAT_NAMES[number]);
+  if (flat >= 0) return flat;
+  return 0;
+}
+
+export function getKeyNamesForScale(scaleType: string): readonly string[] {
+  return scaleType === 'major' ? MAJOR_KEY_NAMES : MINOR_KEY_NAMES;
+}
+
+// Conventional spelling of a key's root for the given pitch class and scale.
+export function getPreferredKeyName(pc: number, scaleType: string): string {
+  const idx = ((pc % 12) + 12) % 12;
+  return getKeyNamesForScale(scaleType)[idx];
+}
+
+// Whether a key should be spelled with flats (vs sharps).
+export function keyPrefersFlats(pc: number, scaleType: string): boolean {
+  const idx = ((pc % 12) + 12) % 12;
+  return scaleType === 'major' ? MAJOR_FLAT_PCS.has(idx) : MINOR_FLAT_PCS.has(idx);
+}
+
 export function noteToMidi(note: string, octave: number): number {
   const idx = NOTE_NAMES.indexOf(note as NoteName);
   if (idx === -1) {
@@ -99,36 +132,40 @@ export function midiToFrequency(midi: number): number {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
-export function getScaleNotes(root: string, scaleType: string): string[] {
-  const rootIdx = NOTE_NAMES.indexOf(root as NoteName) ?? FLAT_NAMES.indexOf(root as typeof FLAT_NAMES[number]);
+export function getScaleNotes(root: string, scaleType: string, useFlats?: boolean): string[] {
+  const rootIdx = noteNameToPc(root);
   const intervals = SCALE_INTERVALS[scaleType] || SCALE_INTERVALS.major;
-  return intervals.map(i => NOTE_NAMES[(rootIdx + i) % 12]);
+  const flats = useFlats ?? keyPrefersFlats(rootIdx, scaleType);
+  const names = flats ? FLAT_NAMES : NOTE_NAMES;
+  return intervals.map(i => names[(rootIdx + i) % 12]);
 }
 
-export function getChordNotes(root: string, chordType: string, octave = 4): ChordInfo {
-  const rootIdx = NOTE_NAMES.indexOf(root as NoteName) >= 0
-    ? NOTE_NAMES.indexOf(root as NoteName)
-    : FLAT_NAMES.indexOf(root as typeof FLAT_NAMES[number]);
+export function getChordNotes(root: string, chordType: string, octave = 4, useFlats?: boolean): ChordInfo {
+  const rootIdx = noteNameToPc(root);
   const type = CHORD_TYPES[chordType] || CHORD_TYPES.major;
   const rootMidi = noteToMidi(root, octave);
+  const flats = useFlats ?? root.includes('b');
+  const names = flats ? FLAT_NAMES : NOTE_NAMES;
 
-  const notes = type.intervals.map(i => NOTE_NAMES[(rootIdx + i) % 12]);
+  const rootName = names[rootIdx];
+  const notes = type.intervals.map(i => names[(rootIdx + i) % 12]);
   const midiNotes = type.intervals.map(i => rootMidi + i);
 
   return {
-    root,
+    root: rootName,
     type,
     notes,
     midiNotes,
-    display: `${root}${type.symbol}`,
+    display: `${rootName}${type.symbol}`,
   };
 }
 
 export function getChordsInKey(root: string, scaleType: string, complexity: ChordComplexity = 'basic'): ChordInfo[] {
-  const scaleNotes = getScaleNotes(root, scaleType);
+  const useFlats = keyPrefersFlats(noteNameToPc(root), scaleType);
+  const scaleNotes = getScaleNotes(root, scaleType, useFlats);
   const chordTypes = getScaleChordTypes(scaleType, complexity);
 
-  return scaleNotes.map((note, i) => getChordNotes(note, chordTypes[i]));
+  return scaleNotes.map((note, i) => getChordNotes(note, chordTypes[i], 4, useFlats));
 }
 
 export function getRomanNumeral(index: number, scaleType: string): string {

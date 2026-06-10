@@ -9,24 +9,31 @@ interface StaffNotationProps {
   isPlaying: boolean;
 }
 
-function midiToVexKey(midi: number): { key: string; accidental: string | null } {
-  const { note, octave } = midiToNote(midi);
-  const map: Record<string, { letter: string; acc: string | null }> = {
-    'C':  { letter: 'c',  acc: null },
-    'C#': { letter: 'c',  acc: '#' },
-    'D':  { letter: 'd',  acc: null },
-    'D#': { letter: 'd',  acc: '#' },
-    'E':  { letter: 'e',  acc: null },
-    'F':  { letter: 'f',  acc: null },
-    'F#': { letter: 'f',  acc: '#' },
-    'G':  { letter: 'g',  acc: null },
-    'G#': { letter: 'g',  acc: '#' },
-    'A':  { letter: 'a',  acc: null },
-    'A#': { letter: 'a',  acc: '#' },
-    'B':  { letter: 'b',  acc: null },
-  };
+const NOTE_LETTER: Record<string, { letter: string; acc: string | null }> = {
+  'C':  { letter: 'c',  acc: null },
+  'C#': { letter: 'c',  acc: '#' },
+  'Db': { letter: 'd',  acc: 'b' },
+  'D':  { letter: 'd',  acc: null },
+  'D#': { letter: 'd',  acc: '#' },
+  'Eb': { letter: 'e',  acc: 'b' },
+  'E':  { letter: 'e',  acc: null },
+  'F':  { letter: 'f',  acc: null },
+  'F#': { letter: 'f',  acc: '#' },
+  'Gb': { letter: 'g',  acc: 'b' },
+  'G':  { letter: 'g',  acc: null },
+  'G#': { letter: 'g',  acc: '#' },
+  'Ab': { letter: 'a',  acc: 'b' },
+  'A':  { letter: 'a',  acc: null },
+  'A#': { letter: 'a',  acc: '#' },
+  'Bb': { letter: 'b',  acc: 'b' },
+  'B':  { letter: 'b',  acc: null },
+};
 
-  const entry = map[note] || { letter: 'c', acc: null };
+// Spell a staff key using the chord's note name (so flat keys render flats)
+// while taking the octave from the MIDI value.
+function noteNameToVexKey(name: string, midi: number): { key: string; accidental: string | null } {
+  const { octave } = midiToNote(midi);
+  const entry = NOTE_LETTER[name] || { letter: 'c', acc: null };
   return { key: `${entry.letter}/${octave}`, accidental: entry.acc };
 }
 
@@ -50,7 +57,9 @@ export function StaffNotation({ progression, activeIndex, isPlaying }: StaffNota
 
     try {
       const staveNotes = progression.map((chord, chordIdx) => {
-        const vexKeys = chord.midiNotes.map(midi => midiToVexKey(midi));
+        const vexKeys = chord.midiNotes.map((midi, i) =>
+          noteNameToVexKey(chord.notes[i] ?? midiToNote(midi).note, midi),
+        );
         const keys = vexKeys.map(v => v.key);
 
         const sn = new StaveNote({

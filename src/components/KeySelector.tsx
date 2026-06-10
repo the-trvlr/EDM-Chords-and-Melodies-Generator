@@ -1,4 +1,4 @@
-import { NOTE_NAMES } from '../utils/musicTheory';
+import { getKeyNamesForScale } from '../utils/musicTheory';
 
 interface KeySelectorProps {
   selectedKey: string;
@@ -15,6 +15,7 @@ const SCALES = [
 ];
 
 export function KeySelector({ selectedKey, selectedScale, onKeyChange, onScaleChange }: KeySelectorProps) {
+  const keyNames = getKeyNamesForScale(selectedScale);
   return (
     <div className="flex flex-col gap-3">
       <label className="text-xs font-semibold uppercase tracking-wider text-gray-400">Key &amp; Scale</label>
@@ -24,7 +25,7 @@ export function KeySelector({ selectedKey, selectedScale, onKeyChange, onScaleCh
           onChange={e => onKeyChange(e.target.value)}
           className="flex-1 rounded-lg bg-gray-800 px-3 py-2 text-sm text-white border border-gray-700 focus:border-purple-500 focus:outline-none transition-colors"
         >
-          {NOTE_NAMES.map(note => (
+          {keyNames.map(note => (
             <option key={note} value={note}>{note}</option>
           ))}
         </select>
