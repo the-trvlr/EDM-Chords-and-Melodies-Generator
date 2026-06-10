@@ -5,6 +5,7 @@ import { getChordsInKey, getChordNotes, keyPrefersFlats, noteNameToPc, getPrefer
 import type { ChordInfo, ChordComplexity } from './utils/musicTheory';
 import { initAudio, playChord, playProgression, stopPlayback, setVolume } from './utils/audioEngine';
 import type { SynthPresetId } from './utils/audioEngine';
+import { stopArrangement } from './utils/mixer';
 import { loadPersistedState, savePersistedState } from './utils/persistence';
 import { exportProgressionToMidi } from './utils/midiExport';
 import { KeySelector } from './components/KeySelector';
@@ -18,6 +19,7 @@ import { PianoKeyboard } from './components/PianoKeyboard';
 import { StaffNotation } from './components/StaffNotation';
 import { ChordPalette } from './components/ChordPalette';
 import { MelodyStudio } from './components/MelodyStudio';
+import { MixerStudio } from './components/MixerStudio';
 
 function buildProgression(genre: Genre, progressionIdx: number, key: string, scale: string, complexity: ChordComplexity = 'basic'): ChordInfo[] {
   const scaleChords = getChordsInKey(key, scale, complexity);
@@ -56,7 +58,7 @@ export default function App() {
   const [loop, setLoop] = useState(persisted.loop ?? true);
   const [doubleTime, setDoubleTime] = useState(persisted.doubleTime ?? false);
   const [chordComplexity, setChordComplexity] = useState<ChordComplexity>(persisted.chordComplexity ?? 'basic');
-  const [activeTab, setActiveTab] = useState<'chords' | 'melodies'>(persisted.activeTab ?? 'chords');
+  const [activeTab, setActiveTab] = useState<'chords' | 'melodies' | 'mix'>(persisted.activeTab ?? 'chords');
   const [customProgression, setCustomProgression] = useState<ChordInfo[] | null>(null);
 
   const availableChords = getChordsInKey(selectedKey, selectedScale, chordComplexity);
@@ -99,6 +101,7 @@ export default function App() {
 
   const handlePlay = useCallback(() => {
     if (progression.length === 0) return;
+    stopArrangement(); // ensure the full-mix engine isn't also driving the transport
     setIsPlaying(true);
     setActiveChordIndex(0);
     playProgression(
@@ -117,6 +120,14 @@ export default function App() {
     stopPlayback();
     setIsPlaying(false);
     setActiveChordIndex(0);
+  }, []);
+
+  const handleTabChange = useCallback((tab: 'chords' | 'melodies' | 'mix') => {
+    stopPlayback();
+    stopArrangement();
+    setIsPlaying(false);
+    setActiveChordIndex(0);
+    setActiveTab(tab);
   }, []);
 
   const handleScaleChange = useCallback((scale: string) => {
@@ -195,7 +206,7 @@ export default function App() {
         {/* Tab Navigation */}
         <div className="flex gap-1 mb-6 bg-gray-900/50 rounded-lg p-1 border border-gray-800 w-fit">
           <button
-            onClick={() => setActiveTab('chords')}
+            onClick={() => handleTabChange('chords')}
             className={`px-5 py-2 rounded-md text-sm font-medium transition-all ${
               activeTab === 'chords'
                 ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
@@ -205,7 +216,7 @@ export default function App() {
             Chord Progression
           </button>
           <button
-            onClick={() => setActiveTab('melodies')}
+            onClick={() => handleTabChange('melodies')}
             className={`px-5 py-2 rounded-md text-sm font-medium transition-all ${
               activeTab === 'melodies'
                 ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
@@ -214,10 +225,20 @@ export default function App() {
           >
             Melody Studio
           </button>
+          <button
+            onClick={() => handleTabChange('mix')}
+            className={`px-5 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === 'mix'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
+                : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            Full Mix
+          </button>
         </div>
 
         {activeTab === 'chords' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" data-tab="chords">
           {/* Left Panel - Controls */}
           <div className="lg:col-span-1 flex flex-col gap-6">
             <div className="p-4 rounded-xl bg-gray-900/50 border border-gray-800 flex flex-col gap-5">
@@ -337,13 +358,24 @@ export default function App() {
             </div>
           </div>
         </div>
-        ) : (
+        ) : activeTab === 'melodies' ? (
           <MelodyStudio
             progression={progression}
             rootKey={selectedKey}
             scaleType={selectedScale}
             bpm={bpm}
             genreId={selectedGenre.id}
+          />
+        ) : (
+          <MixerStudio
+            progression={progression}
+            rhythm={selectedRhythm}
+            rootKey={selectedKey}
+            scaleType={selectedScale}
+            bpm={bpm}
+            genreId={selectedGenre.id}
+            chordSynthId={selectedSynth}
+            loop={loop}
           />
         )}
       </main>
