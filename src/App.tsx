@@ -19,7 +19,6 @@ import { PianoKeyboard } from './components/PianoKeyboard';
 import { StaffNotation } from './components/StaffNotation';
 import { ChordPalette } from './components/ChordPalette';
 import { MelodyStudio } from './components/MelodyStudio';
-import { MixerStudio } from './components/MixerStudio';
 
 function buildProgression(genre: Genre, progressionIdx: number, key: string, scale: string, complexity: ChordComplexity = 'basic'): ChordInfo[] {
   const scaleChords = getChordsInKey(key, scale, complexity);
@@ -58,7 +57,7 @@ export default function App() {
   const [loop, setLoop] = useState(persisted.loop ?? true);
   const [doubleTime, setDoubleTime] = useState(persisted.doubleTime ?? false);
   const [chordComplexity, setChordComplexity] = useState<ChordComplexity>(persisted.chordComplexity ?? 'basic');
-  const [activeTab, setActiveTab] = useState<'chords' | 'melodies' | 'mix'>(persisted.activeTab ?? 'chords');
+  const [activeTab, setActiveTab] = useState<'chords' | 'melodies'>(persisted.activeTab === 'mix' ? 'melodies' : persisted.activeTab ?? 'chords');
   const [customProgression, setCustomProgression] = useState<ChordInfo[] | null>(null);
 
   const availableChords = getChordsInKey(selectedKey, selectedScale, chordComplexity);
@@ -122,7 +121,7 @@ export default function App() {
     setActiveChordIndex(0);
   }, []);
 
-  const handleTabChange = useCallback((tab: 'chords' | 'melodies' | 'mix') => {
+  const handleTabChange = useCallback((tab: 'chords' | 'melodies') => {
     stopPlayback();
     stopArrangement();
     setIsPlaying(false);
@@ -224,16 +223,6 @@ export default function App() {
             }`}
           >
             Melody Studio
-          </button>
-          <button
-            onClick={() => handleTabChange('mix')}
-            className={`px-5 py-2 rounded-md text-sm font-medium transition-all ${
-              activeTab === 'mix'
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
-                : 'text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            Full Mix
           </button>
         </div>
 
@@ -358,16 +347,8 @@ export default function App() {
             </div>
           </div>
         </div>
-        ) : activeTab === 'melodies' ? (
-          <MelodyStudio
-            progression={progression}
-            rootKey={selectedKey}
-            scaleType={selectedScale}
-            bpm={bpm}
-            genreId={selectedGenre.id}
-          />
         ) : (
-          <MixerStudio
+          <MelodyStudio
             progression={progression}
             rhythm={selectedRhythm}
             rootKey={selectedKey}
@@ -376,6 +357,7 @@ export default function App() {
             genreId={selectedGenre.id}
             chordSynthId={selectedSynth}
             loop={loop}
+            doubleTime={doubleTime}
           />
         )}
       </main>
