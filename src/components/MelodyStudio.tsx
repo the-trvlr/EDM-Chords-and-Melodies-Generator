@@ -1,257 +1,69 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import * as Tone from 'tone';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { ChordInfo } from '../utils/musicTheory';
-import { midiNoteToToneName } from '../utils/musicTheory';
-import { generateMelody, getGenreMelodyStyles, type MelodyType, type MelodyStyle, type GeneratedMelody } from '../utils/melodyGenerator';
-// @ts-expect-error midi-writer-js has types but exports resolution fails
-import MidiWriter from 'midi-writer-js';
+import { generateMelody, getGenreMelodyStyles, type MelodyStyle, type GeneratedMelody } from '../utils/melodyGenerator';
+import type { RhythmPattern } from '../data/genres';
+import type { SynthPresetId } from '../utils/audioEngine';
+import { playArrangement, stopArrangement, setTrackVolume, setTrackMute, setTrackSolo, renderArrangementToWav, type TrackId } from '../utils/mixer';
+import { exportArrangementToMidi } from '../utils/midiExport';
+import { stopPlayback } from '../utils/audioEngine';
+import { SynthSelector } from './SynthSelector';
 
 interface MelodyStudioProps {
   progression: ChordInfo[];
+  rhythm: RhythmPattern;
   rootKey: string;
   scaleType: string;
   bpm: number;
   genreId: string;
+  chordSynthId: SynthPresetId;
+  loop: boolean;
+  doubleTime: boolean;
 }
 
-function exportMelodyToMidi(melody: GeneratedMelody, bpm: number, label: string) {
-  const track = new MidiWriter.Track();
-  track.setTempo(bpm);
-  track.addTrackName(`EDM ${label} Melody`);
-  track.setTimeSignature(4, 4);
+const STEPS_PER_CHORD = 16;
 
-  const ticksPer16th = 32;
-  let cursor = 0;
+type TrackState = { volume: number; mute: boolean; solo: boolean };
+const initTrack = (): TrackState => ({ volume: 0, mute: false, solo: false });
 
-  for (const note of melody.notes) {
-    const waitSteps = note.step - cursor;
-    const opts: Record<string, unknown> = {
-      pitch: [midiNoteToToneName(note.midi)],
-      duration: `T${note.duration * ticksPer16th}`,
-      velocity: 80,
-    };
-    if (waitSteps > 0) {
-      opts.wait = `T${waitSteps * ticksPer16th}`;
-    }
-    track.addEvent(new MidiWriter.NoteEvent(opts));
-    cursor = note.step + note.duration;
-  }
-
-  const write = new MidiWriter.Writer([track]);
-  const dataUri = write.dataUri();
-  const link = document.createElement('a');
-  link.href = dataUri;
-  link.download = `${label.toLowerCase().replace(/\s+/g, '-')}-melody-${bpm}bpm.mid`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-function MelodyPanel({
-  type,
-  melody,
-  styles,
-  selectedStyleId,
-  progression,
-  bpm,
-  onStyleChange,
-  onRegenerate,
+function MelodyLane({
+  melody, totalSteps, activeStep, color, activeColor,
 }: {
-  type: MelodyType;
   melody: GeneratedMelody;
-  styles: MelodyStyle[];
-  selectedStyleId: string;
-  progression: ChordInfo[];
-  bpm: number;
-  onStyleChange: (styleId: string) => void;
-  onRegenerate: () => void;
+  totalSteps: number;
+  activeStep: number | null;
+  color: string;
+  activeColor: string;
 }) {
-  const synthRef = useRef<Tone.PolySynth | null>(null);
-  const loopRef = useRef<Tone.Loop | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [activeStep, setActiveStep] = useState<number | null>(null);
-
-  const stopMelody = useCallback(() => {
-    if (loopRef.current) {
-      loopRef.current.stop();
-      loopRef.current.dispose();
-      loopRef.current = null;
-    }
-    Tone.getTransport().stop();
-    Tone.getTransport().position = 0;
-    setIsPlaying(false);
-    setActiveStep(null);
-  }, []);
-
-  useEffect(() => {
-    return () => { stopMelody(); };
-  }, [stopMelody]);
-
-  const playMelody = useCallback(() => {
-    stopMelody();
-
-    if (synthRef.current) {
-      synthRef.current.disconnect();
-      synthRef.current.dispose();
-    }
-
-    const preset = type === 'bass'
-      ? { oscillator: { type: 'sawtooth4' as const }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.6, release: 0.5 }, volume: -8 }
-      : { oscillator: { type: 'triangle8' as const }, envelope: { attack: 0.01, decay: 0.15, sustain: 0.3, release: 0.8 }, volume: -10 };
-
-    synthRef.current = new Tone.PolySynth(Tone.Synth, preset).toDestination();
-    Tone.getTransport().bpm.value = bpm;
-
-    const totalSteps = progression.length * 16;
-    let step = 0;
-    const sixteenthDur = Tone.Time('16n').toSeconds();
-
-    const noteMap = new Map<number, { midi: number; duration: number }>();
-    for (const n of melody.notes) noteMap.set(n.step, n);
-
-    loopRef.current = new Tone.Loop((time) => {
-      const note = noteMap.get(step);
-      if (note && synthRef.current) {
-        const name = midiNoteToToneName(note.midi);
-        synthRef.current.triggerAttackRelease(name, sixteenthDur * note.duration * 0.9, time);
-      }
-      const currentStep = step;
-      Tone.getDraw().schedule(() => setActiveStep(currentStep), time);
-      step++;
-      if (step >= totalSteps) {
-        Tone.getDraw().schedule(() => { setIsPlaying(false); setActiveStep(null); }, time);
-        stopMelody();
-      }
-    }, '16n');
-
-    loopRef.current.start(0);
-    Tone.getTransport().start();
-    setIsPlaying(true);
-  }, [melody, bpm, progression, type, stopMelody]);
-
-  const label = type === 'bass' ? 'Bass' : 'Lead';
-
-  // Compute note range for visualization
   if (melody.notes.length === 0) {
-    return (
-      <div className="flex flex-col gap-3">
-        <h3 className="text-sm font-semibold text-white">{label} Melody</h3>
-        <div className="text-xs text-gray-500">No notes generated. Try a different style or regenerate.</div>
-      </div>
-    );
+    return <div className="flex-1 text-[10px] text-gray-600 flex items-center pl-2">No notes</div>;
   }
-
-  const midiValues = melody.notes.map(n => n.midi);
-  const minMidi = Math.min(...midiValues);
-  const maxMidi = Math.max(...midiValues);
+  const midis = melody.notes.map(n => n.midi);
+  const minMidi = Math.min(...midis);
+  const maxMidi = Math.max(...midis);
   const range = Math.max(maxMidi - minMidi, 12);
-  const totalSteps = progression.length * 16;
-
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-white">{label} Melody</h3>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={isPlaying ? stopMelody : playMelody}
-            className={`px-3 py-1 rounded text-xs font-medium transition-all ${
-              isPlaying
-                ? 'bg-red-500 hover:bg-red-600 text-white'
-                : 'bg-green-500 hover:bg-green-600 text-white'
-            }`}
-          >
-            {isPlaying ? 'Stop' : 'Preview'}
-          </button>
-          <button
-            onClick={() => exportMelodyToMidi(melody, bpm, label)}
-            className="px-3 py-1 rounded text-xs font-medium border border-gray-600 text-gray-300 hover:border-purple-500 hover:text-purple-300 transition-all"
-          >
-            Download MIDI
-          </button>
-        </div>
-      </div>
-
-      {/* Style selector */}
-      <div className="flex gap-1.5 flex-wrap">
-        {styles.map((style) => (
-          <button
-            key={style.id}
-            onClick={() => onStyleChange(style.id)}
-            title={style.description}
-            className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
-              selectedStyleId === style.id
-                ? 'bg-purple-500/20 border border-purple-500 text-purple-300'
-                : 'border border-gray-700/50 text-gray-400 hover:border-gray-600 hover:text-gray-200'
-            }`}
-          >
-            {style.name}
-          </button>
-        ))}
-      </div>
-
-      {/* Piano roll visualization */}
-      <div className="relative bg-gray-900 rounded-lg border border-gray-700/50 overflow-hidden" style={{ height: 120 }}>
-        {/* Grid lines for each chord */}
-        {progression.map((_, i) => (
+    <div className="relative flex-1 bg-gray-900 rounded border border-gray-700/50 overflow-hidden" style={{ height: 120 }}>
+      {activeStep !== null && (
+        <div className="absolute top-0 bottom-0 w-px bg-white/50 z-10" style={{ left: `${(activeStep / totalSteps) * 100}%` }} />
+      )}
+      {melody.notes.map((note, i) => {
+        const x = (note.step / totalSteps) * 100;
+        const w = (note.duration / totalSteps) * 100;
+        const y = ((maxMidi - note.midi) / range) * 80 + 10;
+        const isActive = activeStep !== null && activeStep >= note.step && activeStep < note.step + note.duration;
+        return (
           <div
-            key={`grid-${i}`}
-            className="absolute top-0 bottom-0 border-l border-gray-700/30"
-            style={{ left: `${(i / progression.length) * 100}%` }}
+            key={i}
+            className={`absolute rounded-sm transition-all ${isActive ? activeColor : color}`}
+            style={{ left: `${x}%`, width: `${Math.max(w, 0.5)}%`, top: `${y}%`, height: isActive ? 8 : 6 }}
           />
-        ))}
-        {/* Chord labels */}
-        {progression.map((chord, i) => (
-          <div
-            key={`label-${i}`}
-            className="absolute top-1 text-[9px] text-gray-500"
-            style={{ left: `${((i + 0.05) / progression.length) * 100}%` }}
-          >
-            {chord.display}
-          </div>
-        ))}
-        {/* Playhead */}
-        {activeStep !== null && (
-          <div
-            className="absolute top-0 bottom-0 w-px bg-white/50"
-            style={{ left: `${(activeStep / totalSteps) * 100}%` }}
-          />
-        )}
-        {/* Notes */}
-        {melody.notes.map((note, i) => {
-          const x = (note.step / totalSteps) * 100;
-          const w = (note.duration / totalSteps) * 100;
-          const y = ((maxMidi - note.midi) / range) * 80 + 10;
-          const isActive = activeStep !== null && activeStep >= note.step && activeStep < note.step + note.duration;
-          const activeCls = type === 'bass'
-            ? 'bg-orange-300 ring-1 ring-white shadow-[0_0_6px_rgba(255,255,255,0.7)]'
-            : 'bg-cyan-300 ring-1 ring-white shadow-[0_0_6px_rgba(255,255,255,0.7)]';
-          const idleCls = type === 'bass' ? 'bg-orange-400/80' : 'bg-cyan-400/80';
-          return (
-            <div
-              key={i}
-              className={`absolute rounded-sm transition-all ${isActive ? activeCls : idleCls}`}
-              style={{
-                left: `${x}%`,
-                width: `${Math.max(w, 0.5)}%`,
-                top: `${y}%`,
-                height: isActive ? 8 : 6,
-              }}
-            />
-          );
-        })}
-      </div>
-
-      <button
-        onClick={onRegenerate}
-        className="self-start px-3 py-1 rounded text-xs text-gray-400 hover:text-gray-200 border border-gray-700/50 hover:border-gray-600 transition-all"
-      >
-        Regenerate
-      </button>
+        );
+      })}
     </div>
   );
 }
 
-export function MelodyStudio({ progression, rootKey, scaleType, bpm, genreId }: MelodyStudioProps) {
+export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, genreId, chordSynthId, loop, doubleTime }: MelodyStudioProps) {
   const bassStyles = getGenreMelodyStyles(genreId, 'bass');
   const leadStyles = getGenreMelodyStyles(genreId, 'lead');
 
@@ -260,8 +72,21 @@ export function MelodyStudio({ progression, rootKey, scaleType, bpm, genreId }: 
   const [bassSeed, setBassSeed] = useState(1);
   const [leadSeed, setLeadSeed] = useState(1);
 
-  // Reset styles when genre changes (render-time state adjustment instead of an
-  // effect — see https://react.dev/learn/you-might-not-need-an-effect).
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [activeStep, setActiveStep] = useState<number | null>(null);
+  const [rendering, setRendering] = useState(false);
+
+  const [tracks, setTracks] = useState<Record<TrackId, TrackState>>({
+    chord: initTrack(), bass: initTrack(), lead: initTrack(),
+  });
+
+  const [synthIds, setSynthIds] = useState<{ chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId }>({
+    chord: chordSynthId,
+    bass: 'pluck',
+    lead: 'supersaw',
+  });
+
+  // Reset melody styles when genre changes (render-time state adjustment).
   const [prevGenreId, setPrevGenreId] = useState(genreId);
   if (genreId !== prevGenreId) {
     setPrevGenreId(genreId);
@@ -280,6 +105,71 @@ export function MelodyStudio({ progression, rootKey, scaleType, bpm, genreId }: 
     [progression, leadStyleId, rootKey, scaleType, leadSeed],
   );
 
+  // Engine start carries no direct setState — playback state is owned by isPlaying
+  // and driven via the effect below, so changing inputs mid-play re-syncs the mix.
+  const startEngine = useCallback(() => {
+    stopPlayback(); // stop the chord-only engine if it was running
+    playArrangement({
+      chords: progression,
+      rhythm,
+      bass: bassMelody,
+      lead: leadMelody,
+      synthIds,
+      bpm,
+      loop,
+      onStep: setActiveStep,
+      onStop: () => { setIsPlaying(false); setActiveStep(null); },
+    });
+  }, [progression, rhythm, bassMelody, leadMelody, synthIds, bpm, loop]);
+
+  const stop = useCallback(() => {
+    stopArrangement();
+    setIsPlaying(false);
+    setActiveStep(null);
+  }, []);
+
+  // (Re)start whenever playing or when the musical content changes mid-playback.
+  useEffect(() => {
+    if (isPlaying) startEngine();
+  }, [isPlaying, startEngine]);
+
+  useEffect(() => () => { stopArrangement(); }, []);
+
+  // Push per-track mixer settings to the engine whenever they change.
+  useEffect(() => {
+    (Object.keys(tracks) as TrackId[]).forEach(id => {
+      setTrackVolume(id, tracks[id].volume);
+      setTrackMute(id, tracks[id].mute);
+      setTrackSolo(id, tracks[id].solo);
+    });
+  }, [tracks]);
+
+  const updateTrack = useCallback((id: TrackId, patch: Partial<TrackState>) => {
+    setTracks(prev => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  }, []);
+
+  const handleExportWav = useCallback(async () => {
+    setRendering(true);
+    try {
+      const blob = await renderArrangementToWav({
+        chords: progression, rhythm, bass: bassMelody, lead: leadMelody,
+        synthIds, bpm, tracks,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `edm-mix-${rootKey}-${scaleType}-${bpm}bpm.wav`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setRendering(false);
+    }
+  }, [progression, rhythm, bassMelody, leadMelody, synthIds, bpm, tracks, rootKey, scaleType]);
+
+  const handleExportMultitrackMidi = useCallback(() => {
+    exportArrangementToMidi(progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime);
+  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime]);
+
   if (progression.length === 0) {
     return (
       <div className="text-center text-gray-500 py-12">
@@ -288,41 +178,129 @@ export function MelodyStudio({ progression, rootKey, scaleType, bpm, genreId }: 
     );
   }
 
+  const totalSteps = progression.length * STEPS_PER_CHORD;
+  const activeChordIdx = activeStep !== null ? Math.floor(activeStep / STEPS_PER_CHORD) : -1;
+
+  const renderStrip = (id: TrackId, label: string, accent: string) => {
+    const t = tracks[id];
+    return (
+      <div className="flex flex-col gap-1.5 w-32 shrink-0">
+        <div className="flex items-center justify-between">
+          <span className={`text-xs font-semibold ${accent}`}>{label}</span>
+          <div className="flex gap-1">
+            <button
+              onClick={() => updateTrack(id, { mute: !t.mute })}
+              className={`w-5 h-5 rounded text-[10px] font-bold transition-all ${t.mute ? 'bg-red-500 text-white' : 'bg-gray-700/60 text-gray-300 hover:bg-gray-600'}`}
+              title="Mute"
+            >M</button>
+            <button
+              onClick={() => updateTrack(id, { solo: !t.solo })}
+              className={`w-5 h-5 rounded text-[10px] font-bold transition-all ${t.solo ? 'bg-yellow-400 text-black' : 'bg-gray-700/60 text-gray-300 hover:bg-gray-600'}`}
+              title="Solo"
+            >S</button>
+          </div>
+        </div>
+        <input
+          type="range" min={-30} max={6} step={1} value={t.volume}
+          onChange={e => updateTrack(id, { volume: Number(e.target.value) })}
+          className="w-full accent-purple-500"
+        />
+        <span className="text-[10px] text-gray-500">{t.volume > 0 ? '+' : ''}{t.volume} dB</span>
+      </div>
+    );
+  };
+
+  const styleButtons = (styles: MelodyStyle[], selected: string, onPick: (id: string) => void, onRegen: () => void) => (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {styles.map(s => (
+        <button
+          key={s.id}
+          onClick={() => onPick(s.id)}
+          title={s.description}
+          className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${selected === s.id ? 'bg-purple-500/20 border border-purple-500 text-purple-300' : 'border border-gray-700/50 text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}
+        >{s.name}</button>
+      ))}
+      <button
+        onClick={onRegen}
+        className="px-2 py-0.5 rounded text-[11px] text-gray-400 hover:text-gray-200 border border-gray-700/50 hover:border-gray-600 transition-all"
+      >Regenerate</button>
+    </div>
+  );
+
   return (
-    <div className="flex flex-col gap-8">
-      <div className="text-center">
-        <h2 className="text-lg font-bold text-white mb-1">Melody Studio</h2>
-        <p className="text-xs text-gray-500">
-          Generate bass and lead melodies synced to your chord progression ({rootKey} {scaleType} · {bpm} BPM)
-        </p>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">Melody Studio</h2>
+          <p className="text-xs text-gray-500">Multi-track arranger ({rootKey} {scaleType} · {bpm} BPM)</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportMultitrackMidi}
+            className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-700 text-gray-200 hover:border-gray-500 transition-all"
+          >
+            Download Multitrack MIDI
+          </button>
+          <button
+            onClick={handleExportWav}
+            disabled={rendering}
+            className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-700 text-gray-200 hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            {rendering ? 'Rendering…' : 'Download WAV'}
+          </button>
+          <button
+            onClick={isPlaying ? stop : () => setIsPlaying(true)}
+            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${isPlaying ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}
+          >
+            {isPlaying ? 'Stop' : 'Play All Together'}
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        <div className="p-4 rounded-xl bg-gray-900/50 border border-gray-800">
-          <MelodyPanel
-            type="bass"
-            melody={bassMelody}
-            styles={bassStyles}
-            selectedStyleId={bassStyleId}
-            progression={progression}
-            bpm={bpm}
-            onStyleChange={setBassStyleId}
-            onRegenerate={() => setBassSeed(s => s + 1)}
-          />
+      {/* Chord track */}
+      <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-900/50 border border-gray-800">
+        {renderStrip('chord', 'Chords', 'text-purple-300')}
+        <div className="flex-1 flex items-center gap-2">
+          <SynthSelector selectedSynth={synthIds.chord} onSynthChange={(id) => setSynthIds(prev => ({ ...prev, chord: id }))} />
+          <div className="relative flex-1 bg-gray-900 rounded border border-gray-700/50 overflow-hidden flex" style={{ height: 120 }}>
+            {activeStep !== null && (
+              <div className="absolute top-0 bottom-0 w-px bg-white/50 z-10" style={{ left: `${(activeStep / totalSteps) * 100}%` }} />
+            )}
+            {progression.map((chord, i) => (
+              <div
+                key={i}
+                className={`h-full flex items-center justify-center text-xs font-medium border-r border-gray-800 transition-colors ${i === activeChordIdx ? 'bg-purple-500/30 text-white' : 'text-gray-400'}`}
+                style={{ width: `${100 / progression.length}%` }}
+              >
+                {chord.display}
+              </div>
+            ))}
+          </div>
         </div>
+      </div>
 
-        <div className="p-4 rounded-xl bg-gray-900/50 border border-gray-800">
-          <MelodyPanel
-            type="lead"
-            melody={leadMelody}
-            styles={leadStyles}
-            selectedStyleId={leadStyleId}
-            progression={progression}
-            bpm={bpm}
-            onStyleChange={setLeadStyleId}
-            onRegenerate={() => setLeadSeed(s => s + 1)}
-          />
+      {/* Bass track */}
+      <div className="flex flex-col gap-2 p-3 rounded-xl bg-gray-900/50 border border-gray-800">
+        <div className="flex items-center gap-3">
+          {renderStrip('bass', 'Bass', 'text-orange-300')}
+          <div className="flex-1 flex items-center gap-2">
+            <SynthSelector selectedSynth={synthIds.bass} onSynthChange={(id) => setSynthIds(prev => ({ ...prev, bass: id }))} />
+            <MelodyLane melody={bassMelody} totalSteps={totalSteps} activeStep={activeStep} color="bg-orange-400/80" activeColor="bg-orange-300 ring-1 ring-white" />
+          </div>
         </div>
+        {styleButtons(bassStyles, bassStyleId, setBassStyleId, () => setBassSeed(s => s + 1))}
+      </div>
+
+      {/* Lead track */}
+      <div className="flex flex-col gap-2 p-3 rounded-xl bg-gray-900/50 border border-gray-800">
+        <div className="flex items-center gap-3">
+          {renderStrip('lead', 'Lead', 'text-cyan-300')}
+          <div className="flex-1 flex items-center gap-2">
+            <SynthSelector selectedSynth={synthIds.lead} onSynthChange={(id) => setSynthIds(prev => ({ ...prev, lead: id }))} />
+            <MelodyLane melody={leadMelody} totalSteps={totalSteps} activeStep={activeStep} color="bg-cyan-400/80" activeColor="bg-cyan-300 ring-1 ring-white" />
+          </div>
+        </div>
+        {styleButtons(leadStyles, leadStyleId, setLeadStyleId, () => setLeadSeed(s => s + 1))}
       </div>
     </div>
   );

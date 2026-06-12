@@ -48,6 +48,16 @@ A fully offline Progressive Web App (PWA) for generating, previewing, and export
 - Exports respect the selected rhythm pattern, BPM, and Double Time setting
 - Filename includes key, scale, and BPM for easy organization
 
+### Melody Studio (Arranger)
+- **Multi-track arranger** with Chords, Bass, and Lead tracks
+- **Per-track instrument selection** — each track can use a different synth preset
+- **Per-track mixer controls** — volume, mute, and solo for each track
+- **Seeded melody generation** — bass and lead melodies synced to your chord progression
+- **Genre-specific melody styles** — different patterns for bass (Rolling, Driving, Gated) and lead (Arpeggio, Euphoric, Pluck)
+- **Synced playback** — "Play All Together" plays all tracks with a unified transport
+- **Multitrack MIDI export** — download all three tracks as a single MIDI file with separate tracks
+- **WAV export** — render the full arrangement to audio for quick demos
+
 ### Offline PWA
 - Installable on desktop and mobile (Chrome, Edge, Safari, Firefox)
 - Works fully offline after first load — no server required
@@ -144,11 +154,15 @@ src/
 │   ├── ChordDisplay.tsx             # Chord cards with active highlighting
 │   ├── ChordPalette.tsx             # Add/remove chords from progression
 │   ├── PianoKeyboard.tsx            # SVG piano keyboard visualization
-│   └── StaffNotation.tsx            # VexFlow staff notation rendering
+│   ├── StaffNotation.tsx            # VexFlow staff notation rendering
+│   └── MelodyStudio.tsx             # Multi-track arranger with chords, bass, lead
 └── utils/
     ├── audioEngine.ts               # Tone.js synth creation, playback, looping
     ├── musicTheory.ts               # Scales, chords, intervals, transposition
-    └── midiExport.ts                # MIDI file generation & download
+    ├── midiExport.ts                # MIDI file generation & download (chord + multitrack)
+    ├── melodyGenerator.ts           # Seeded bass/lead melody generation
+    ├── mixer.ts                     # Unified audio engine for multi-track playback
+    └── persistence.ts               # State persistence across reloads
 ```
 
 ---

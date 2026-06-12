@@ -69,7 +69,7 @@ export function TransportControls({
           onChange={e => onDoubleTimeChange(e.target.checked)}
           className="w-3.5 h-3.5 accent-purple-500 rounded"
         />
-        <span className="text-xs text-gray-300">Halftime</span>
+        <span className="text-xs text-gray-300">Half time</span>
       </label>
 
       <div className="flex items-center gap-2">

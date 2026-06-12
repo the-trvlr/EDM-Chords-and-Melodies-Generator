@@ -61,7 +61,7 @@ export interface ArrangementOptions {
   rhythm: RhythmPattern;
   bass: GeneratedMelody;
   lead: GeneratedMelody;
-  chordSynthId: SynthPresetId;
+  synthIds: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId };
   bpm: number;
   loop: boolean;
   onStep?: (step: number) => void;
@@ -75,7 +75,7 @@ export function playArrangement(opts: ArrangementOptions): void {
 
   disposeSynths(m);
   for (const id of TRACK_IDS) {
-    const synth = createTrackSynth(id, opts.chordSynthId);
+    const synth = createTrackSynth(id, opts.synthIds[id]);
     synth.connect(m.channels[id]);
     m.synths[id] = synth;
   }
@@ -170,7 +170,7 @@ export interface RenderOptions {
   rhythm: RhythmPattern;
   bass: GeneratedMelody;
   lead: GeneratedMelody;
-  chordSynthId: SynthPresetId;
+  synthIds: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId };
   bpm: number;
   tracks: Record<TrackId, { volume: number; mute: boolean; solo: boolean }>;
 }
@@ -229,9 +229,9 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
   const rendered = await Tone.Offline(() => {
     const verb = new Tone.Freeverb({ roomSize: 0.7, dampening: 3000, wet: 0.2 }).toDestination();
     const synths: Record<TrackId, Tone.PolySynth> = {
-      chord: createTrackSynth('chord', opts.chordSynthId).connect(verb),
-      bass: createTrackSynth('bass', opts.chordSynthId).connect(verb),
-      lead: createTrackSynth('lead', opts.chordSynthId).connect(verb),
+      chord: createTrackSynth('chord', opts.synthIds.chord).connect(verb),
+      bass: createTrackSynth('bass', opts.synthIds.bass).connect(verb),
+      lead: createTrackSynth('lead', opts.synthIds.lead).connect(verb),
     };
     for (const id of TRACK_IDS) synths[id].volume.value += opts.tracks[id].volume;
 
