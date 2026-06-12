@@ -21,7 +21,7 @@ export const SYNTH_PRESETS: SynthPreset[] = [
   { id: 'bell', name: 'Bell', description: 'FM bell sound', category: 'genre' },
 ];
 
-function createSynth(presetId: SynthPresetId): Tone.PolySynth {
+export function createSynth(presetId: SynthPresetId): Tone.PolySynth {
   switch (presetId) {
     case 'piano':
       return new Tone.PolySynth(Tone.Synth, {

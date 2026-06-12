@@ -14,7 +14,7 @@ export interface PersistedState {
   loop: boolean;
   doubleTime: boolean;
   chordComplexity: ChordComplexity;
-  activeTab: 'chords' | 'melodies';
+  activeTab: 'chords' | 'melodies' | 'mix';
 }
 
 export function loadPersistedState(): Partial<PersistedState> {
