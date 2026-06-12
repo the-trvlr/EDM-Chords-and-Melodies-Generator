@@ -2,7 +2,7 @@
 
 A fully offline Progressive Web App (PWA) for generating, previewing, and exporting chord progressions tailored to different EDM genres.
 
-**Live App:** [https://dist-jifnjhbm.devinapps.com](https://dist-jifnjhbm.devinapps.com)
+**Live App:** [https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/](https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/)
 
 ---
 
@@ -14,9 +14,10 @@ A fully offline Progressive Web App (PWA) for generating, previewing, and export
 - Genre-appropriate default BPM, scale, synth preset, and rhythm patterns
 
 ### Key & Scale Selection
-- All 12 keys (C through B)
+- All 12 keys, spelled conventionally per key (flats for flat keys, e.g. Eb/Ab/Bb)
 - 4 scale types: Major, Minor, Harmonic Minor, Melodic Minor
 - Chords transpose automatically when changing key or scale
+- Your selections (key, scale, genre, BPM, etc.) are remembered across reloads
 
 ### Rhythm Patterns
 - **Whole Note** — one chord sustained per full bar (available in every genre)
@@ -57,7 +58,7 @@ A fully offline Progressive Web App (PWA) for generating, previewing, and export
 ## Using the App Offline
 
 ### Option 1: Visit the Hosted Version (Recommended)
-1. Open [https://dist-jifnjhbm.devinapps.com](https://dist-jifnjhbm.devinapps.com) in Chrome, Edge, or Safari
+1. Open [https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/](https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/) in Chrome, Edge, or Safari
 2. The app loads and caches itself automatically via the service worker
 3. **Install as PWA** (optional but recommended for offline use):
    - **Chrome/Edge (Desktop):** Click the install icon in the address bar, or go to Menu (⋮) → "Install EDM Chord Generator"
@@ -68,8 +69,8 @@ A fully offline Progressive Web App (PWA) for generating, previewing, and export
 ### Option 2: Self-Host from Source
 1. Clone the repository:
    ```bash
-   git clone https://github.com/the-trvlr/Chords-New.git
-   cd Chords-New
+   git clone https://github.com/the-trvlr/EDM-Chords-and-Melodies-Generator.git
+   cd EDM-Chords-and-Melodies-Generator
    ```
 2. Install dependencies:
    ```bash

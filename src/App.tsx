@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { GENRES } from './data/genres';
 import type { Genre, RhythmPattern } from './data/genres';
-import { getChordsInKey, getChordNotes } from './utils/musicTheory';
+import { getChordsInKey, getChordNotes, keyPrefersFlats, noteNameToPc, getPreferredKeyName } from './utils/musicTheory';
 import type { ChordInfo, ChordComplexity } from './utils/musicTheory';
 import { initAudio, playChord, playProgression, stopPlayback, setVolume } from './utils/audioEngine';
 import type { SynthPresetId } from './utils/audioEngine';
+import { loadPersistedState, savePersistedState } from './utils/persistence';
 import { exportProgressionToMidi } from './utils/midiExport';
 import { KeySelector } from './components/KeySelector';
 import { GenreSelector } from './components/GenreSelector';
@@ -20,46 +21,65 @@ import { MelodyStudio } from './components/MelodyStudio';
 
 function buildProgression(genre: Genre, progressionIdx: number, key: string, scale: string, complexity: ChordComplexity = 'basic'): ChordInfo[] {
   const scaleChords = getChordsInKey(key, scale, complexity);
+  const useFlats = keyPrefersFlats(noteNameToPc(key), scale);
   const prog = genre.progressions[progressionIdx];
   if (!prog) return [];
 
   return prog.degrees.map((degree, i) => {
     const baseChord = scaleChords[degree];
-    if (!baseChord) return getChordNotes(key, 'minor');
+    if (!baseChord) return getChordNotes(key, 'minor', 4, useFlats);
     if (prog.chordTypes && prog.chordTypes[i]) {
-      return getChordNotes(baseChord.root, prog.chordTypes[i]);
+      return getChordNotes(baseChord.root, prog.chordTypes[i], 4, useFlats);
     }
     return baseChord;
   });
 }
 
+const persisted = loadPersistedState();
+const initialGenre = GENRES.find(g => g.id === persisted.genreId) ?? GENRES[0];
+const initialScale = persisted.selectedScale ?? 'minor';
+const initialKey = getPreferredKeyName(noteNameToPc(persisted.selectedKey ?? 'A'), initialScale);
+
 export default function App() {
   const [audioReady, setAudioReady] = useState(false);
-  const [selectedKey, setSelectedKey] = useState('A');
-  const [selectedScale, setSelectedScale] = useState('minor');
-  const [selectedGenre, setSelectedGenre] = useState<Genre>(GENRES[0]);
-  const [selectedProgressionIdx, setSelectedProgressionIdx] = useState(0);
-  const [selectedRhythm, setSelectedRhythm] = useState<RhythmPattern>(GENRES[0].rhythmPatterns[0]);
-  const [selectedSynth, setSelectedSynth] = useState<SynthPresetId>('pad');
-  const [bpm, setBpm] = useState(GENRES[0].defaultBpm);
-  const [volume, setVolumeState] = useState(-6);
+  const [selectedKey, setSelectedKey] = useState(initialKey);
+  const [selectedScale, setSelectedScale] = useState(initialScale);
+  const [selectedGenre, setSelectedGenre] = useState<Genre>(initialGenre);
+  const [selectedProgressionIdx, setSelectedProgressionIdx] = useState(persisted.selectedProgressionIdx ?? 0);
+  const [selectedRhythm, setSelectedRhythm] = useState<RhythmPattern>(initialGenre.rhythmPatterns[0]);
+  const [selectedSynth, setSelectedSynth] = useState<SynthPresetId>(persisted.selectedSynth ?? 'pad');
+  const [bpm, setBpm] = useState(persisted.bpm ?? initialGenre.defaultBpm);
+  const [volume, setVolumeState] = useState(persisted.volume ?? -6);
   const [activeChordIndex, setActiveChordIndex] = useState(0);
   const [selectedChordForView, setSelectedChordForView] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [loop, setLoop] = useState(true);
-  const [doubleTime, setDoubleTime] = useState(false);
-  const [chordComplexity, setChordComplexity] = useState<ChordComplexity>('basic');
-  const [activeTab, setActiveTab] = useState<'chords' | 'melodies'>('chords');
+  const [loop, setLoop] = useState(persisted.loop ?? true);
+  const [doubleTime, setDoubleTime] = useState(persisted.doubleTime ?? false);
+  const [chordComplexity, setChordComplexity] = useState<ChordComplexity>(persisted.chordComplexity ?? 'basic');
+  const [activeTab, setActiveTab] = useState<'chords' | 'melodies'>(persisted.activeTab ?? 'chords');
   const [customProgression, setCustomProgression] = useState<ChordInfo[] | null>(null);
 
   const availableChords = getChordsInKey(selectedKey, selectedScale, chordComplexity);
   const templateProgression = buildProgression(selectedGenre, selectedProgressionIdx, selectedKey, selectedScale, chordComplexity);
+
+  // Reset custom edits when the underlying configuration changes (render-time
+  // state adjustment — see https://react.dev/learn/you-might-not-need-an-effect).
+  const configKey = `${selectedKey}|${selectedScale}|${selectedGenre.id}|${selectedProgressionIdx}|${chordComplexity}`;
+  const [prevConfigKey, setPrevConfigKey] = useState(configKey);
+  if (configKey !== prevConfigKey) {
+    setPrevConfigKey(configKey);
+    setCustomProgression(null);
+    setSelectedChordForView(null);
+  }
+
   const progression = customProgression || templateProgression;
 
   useEffect(() => {
-    setCustomProgression(null);
-    setSelectedChordForView(null);
-  }, [selectedKey, selectedScale, selectedGenre, selectedProgressionIdx, chordComplexity]);
+    savePersistedState({
+      selectedKey, selectedScale, genreId: selectedGenre.id, selectedProgressionIdx,
+      selectedSynth, bpm, volume, loop, doubleTime, chordComplexity, activeTab,
+    });
+  }, [selectedKey, selectedScale, selectedGenre, selectedProgressionIdx, selectedSynth, bpm, volume, loop, doubleTime, chordComplexity, activeTab]);
 
   const handleInitAudio = useCallback(async () => {
     await initAudio();
@@ -73,6 +93,7 @@ export default function App() {
     setSelectedRhythm(genre.rhythmPatterns[0]);
     setBpm(genre.defaultBpm);
     setSelectedScale(genre.preferredScale);
+    setSelectedKey(k => getPreferredKeyName(noteNameToPc(k), genre.preferredScale));
     setSelectedSynth(genre.synthPreset as SynthPresetId);
   }, [isPlaying]);
 
@@ -97,6 +118,12 @@ export default function App() {
     setIsPlaying(false);
     setActiveChordIndex(0);
   }, []);
+
+  const handleScaleChange = useCallback((scale: string) => {
+    if (isPlaying) handleStop();
+    setSelectedScale(scale);
+    setSelectedKey(k => getPreferredKeyName(noteNameToPc(k), scale));
+  }, [isPlaying, handleStop]);
 
   const handleVolumeChange = useCallback((vol: number) => {
     setVolumeState(vol);
@@ -198,7 +225,7 @@ export default function App() {
                 selectedKey={selectedKey}
                 selectedScale={selectedScale}
                 onKeyChange={(k) => { if (isPlaying) handleStop(); setSelectedKey(k); }}
-                onScaleChange={(s) => { if (isPlaying) handleStop(); setSelectedScale(s); }}
+                onScaleChange={handleScaleChange}
               />
               <GenreSelector selectedGenre={selectedGenre} onGenreChange={handleGenreChange} />
 

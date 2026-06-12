@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import * as Tone from 'tone';
 import type { ChordInfo } from '../utils/musicTheory';
 import { midiNoteToToneName } from '../utils/musicTheory';
@@ -69,6 +69,7 @@ function MelodyPanel({
   const synthRef = useRef<Tone.PolySynth | null>(null);
   const loopRef = useRef<Tone.Loop | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [activeStep, setActiveStep] = useState<number | null>(null);
 
   const stopMelody = useCallback(() => {
     if (loopRef.current) {
@@ -79,6 +80,7 @@ function MelodyPanel({
     Tone.getTransport().stop();
     Tone.getTransport().position = 0;
     setIsPlaying(false);
+    setActiveStep(null);
   }, []);
 
   useEffect(() => {
@@ -113,9 +115,11 @@ function MelodyPanel({
         const name = midiNoteToToneName(note.midi);
         synthRef.current.triggerAttackRelease(name, sixteenthDur * note.duration * 0.9, time);
       }
+      const currentStep = step;
+      Tone.getDraw().schedule(() => setActiveStep(currentStep), time);
       step++;
       if (step >= totalSteps) {
-        Tone.getDraw().schedule(() => setIsPlaying(false), time);
+        Tone.getDraw().schedule(() => { setIsPlaying(false); setActiveStep(null); }, time);
         stopMelody();
       }
     }, '16n');
@@ -205,20 +209,32 @@ function MelodyPanel({
             {chord.display}
           </div>
         ))}
+        {/* Playhead */}
+        {activeStep !== null && (
+          <div
+            className="absolute top-0 bottom-0 w-px bg-white/50"
+            style={{ left: `${(activeStep / totalSteps) * 100}%` }}
+          />
+        )}
         {/* Notes */}
         {melody.notes.map((note, i) => {
           const x = (note.step / totalSteps) * 100;
           const w = (note.duration / totalSteps) * 100;
           const y = ((maxMidi - note.midi) / range) * 80 + 10;
+          const isActive = activeStep !== null && activeStep >= note.step && activeStep < note.step + note.duration;
+          const activeCls = type === 'bass'
+            ? 'bg-orange-300 ring-1 ring-white shadow-[0_0_6px_rgba(255,255,255,0.7)]'
+            : 'bg-cyan-300 ring-1 ring-white shadow-[0_0_6px_rgba(255,255,255,0.7)]';
+          const idleCls = type === 'bass' ? 'bg-orange-400/80' : 'bg-cyan-400/80';
           return (
             <div
               key={i}
-              className={`absolute rounded-sm ${type === 'bass' ? 'bg-orange-400/80' : 'bg-cyan-400/80'}`}
+              className={`absolute rounded-sm transition-all ${isActive ? activeCls : idleCls}`}
               style={{
                 left: `${x}%`,
                 width: `${Math.max(w, 0.5)}%`,
                 top: `${y}%`,
-                height: 6,
+                height: isActive ? 8 : 6,
               }}
             />
           );
@@ -244,16 +260,25 @@ export function MelodyStudio({ progression, rootKey, scaleType, bpm, genreId }: 
   const [bassSeed, setBassSeed] = useState(1);
   const [leadSeed, setLeadSeed] = useState(1);
 
-  // Reset styles when genre changes
-  useEffect(() => {
+  // Reset styles when genre changes (render-time state adjustment instead of an
+  // effect — see https://react.dev/learn/you-might-not-need-an-effect).
+  const [prevGenreId, setPrevGenreId] = useState(genreId);
+  if (genreId !== prevGenreId) {
+    setPrevGenreId(genreId);
     setBassStyleId(bassStyles[0]?.id || '');
     setLeadStyleId(leadStyles[0]?.id || '');
     setBassSeed(s => s + 1);
     setLeadSeed(s => s + 1);
-  }, [genreId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
-  const bassMelody = generateMelody(progression, 'bass', bassStyleId, rootKey, scaleType, bassSeed);
-  const leadMelody = generateMelody(progression, 'lead', leadStyleId, rootKey, scaleType, leadSeed);
+  const bassMelody = useMemo(
+    () => generateMelody(progression, 'bass', bassStyleId, rootKey, scaleType, bassSeed),
+    [progression, bassStyleId, rootKey, scaleType, bassSeed],
+  );
+  const leadMelody = useMemo(
+    () => generateMelody(progression, 'lead', leadStyleId, rootKey, scaleType, leadSeed),
+    [progression, leadStyleId, rootKey, scaleType, leadSeed],
+  );
 
   if (progression.length === 0) {
     return (

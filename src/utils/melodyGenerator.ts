@@ -1,5 +1,5 @@
 import type { ChordInfo } from './musicTheory';
-import { NOTE_NAMES, SCALE_INTERVALS, type NoteName } from './musicTheory';
+import { SCALE_INTERVALS, noteNameToPc } from './musicTheory';
 
 export type MelodyType = 'bass' | 'lead';
 
@@ -46,8 +46,7 @@ class SeededRandom {
 // ──── Scale helpers ────
 
 function getScaleMidiNotes(root: string, scaleType: string, octave: number): number[] {
-  const rootIdx = NOTE_NAMES.indexOf(root as NoteName);
-  if (rootIdx === -1) return [];
+  const rootIdx = noteNameToPc(root);
   const intervals = SCALE_INTERVALS[scaleType] || SCALE_INTERVALS.minor;
   const rootMidi = (octave + 1) * 12 + rootIdx;
   return intervals.map(i => rootMidi + i);
