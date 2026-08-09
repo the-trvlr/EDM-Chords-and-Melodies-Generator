@@ -3,6 +3,7 @@ import MidiWriter from 'midi-writer-js';
 import type { ChordInfo } from './musicTheory';
 import type { RhythmPattern } from '../data/genres';
 import type { GeneratedMelody } from './melodyGenerator';
+import type { DrumPattern } from './drumGenerator';
 
 export function exportProgressionToMidi(
   chords: ChordInfo[],
@@ -168,6 +169,43 @@ function buildMelodyTrack(melody: GeneratedMelody, bpm: number, label: string): 
   return track;
 }
 
+function buildDrumTrack(drums: DrumPattern, bpm: number): MidiWriter.Track {
+  const track = new MidiWriter.Track();
+  track.setTempo(bpm);
+  track.addTrackName('Drums');
+  track.setTimeSignature(4, 4);
+
+  const ticksPer16th = 32;
+  const totalSteps = drums.kick.length;
+
+  for (let step = 0; step < totalSteps; step++) {
+    const stepInPattern = step % 16;
+    const events: Record<string, unknown>[] = [];
+
+    if (drums.kick[stepInPattern]) {
+      events.push({ pitch: 'C1', duration: 'T32', velocity: 100 });
+    }
+    if (drums.snare[stepInPattern]) {
+      events.push({ pitch: 'D1', duration: 'T32', velocity: 90 });
+    }
+    if (drums.clap[stepInPattern]) {
+      events.push({ pitch: 'E1', duration: 'T32', velocity: 85 });
+    }
+    if (drums.hat[stepInPattern]) {
+      events.push({ pitch: 'G#5', duration: 'T32', velocity: 70 });
+    }
+
+    if (events.length > 0) {
+      if (step > 0) {
+        events[0].wait = `T${ticksPer16th}`;
+      }
+      events.forEach(e => track.addEvent(new MidiWriter.NoteEvent(e)));
+    }
+  }
+
+  return track;
+}
+
 export function exportArrangementToMidi(
   chords: ChordInfo[],
   rhythm: RhythmPattern,
@@ -177,12 +215,16 @@ export function exportArrangementToMidi(
   keyName: string,
   scaleName: string,
   doubleTime = false,
+  arpMelody?: GeneratedMelody | null,
+  drums?: DrumPattern | null,
 ): void {
-  const chordTrack = buildChordTrack(chords, bpm, rhythm, doubleTime);
+  const chordTrack = arpMelody ? buildMelodyTrack(arpMelody, bpm, 'Arp Chords') : buildChordTrack(chords, bpm, rhythm, doubleTime);
   const bassTrack = buildMelodyTrack(bass, bpm, 'Bass');
   const leadTrack = buildMelodyTrack(lead, bpm, 'Lead');
+  const drumTrack = drums ? buildDrumTrack(drums, bpm) : null;
 
-  const write = new MidiWriter.Writer([chordTrack, bassTrack, leadTrack]);
+  const tracks = drumTrack ? [chordTrack, bassTrack, leadTrack, drumTrack] : [chordTrack, bassTrack, leadTrack];
+  const write = new MidiWriter.Writer(tracks);
   const dataUri = write.dataUri();
 
   const link = document.createElement('a');
