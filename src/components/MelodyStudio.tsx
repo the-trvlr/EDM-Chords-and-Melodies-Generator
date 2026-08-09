@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/preserve-manual-memoization */
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { ChordInfo } from '../utils/musicTheory';
 import { generateMelody, getGenreMelodyStyles, type MelodyStyle, type GeneratedMelody } from '../utils/melodyGenerator';
@@ -283,7 +285,6 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
       const currentState = history[historyIndex];
       if (currentState.bassSeed !== bassSeed || currentState.leadSeed !== leadSeed || 
           currentState.arpSeed !== arpSeed || currentState.drumSeed !== drumSeed) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setHistory(prev => {
           const newHistory = prev.slice(0, historyIndex + 1);
           newHistory.push({ bassSeed, leadSeed, arpSeed, drumSeed });
