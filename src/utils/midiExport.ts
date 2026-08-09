@@ -177,8 +177,9 @@ export function exportArrangementToMidi(
   keyName: string,
   scaleName: string,
   doubleTime = false,
+  arpMelody?: GeneratedMelody | null,
 ): void {
-  const chordTrack = buildChordTrack(chords, bpm, rhythm, doubleTime);
+  const chordTrack = arpMelody ? buildMelodyTrack(arpMelody, bpm, 'Arp Chords') : buildChordTrack(chords, bpm, rhythm, doubleTime);
   const bassTrack = buildMelodyTrack(bass, bpm, 'Bass');
   const leadTrack = buildMelodyTrack(lead, bpm, 'Lead');
 

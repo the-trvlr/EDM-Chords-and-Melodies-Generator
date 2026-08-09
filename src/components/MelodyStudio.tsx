@@ -7,6 +7,7 @@ import { playArrangement, stopArrangement, setTrackVolume, setTrackMute, setTrac
 import { exportArrangementToMidi } from '../utils/midiExport';
 import { stopPlayback } from '../utils/audioEngine';
 import { SynthSelector } from './SynthSelector';
+import { arpeggiate, type ArpSettings, type ArpPattern, type ArpRate } from '../utils/arpeggiator';
 
 interface MelodyStudioProps {
   progression: ChordInfo[];
@@ -72,6 +73,16 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
   const [bassSeed, setBassSeed] = useState(1);
   const [leadSeed, setLeadSeed] = useState(1);
 
+  // Arpeggiator state
+  const [arpEnabled, setArpEnabled] = useState(false);
+  const [arpSettings, setArpSettings] = useState<ArpSettings>({
+    pattern: 'up',
+    rate: 'eighth',
+    octaveRange: 1,
+    gate: 0.8,
+  });
+  const [arpSeed, setArpSeed] = useState(1);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [rendering, setRendering] = useState(false);
@@ -105,6 +116,12 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
     [progression, leadStyleId, rootKey, scaleType, leadSeed],
   );
 
+  // Arpeggiated chord melody
+  const arpMelody = useMemo(
+    () => arpEnabled ? arpeggiate(progression, arpSettings, arpSeed, STEPS_PER_CHORD) : null,
+    [progression, arpEnabled, arpSettings, arpSeed],
+  );
+
   // Engine start carries no direct setState — playback state is owned by isPlaying
   // and driven via the effect below, so changing inputs mid-play re-syncs the mix.
   const startEngine = useCallback(() => {
@@ -114,13 +131,14 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
       rhythm,
       bass: bassMelody,
       lead: leadMelody,
+      arpMelody,
       synthIds,
       bpm,
       loop,
       onStep: setActiveStep,
       onStop: () => { setIsPlaying(false); setActiveStep(null); },
     });
-  }, [progression, rhythm, bassMelody, leadMelody, synthIds, bpm, loop]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, synthIds, bpm, loop]);
 
   const stop = useCallback(() => {
     stopArrangement();
@@ -167,8 +185,8 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
   }, [progression, rhythm, bassMelody, leadMelody, synthIds, bpm, tracks, rootKey, scaleType]);
 
   const handleExportMultitrackMidi = useCallback(() => {
-    exportArrangementToMidi(progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime);
-  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime]);
+    exportArrangementToMidi(progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody);
+  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody]);
 
   if (progression.length === 0) {
     return (
@@ -258,24 +276,86 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
       </div>
 
       {/* Chord track */}
-      <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-900/50 border border-gray-800">
-        {renderStrip('chord', 'Chords', 'text-purple-300')}
-        <div className="flex-1 flex items-center gap-2">
-          <SynthSelector selectedSynth={synthIds.chord} onSynthChange={(id) => setSynthIds(prev => ({ ...prev, chord: id }))} />
-          <div className="relative flex-1 bg-gray-900 rounded border border-gray-700/50 overflow-hidden flex" style={{ height: 120 }}>
-            {activeStep !== null && (
-              <div className="absolute top-0 bottom-0 w-px bg-white/50 z-10" style={{ left: `${(activeStep / totalSteps) * 100}%` }} />
-            )}
-            {progression.map((chord, i) => (
-              <div
-                key={i}
-                className={`h-full flex items-center justify-center text-xs font-medium border-r border-gray-800 transition-colors ${i === activeChordIdx ? 'bg-purple-500/30 text-white' : 'text-gray-400'}`}
-                style={{ width: `${100 / progression.length}%` }}
-              >
-                {chord.display}
+      <div className="flex flex-col gap-2 p-3 rounded-xl bg-gray-900/50 border border-gray-800">
+        <div className="flex items-center gap-3">
+          {renderStrip('chord', 'Chords', 'text-purple-300')}
+          <div className="flex-1 flex items-center gap-2">
+            <SynthSelector selectedSynth={synthIds.chord} onSynthChange={(id) => setSynthIds(prev => ({ ...prev, chord: id }))} />
+            {arpEnabled && arpMelody ? (
+              <MelodyLane melody={arpMelody} totalSteps={totalSteps} activeStep={activeStep} color="bg-purple-400/80" activeColor="bg-purple-300 ring-1 ring-white" />
+            ) : (
+              <div className="relative flex-1 bg-gray-900 rounded border border-gray-700/50 overflow-hidden flex" style={{ height: 120 }}>
+                {activeStep !== null && (
+                  <div className="absolute top-0 bottom-0 w-px bg-white/50 z-10" style={{ left: `${(activeStep / totalSteps) * 100}%` }} />
+                )}
+                {progression.map((chord, i) => (
+                  <div
+                    key={i}
+                    className={`h-full flex items-center justify-center text-xs font-medium border-r border-gray-800 transition-colors ${i === activeChordIdx ? 'bg-purple-500/30 text-white' : 'text-gray-400'}`}
+                    style={{ width: `${100 / progression.length}%` }}
+                  >
+                    {chord.display}
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
+        </div>
+        {/* Arpeggiator controls */}
+        <div className="flex items-center gap-2 pl-[140px]">
+          <button
+            onClick={() => setArpEnabled(!arpEnabled)}
+            className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${arpEnabled ? 'bg-purple-500/20 border border-purple-500 text-purple-300' : 'border border-gray-700/50 text-gray-400 hover:border-gray-600'}`}
+          >
+            {arpEnabled ? 'Arp: ON' : 'Arp: OFF'}
+          </button>
+          {arpEnabled && (
+            <>
+              <select
+                value={arpSettings.pattern}
+                onChange={e => setArpSettings(prev => ({ ...prev, pattern: e.target.value as ArpPattern }))}
+                className="px-2 py-0.5 rounded text-[11px] bg-gray-800 border border-gray-700 text-gray-300"
+              >
+                <option value="up">Up</option>
+                <option value="down">Down</option>
+                <option value="up-down">Up-Down</option>
+                <option value="random">Random</option>
+              </select>
+              <select
+                value={arpSettings.rate}
+                onChange={e => setArpSettings(prev => ({ ...prev, rate: e.target.value as ArpRate }))}
+                className="px-2 py-0.5 rounded text-[11px] bg-gray-800 border border-gray-700 text-gray-300"
+              >
+                <option value="eighth">1/8</option>
+                <option value="sixteenth">1/16</option>
+              </select>
+              <select
+                value={arpSettings.octaveRange}
+                onChange={e => setArpSettings(prev => ({ ...prev, octaveRange: Number(e.target.value) }))}
+                className="px-2 py-0.5 rounded text-[11px] bg-gray-800 border border-gray-700 text-gray-300"
+              >
+                <option value={1}>1 Oct</option>
+                <option value={2}>2 Oct</option>
+                <option value={3}>3 Oct</option>
+              </select>
+              <input
+                type="range"
+                min="0.5"
+                max="1"
+                step="0.1"
+                value={arpSettings.gate}
+                onChange={e => setArpSettings(prev => ({ ...prev, gate: Number(e.target.value) }))}
+                className="w-16 accent-purple-500"
+              />
+              <span className="text-[10px] text-gray-500">Gate: {arpSettings.gate}</span>
+              <button
+                onClick={() => setArpSeed(s => s + 1)}
+                className="px-2 py-0.5 rounded text-[11px] text-gray-400 hover:text-gray-200 border border-gray-700/50 hover:border-gray-600 transition-all"
+              >
+                Regenerate
+              </button>
+            </>
+          )}
         </div>
       </div>
 

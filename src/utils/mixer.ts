@@ -61,6 +61,7 @@ export interface ArrangementOptions {
   rhythm: RhythmPattern;
   bass: GeneratedMelody;
   lead: GeneratedMelody;
+  arpMelody?: GeneratedMelody | null;
   synthIds: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId };
   bpm: number;
   loop: boolean;
@@ -89,6 +90,10 @@ export function playArrangement(opts: ArrangementOptions): void {
   for (const n of opts.bass.notes) bassMap.set(n.step, n);
   const leadMap = new Map<number, MelodyNote>();
   for (const n of opts.lead.notes) leadMap.set(n.step, n);
+  const arpMap = new Map<number, MelodyNote>();
+  if (opts.arpMelody) {
+    for (const n of opts.arpMelody.notes) arpMap.set(n.step, n);
+  }
 
   const chordNames = opts.chords.map(c => c.midiNotes.map(midiNoteToToneName));
 
@@ -98,14 +103,22 @@ export function playArrangement(opts: ArrangementOptions): void {
     const sic = step % STEPS_PER_CHORD;
     const ps = sic % plen;
 
-    if (pattern[ps]) {
-      let nextHit = plen - ps;
-      for (let i = ps + 1; i < plen; i++) {
-        if (pattern[i]) { nextHit = i - ps; break; }
+    // Play arpeggiated chords if arp is enabled, otherwise play block chords
+    if (opts.arpMelody) {
+      const an = arpMap.get(step);
+      if (an && m.synths.chord) {
+        m.synths.chord.triggerAttackRelease(midiNoteToToneName(an.midi), sixteenth * an.duration * 0.9, time);
       }
-      const names = chordNames[chordIdx];
-      if (names && m.synths.chord) {
-        m.synths.chord.triggerAttackRelease(names, sixteenth * nextHit * 0.9, time);
+    } else {
+      if (pattern[ps]) {
+        let nextHit = plen - ps;
+        for (let i = ps + 1; i < plen; i++) {
+          if (pattern[i]) { nextHit = i - ps; break; }
+        }
+        const names = chordNames[chordIdx];
+        if (names && m.synths.chord) {
+          m.synths.chord.triggerAttackRelease(names, sixteenth * nextHit * 0.9, time);
+        }
       }
     }
 
