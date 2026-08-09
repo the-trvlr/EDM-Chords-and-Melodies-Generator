@@ -3,7 +3,7 @@ import type { ChordInfo } from '../utils/musicTheory';
 import { generateMelody, getGenreMelodyStyles, type MelodyStyle, type GeneratedMelody } from '../utils/melodyGenerator';
 import type { RhythmPattern } from '../data/genres';
 import type { SynthPresetId } from '../utils/audioEngine';
-import { playArrangement, stopArrangement, setTrackVolume, setTrackMute, setTrackSolo, renderArrangementToWav, type TrackId } from '../utils/mixer';
+import { playArrangement, stopArrangement, setTrackVolume, setTrackMute, setTrackSolo, renderArrangementToWav, playTrackPreview, stopTrackPreview, type TrackId } from '../utils/mixer';
 import { exportArrangementToMidi } from '../utils/midiExport';
 import { stopPlayback } from '../utils/audioEngine';
 import { SynthSelector } from './SynthSelector';
@@ -86,6 +86,7 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [rendering, setRendering] = useState(false);
+  const [previewingTrack, setPreviewingTrack] = useState<TrackId | null>(null);
 
   const [tracks, setTracks] = useState<Record<TrackId, TrackState>>({
     chord: initTrack(), bass: initTrack(), lead: initTrack(),
@@ -142,9 +143,29 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
 
   const stop = useCallback(() => {
     stopArrangement();
+    stopTrackPreview();
     setIsPlaying(false);
+    setPreviewingTrack(null);
     setActiveStep(null);
   }, []);
+
+  const handlePreviewTrack = useCallback((trackId: TrackId) => {
+    stopPlayback();
+    stopArrangement();
+    setPreviewingTrack(trackId);
+    playTrackPreview({
+      chords: progression,
+      rhythm,
+      bass: bassMelody,
+      lead: leadMelody,
+      arpMelody,
+      synthIds,
+      bpm,
+      trackId,
+      onStep: setActiveStep,
+      onStop: () => { setPreviewingTrack(null); setActiveStep(null); },
+    });
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, synthIds, bpm]);
 
   // (Re)start whenever playing or when the musical content changes mid-playback.
   useEffect(() => {
@@ -299,6 +320,13 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
                 ))}
               </div>
             )}
+            <button
+              onClick={() => handlePreviewTrack('chord')}
+              disabled={previewingTrack === 'chord' || isPlaying}
+              className="px-3 py-1.5 rounded text-xs font-semibold border border-gray-700 text-gray-200 hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+            >
+              {previewingTrack === 'chord' ? 'Playing...' : 'Preview'}
+            </button>
           </div>
         </div>
         {/* Arpeggiator controls */}
@@ -366,6 +394,13 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
           <div className="flex-1 flex items-center gap-2">
             <SynthSelector selectedSynth={synthIds.bass} onSynthChange={(id) => setSynthIds(prev => ({ ...prev, bass: id }))} />
             <MelodyLane melody={bassMelody} totalSteps={totalSteps} activeStep={activeStep} color="bg-orange-400/80" activeColor="bg-orange-300 ring-1 ring-white" />
+            <button
+              onClick={() => handlePreviewTrack('bass')}
+              disabled={previewingTrack === 'bass' || isPlaying}
+              className="px-3 py-1.5 rounded text-xs font-semibold border border-gray-700 text-gray-200 hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+            >
+              {previewingTrack === 'bass' ? 'Playing...' : 'Preview'}
+            </button>
           </div>
         </div>
         {styleButtons(bassStyles, bassStyleId, setBassStyleId, () => setBassSeed(s => s + 1))}
@@ -378,6 +413,13 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
           <div className="flex-1 flex items-center gap-2">
             <SynthSelector selectedSynth={synthIds.lead} onSynthChange={(id) => setSynthIds(prev => ({ ...prev, lead: id }))} />
             <MelodyLane melody={leadMelody} totalSteps={totalSteps} activeStep={activeStep} color="bg-cyan-400/80" activeColor="bg-cyan-300 ring-1 ring-white" />
+            <button
+              onClick={() => handlePreviewTrack('lead')}
+              disabled={previewingTrack === 'lead' || isPlaying}
+              className="px-3 py-1.5 rounded text-xs font-semibold border border-gray-700 text-gray-200 hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+            >
+              {previewingTrack === 'lead' ? 'Playing...' : 'Preview'}
+            </button>
           </div>
         </div>
         {styleButtons(leadStyles, leadStyleId, setLeadStyleId, () => setLeadSeed(s => s + 1))}

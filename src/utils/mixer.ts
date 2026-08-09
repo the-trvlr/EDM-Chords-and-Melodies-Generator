@@ -69,6 +69,19 @@ export interface ArrangementOptions {
   onStop?: () => void;
 }
 
+export interface TrackPreviewOptions {
+  chords: ChordInfo[];
+  rhythm: RhythmPattern;
+  bass: GeneratedMelody;
+  lead: GeneratedMelody;
+  arpMelody?: GeneratedMelody | null;
+  synthIds: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId };
+  bpm: number;
+  trackId: TrackId;
+  onStep?: (step: number) => void;
+  onStop?: () => void;
+}
+
 export function playArrangement(opts: ArrangementOptions): void {
   stopArrangement();
   const m = ensureMixer();
@@ -164,6 +177,95 @@ export function stopArrangement(): void {
 
 export function isArrangementPlaying(): boolean {
   return arrPlaying;
+}
+
+let previewLoop: Tone.Loop | null = null;
+let previewPlaying = false;
+
+export function playTrackPreview(opts: TrackPreviewOptions): void {
+  stopTrackPreview();
+  stopArrangement();
+  const m = ensureMixer();
+  Tone.getTransport().bpm.value = opts.bpm;
+
+  // Only create synth for the previewed track
+  disposeSynths(m);
+  const synth = createTrackSynth(opts.trackId, opts.synthIds[opts.trackId]);
+  synth.connect(m.channels[opts.trackId]);
+  m.synths[opts.trackId] = synth;
+
+  const totalSteps = opts.chords.length * STEPS_PER_CHORD;
+  const sixteenth = Tone.Time('16n').toSeconds();
+  const pattern = opts.rhythm.pattern;
+  const plen = pattern.length;
+
+  let step = 0;
+  previewLoop = new Tone.Loop((time) => {
+    const chordIdx = Math.floor(step / STEPS_PER_CHORD);
+    const sic = step % STEPS_PER_CHORD;
+    const ps = sic % plen;
+
+    if (opts.trackId === 'chord') {
+      // Play arpeggiated chords if arp is enabled, otherwise play block chords
+      if (opts.arpMelody) {
+        const an = opts.arpMelody.notes.find(n => n.step === step);
+        if (an && m.synths.chord) {
+          m.synths.chord.triggerAttackRelease(midiNoteToToneName(an.midi), sixteenth * an.duration * 0.9, time);
+        }
+      } else {
+        if (pattern[ps]) {
+          let nextHit = plen - ps;
+          for (let i = ps + 1; i < plen; i++) {
+            if (pattern[i]) { nextHit = i - ps; break; }
+          }
+          const chordNames = opts.chords.map(c => c.midiNotes.map(midiNoteToToneName));
+          const names = chordNames[chordIdx];
+          if (names && m.synths.chord) {
+            m.synths.chord.triggerAttackRelease(names, sixteenth * nextHit * 0.9, time);
+          }
+        }
+      }
+    } else if (opts.trackId === 'bass') {
+      const bn = opts.bass.notes.find(n => n.step === step);
+      if (bn && m.synths.bass) {
+        m.synths.bass.triggerAttackRelease(midiNoteToToneName(bn.midi), sixteenth * bn.duration * 0.9, time);
+      }
+    } else if (opts.trackId === 'lead') {
+      const ln = opts.lead.notes.find(n => n.step === step);
+      if (ln && m.synths.lead) {
+        m.synths.lead.triggerAttackRelease(midiNoteToToneName(ln.midi), sixteenth * ln.duration * 0.9, time);
+      }
+    }
+
+    const currentStep = step;
+    if (opts.onStep) Tone.getDraw().schedule(() => opts.onStep!(currentStep), time);
+
+    step++;
+    if (step >= totalSteps) {
+      Tone.getDraw().schedule(() => { if (opts.onStop) opts.onStop(); }, time);
+      stopTrackPreview();
+    }
+  }, '16n');
+
+  if (opts.onStep) opts.onStep(0);
+  previewLoop.start(0);
+  Tone.getTransport().start();
+  previewPlaying = true;
+}
+
+export function stopTrackPreview(): void {
+  if (previewLoop) {
+    previewLoop.stop();
+    previewLoop.dispose();
+    previewLoop = null;
+  }
+  Tone.getTransport().stop();
+  Tone.getTransport().position = 0;
+  previewPlaying = false;
+}
+
+export function isTrackPreviewPlaying(): boolean {
+  return previewPlaying;
 }
 
 export function setTrackVolume(track: TrackId, db: number): void {
