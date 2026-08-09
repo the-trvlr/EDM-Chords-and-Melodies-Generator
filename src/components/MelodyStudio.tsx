@@ -8,6 +8,8 @@ import { exportArrangementToMidi } from '../utils/midiExport';
 import { stopPlayback } from '../utils/audioEngine';
 import { SynthSelector } from './SynthSelector';
 import { arpeggiate, type ArpSettings, type ArpPattern, type ArpRate } from '../utils/arpeggiator';
+import { generateDrums } from '../utils/drumGenerator';
+import { DRUM_KITS, type DrumKitId } from '../data/drumKits';
 
 interface MelodyStudioProps {
   progression: ChordInfo[];
@@ -83,19 +85,24 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
   });
   const [arpSeed, setArpSeed] = useState(1);
 
+  // Drum state
+  const [drumKitId, setDrumKitId] = useState<DrumKitId>('acoustic');
+  const [drumSeed, setDrumSeed] = useState(1);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [rendering, setRendering] = useState(false);
   const [previewingTrack, setPreviewingTrack] = useState<TrackId | null>(null);
 
   const [tracks, setTracks] = useState<Record<TrackId, TrackState>>({
-    chord: initTrack(), bass: initTrack(), lead: initTrack(),
+    chord: initTrack(), bass: initTrack(), lead: initTrack(), drums: initTrack(),
   });
 
-  const [synthIds, setSynthIds] = useState<{ chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId }>({
+  const [synthIds, setSynthIds] = useState<{ chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId; drums: SynthPresetId }>({
     chord: chordSynthId,
     bass: 'pluck',
     lead: 'supersaw',
+    drums: 'piano',
   });
 
   // Reset melody styles when genre changes (render-time state adjustment).
@@ -123,6 +130,12 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
     [progression, arpEnabled, arpSettings, arpSeed],
   );
 
+  // Drum pattern
+  const drumPattern = useMemo(
+    () => generateDrums(genreId, progression.length, drumSeed),
+    [genreId, progression.length, drumSeed],
+  );
+
   // Engine start carries no direct setState — playback state is owned by isPlaying
   // and driven via the effect below, so changing inputs mid-play re-syncs the mix.
   const startEngine = useCallback(() => {
@@ -133,13 +146,14 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
       bass: bassMelody,
       lead: leadMelody,
       arpMelody,
+      drums: drumPattern,
       synthIds,
       bpm,
       loop,
       onStep: setActiveStep,
       onStop: () => { setIsPlaying(false); setActiveStep(null); },
     });
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, synthIds, bpm, loop]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, synthIds, bpm, loop]);
 
   const stop = useCallback(() => {
     stopArrangement();
@@ -159,13 +173,14 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
       bass: bassMelody,
       lead: leadMelody,
       arpMelody,
+      drums: drumPattern,
       synthIds,
       bpm,
       trackId,
       onStep: setActiveStep,
       onStop: () => { setPreviewingTrack(null); setActiveStep(null); },
     });
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, synthIds, bpm]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, synthIds, bpm]);
 
   // (Re)start whenever playing or when the musical content changes mid-playback.
   useEffect(() => {
@@ -206,8 +221,8 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
   }, [progression, rhythm, bassMelody, leadMelody, synthIds, bpm, tracks, rootKey, scaleType]);
 
   const handleExportMultitrackMidi = useCallback(() => {
-    exportArrangementToMidi(progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody);
-  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody]);
+    exportArrangementToMidi(progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern);
+  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern]);
 
   if (progression.length === 0) {
     return (
@@ -423,6 +438,90 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
           </div>
         </div>
         {styleButtons(leadStyles, leadStyleId, setLeadStyleId, () => setLeadSeed(s => s + 1))}
+      </div>
+
+      {/* Drums track */}
+      <div className="flex flex-col gap-2 p-3 rounded-xl bg-gray-900/50 border border-gray-800">
+        <div className="flex items-center gap-3">
+          {renderStrip('drums', 'Drums', 'text-red-300')}
+          <div className="flex-1 flex items-center gap-2">
+            <div className="relative flex-1 bg-gray-900 rounded border border-gray-700/50 overflow-hidden flex" style={{ height: 120 }}>
+              {activeStep !== null && (
+                <div className="absolute top-0 bottom-0 w-px bg-white/50 z-10" style={{ left: `${(activeStep / totalSteps) * 100}%` }} />
+              )}
+              <div className="flex-1 flex flex-col gap-0.5 p-2">
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-gray-500 w-8">Kick</span>
+                  <div className="flex-1 flex gap-0.5">
+                    {drumPattern.kick.slice(0, 16).map((v, i) => (
+                      <div
+                        key={i}
+                        className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-red-400' : 'bg-gray-800'} ${activeStep === i ? 'ring-1 ring-white' : ''}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-gray-500 w-8">Snare</span>
+                  <div className="flex-1 flex gap-0.5">
+                    {drumPattern.snare.slice(0, 16).map((v, i) => (
+                      <div
+                        key={i}
+                        className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-orange-400' : 'bg-gray-800'} ${activeStep === i ? 'ring-1 ring-white' : ''}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-gray-500 w-8">Clap</span>
+                  <div className="flex-1 flex gap-0.5">
+                    {drumPattern.clap.slice(0, 16).map((v, i) => (
+                      <div
+                        key={i}
+                        className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-yellow-400' : 'bg-gray-800'} ${activeStep === i ? 'ring-1 ring-white' : ''}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-gray-500 w-8">Hat</span>
+                  <div className="flex-1 flex gap-0.5">
+                    {drumPattern.hat.slice(0, 16).map((v, i) => (
+                      <div
+                        key={i}
+                        className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-green-400' : 'bg-gray-800'} ${activeStep === i ? 'ring-1 ring-white' : ''}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => handlePreviewTrack('drums')}
+              disabled={previewingTrack === 'drums' || isPlaying}
+              className="px-3 py-1.5 rounded text-xs font-semibold border border-gray-700 text-gray-200 hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+            >
+              {previewingTrack === 'drums' ? 'Playing...' : 'Preview'}
+            </button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 pl-[140px]">
+          <select
+            value={drumKitId}
+            onChange={e => setDrumKitId(e.target.value as DrumKitId)}
+            className="px-2 py-0.5 rounded text-[11px] bg-gray-800 border border-gray-700 text-gray-300"
+          >
+            {DRUM_KITS.map(kit => (
+              <option key={kit.id} value={kit.id}>{kit.name}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => setDrumSeed(s => s + 1)}
+            className="px-2 py-0.5 rounded text-[11px] text-gray-400 hover:text-gray-200 border border-gray-700/50 hover:border-gray-600 transition-all"
+          >
+            Regenerate
+          </button>
+        </div>
       </div>
     </div>
   );

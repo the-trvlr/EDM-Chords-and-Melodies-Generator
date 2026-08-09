@@ -3,10 +3,11 @@ import type { ChordInfo } from './musicTheory';
 import { midiNoteToToneName } from './musicTheory';
 import type { RhythmPattern } from '../data/genres';
 import type { GeneratedMelody, MelodyNote } from './melodyGenerator';
+import type { DrumPattern } from './drumGenerator';
 import { createSynth, type SynthPresetId } from './audioEngine';
 
-export type TrackId = 'chord' | 'bass' | 'lead';
-export const TRACK_IDS: TrackId[] = ['chord', 'bass', 'lead'];
+export type TrackId = 'chord' | 'bass' | 'lead' | 'drums';
+export const TRACK_IDS: TrackId[] = ['chord', 'bass', 'lead', 'drums'];
 
 const STEPS_PER_CHORD = 16; // melodies are generated on a fixed 16-step (1 bar) grid
 
@@ -28,8 +29,9 @@ function ensureMixer(): MixerNodes {
     chord: new Tone.Channel({ volume: 0 }).connect(reverb),
     bass: new Tone.Channel({ volume: 0 }).connect(reverb),
     lead: new Tone.Channel({ volume: 0 }).connect(reverb),
+    drums: new Tone.Channel({ volume: 0 }).connect(reverb),
   };
-  mixer = { reverb, channels, synths: { chord: null, bass: null, lead: null } };
+  mixer = { reverb, channels, synths: { chord: null, bass: null, lead: null, drums: null } };
   return mixer;
 }
 
@@ -49,6 +51,14 @@ function createTrackSynth(track: TrackId, chordSynthId: SynthPresetId): Tone.Pol
       volume: -8,
     });
   }
+  if (track === 'drums') {
+    // Return a placeholder synth for drums - actual drum sounds will be synthesized
+    return new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'square' },
+      envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 },
+      volume: -5,
+    });
+  }
   return new Tone.PolySynth(Tone.Synth, {
     oscillator: { type: 'triangle8' },
     envelope: { attack: 0.01, decay: 0.15, sustain: 0.3, release: 0.8 },
@@ -62,7 +72,8 @@ export interface ArrangementOptions {
   bass: GeneratedMelody;
   lead: GeneratedMelody;
   arpMelody?: GeneratedMelody | null;
-  synthIds: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId };
+  drums?: DrumPattern | null;
+  synthIds: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId; drums: SynthPresetId };
   bpm: number;
   loop: boolean;
   onStep?: (step: number) => void;
@@ -75,7 +86,8 @@ export interface TrackPreviewOptions {
   bass: GeneratedMelody;
   lead: GeneratedMelody;
   arpMelody?: GeneratedMelody | null;
-  synthIds: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId };
+  drums?: DrumPattern | null;
+  synthIds: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId; drums: SynthPresetId };
   bpm: number;
   trackId: TrackId;
   onStep?: (step: number) => void;
@@ -142,6 +154,23 @@ export function playArrangement(opts: ArrangementOptions): void {
     const ln = leadMap.get(step);
     if (ln && m.synths.lead) {
       m.synths.lead.triggerAttackRelease(midiNoteToToneName(ln.midi), sixteenth * ln.duration * 0.9, time);
+    }
+
+    // Play drums if pattern is provided
+    if (opts.drums && m.synths.drums) {
+      const stepInPattern = step % 16;
+      if (opts.drums.kick[stepInPattern]) {
+        m.synths.drums.triggerAttackRelease('C1', sixteenth * 0.8, time);
+      }
+      if (opts.drums.snare[stepInPattern]) {
+        m.synths.drums.triggerAttackRelease('D1', sixteenth * 0.6, time);
+      }
+      if (opts.drums.clap[stepInPattern]) {
+        m.synths.drums.triggerAttackRelease('E1', sixteenth * 0.5, time);
+      }
+      if (opts.drums.hat[stepInPattern]) {
+        m.synths.drums.triggerAttackRelease('G#5', sixteenth * 0.3, time);
+      }
     }
 
     const currentStep = step;
@@ -234,6 +263,20 @@ export function playTrackPreview(opts: TrackPreviewOptions): void {
       const ln = opts.lead.notes.find(n => n.step === step);
       if (ln && m.synths.lead) {
         m.synths.lead.triggerAttackRelease(midiNoteToToneName(ln.midi), sixteenth * ln.duration * 0.9, time);
+      }
+    } else if (opts.trackId === 'drums' && opts.drums) {
+      const stepInPattern = step % 16;
+      if (opts.drums.kick[stepInPattern]) {
+        m.synths.drums?.triggerAttackRelease('C1', sixteenth * 0.8, time);
+      }
+      if (opts.drums.snare[stepInPattern]) {
+        m.synths.drums?.triggerAttackRelease('D1', sixteenth * 0.6, time);
+      }
+      if (opts.drums.clap[stepInPattern]) {
+        m.synths.drums?.triggerAttackRelease('E1', sixteenth * 0.5, time);
+      }
+      if (opts.drums.hat[stepInPattern]) {
+        m.synths.drums?.triggerAttackRelease('G#5', sixteenth * 0.3, time);
       }
     }
 
@@ -347,6 +390,7 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
       chord: createTrackSynth('chord', opts.synthIds.chord).connect(verb),
       bass: createTrackSynth('bass', opts.synthIds.bass).connect(verb),
       lead: createTrackSynth('lead', opts.synthIds.lead).connect(verb),
+      drums: createTrackSynth('drums', opts.synthIds.chord).connect(verb),
     };
     for (const id of TRACK_IDS) synths[id].volume.value += opts.tracks[id].volume;
 
