@@ -3,7 +3,7 @@ import type { ChordInfo } from '../utils/musicTheory';
 import { generateMelody, getGenreMelodyStyles, type MelodyStyle, type GeneratedMelody } from '../utils/melodyGenerator';
 import type { RhythmPattern } from '../data/genres';
 import type { SynthPresetId } from '../utils/audioEngine';
-import { playArrangement, stopArrangement, setTrackVolume, setTrackMute, setTrackSolo, renderArrangementToWav, playTrackPreview, stopTrackPreview, type TrackId } from '../utils/mixer';
+import { playArrangement, stopArrangement, setTrackVolume, setTrackMute, setTrackSolo, renderArrangementToWav, playTrackPreview, stopTrackPreview, updateDrumKit, type TrackId } from '../utils/mixer';
 import { exportArrangementToMidi } from '../utils/midiExport';
 import { stopPlayback } from '../utils/audioEngine';
 import { SynthSelector } from './SynthSelector';
@@ -224,7 +224,28 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
   }, [saveName, rootKey, scaleType, genreId, bpm, bassStyleId, leadStyleId, bassSeed, leadSeed, arpEnabled, arpSettings, arpSeed, drumKitId, drumSeed, synthIds]);
 
   const handleLoadArrangement = useCallback((arrangement: SavedArrangement) => {
-    console.log('Load arrangement:', arrangement);
+    // Restore all state from the saved arrangement
+    const { data } = arrangement;
+    setBassStyleId(data.bassStyleId);
+    setLeadStyleId(data.leadStyleId);
+    setBassSeed(data.bassSeed);
+    setLeadSeed(data.leadSeed);
+    setArpEnabled(data.arpEnabled);
+    setArpSettings(data.arpSettings);
+    setArpSeed(data.arpSeed);
+    setDrumKitId(data.drumKitId);
+    setDrumSeed(data.drumSeed);
+    setSynthIds(data.synthIds);
+    
+    // Reset history with loaded state
+    setHistory([{ 
+      bassSeed: data.bassSeed, 
+      leadSeed: data.leadSeed, 
+      arpSeed: data.arpSeed, 
+      drumSeed: data.drumSeed 
+    }]);
+    setHistoryIndex(0);
+    
     setShowLoadDialog(false);
   }, []);
 
@@ -324,6 +345,11 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
     });
   }, [tracks]);
 
+  // Update drum kit when drumKitId changes
+  useEffect(() => {
+    updateDrumKit(drumKitId);
+  }, [drumKitId]);
+
   const updateTrack = useCallback((id: TrackId, patch: Partial<TrackState>) => {
     setTracks(prev => ({ ...prev, [id]: { ...prev[id], ...patch } }));
   }, []);
@@ -333,6 +359,7 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
     try {
       const blob = await renderArrangementToWav({
         chords: progression, rhythm, bass: bassMelody, lead: leadMelody,
+        drums: drumPattern,
         synthIds, bpm, tracks,
       });
       const url = URL.createObjectURL(blob);
@@ -344,7 +371,7 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
     } finally {
       setRendering(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, synthIds, bpm, tracks, rootKey, scaleType]);
+  }, [progression, rhythm, bassMelody, leadMelody, drumPattern, synthIds, bpm, tracks, rootKey, scaleType]);
 
   const handleExportMultitrackMidi = useCallback(() => {
     exportArrangementToMidi(progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern);
@@ -693,7 +720,7 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
                             {drumPattern.kick.slice(0, 16).map((v, i) => (
                               <div
                                 key={i}
-                                className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-red-400' : 'bg-gray-800'} ${activeStep === i ? 'ring-1 ring-white shadow-lg shadow-red-500/50 scale-110' : ''}`}
+                                className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-red-400' : 'bg-gray-800'} ${activeStep !== null && activeStep % 16 === i ? 'ring-1 ring-white shadow-lg shadow-red-500/50 scale-110' : ''}`}
                               />
                             ))}
                           </div>
@@ -704,7 +731,7 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
                             {drumPattern.snare.slice(0, 16).map((v, i) => (
                               <div
                                 key={i}
-                                className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-orange-400' : 'bg-gray-800'} ${activeStep === i ? 'ring-1 ring-white shadow-lg shadow-orange-500/50 scale-110' : ''}`}
+                                className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-orange-400' : 'bg-gray-800'} ${activeStep !== null && activeStep % 16 === i ? 'ring-1 ring-white shadow-lg shadow-orange-500/50 scale-110' : ''}`}
                               />
                             ))}
                           </div>
@@ -715,7 +742,7 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
                             {drumPattern.clap.slice(0, 16).map((v, i) => (
                               <div
                                 key={i}
-                                className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-yellow-400' : 'bg-gray-800'} ${activeStep === i ? 'ring-1 ring-white shadow-lg shadow-yellow-500/50 scale-110' : ''}`}
+                                className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-yellow-400' : 'bg-gray-800'} ${activeStep !== null && activeStep % 16 === i ? 'ring-1 ring-white shadow-lg shadow-yellow-500/50 scale-110' : ''}`}
                               />
                             ))}
                           </div>
@@ -726,7 +753,7 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
                             {drumPattern.hat.slice(0, 16).map((v, i) => (
                               <div
                                 key={i}
-                                className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-green-400' : 'bg-gray-800'} ${activeStep === i ? 'ring-1 ring-white shadow-lg shadow-green-500/50 scale-110' : ''}`}
+                                className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-green-400' : 'bg-gray-800'} ${activeStep !== null && activeStep % 16 === i ? 'ring-1 ring-white shadow-lg shadow-green-500/50 scale-110' : ''}`}
                               />
                             ))}
                           </div>
