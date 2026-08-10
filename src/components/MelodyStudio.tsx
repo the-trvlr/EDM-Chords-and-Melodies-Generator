@@ -215,6 +215,14 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
     if (isPlaying) startEngine();
   }, [isPlaying, startEngine]);
 
+  // Restart arrangement when synthIds change during playback
+  useEffect(() => {
+    if (isPlaying) {
+      stopArrangement();
+      startEngine();
+    }
+  }, [synthIds, isPlaying, startEngine]);
+
   useEffect(() => () => { stopArrangement(); }, []);
 
   const handleSaveArrangement = useCallback(() => {
