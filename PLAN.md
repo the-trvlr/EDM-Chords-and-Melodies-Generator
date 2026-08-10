@@ -9,7 +9,7 @@ A fully-offline PWA (React 19 + TS + Vite 8 + Tailwind 4 + Tone.js + VexFlow + m
 - **Melody Studio** — generate seeded bass + lead melodies per genre style, piano-roll preview + per-track MIDI export.
 - **Full Mix** _(Phase 2, PR #8)_ — unified engine: chords + bass + lead play together on one transport with per-track mute/solo/volume, synced playhead, and WAV export.
 
-Status: Phase 1 (lint/CI, enharmonic spelling, PWA icons, persistence) ✅ · Phase 2 (unified audio engine) ✅.
+Status: Phase 1 (lint/CI, enharmonic spelling, PWA icons, persistence) ✅ · Phase 2 (unified audio engine) ✅ · Phase 3 (Arpeggiator, Drums, Harmony, Workflow & UX) ✅.
 
 ---
 
@@ -104,8 +104,51 @@ The arranger is the home for everything that plays in time. Each new musical ele
 
 ---
 
+## Phase 3 Implementation (Completed)
+
+### 3a — Arpeggiator ✅
+- Implemented deterministic arpeggiator with patterns (up, down, up-down, random)
+- Rate controls (eighth, sixteenth, quarter)
+- Octave range (1-3 octaves)
+- Gate control (0.5-1.0)
+- Toggles between block chords and arpeggiated output
+- Integrated into unified audio engine and MIDI export
+- UI: collapsible section under Chords track with seed-based regeneration
+
+### 3b — Drum/Beat Generator ✅
+- Genre-specific drum pattern presets (House, Techno, Trance, DnB, Dubstep, Future Bass, Progressive House, Hardstyle)
+- 4-instrument grid: kick, snare, clap, hat (16-step)
+- Drum kit selector (acoustic, 909, 808)
+- Seed-based pattern generation with variation
+- Click-to-toggle individual drum notes for custom patterns
+- Reset button to return to generated pattern
+- Integrated into unified audio engine and multitrack MIDI export
+- MIDI export maps to GM drum notes on channel 10
+
+### 3c — Harmony & Musicianship ✅
+- Added chord inversion controls (0, 1, 2 inversions per chord)
+- Auto voice-leading function for smooth chord movement
+- Inversion state persisted in saved arrangements
+
+### 3d — Workflow & UX ✅
+- **Undo/Redo system** for chord progression editing with 50-step history
+- **Keyboard shortcuts**: Cmd/Ctrl+Z (undo), Cmd/Ctrl+Shift+Z or Cmd/Ctrl+Y (redo), Space (play/stop)
+- **Project save/load**: Changed from localStorage to JSON file download/upload for better portability
+- **Shareable preset links**: URL-encoded state parameters for sharing presets via clipboard
+- **Drag-to-reorder chords**: Native drag-and-drop in progression editor with visual feedback
+- **Arrangement save/load**: Local file persistence for full arrangements including all track settings
+
+### Recent Bug Fixes
+- Fixed drum pattern regeneration stuck on default sequence by adding seed-based variation to fallback patterns
+- Fixed share button not providing user feedback - added alert notification with error handling
+- Fixed bass and lead synth selection not affecting playback - added useEffect to restart arrangement when synthIds change during playback
+- Added genre-specific drum presets for all genres (previously only had House, Techno, Trance)
+
+---
+
 ## Resolved (historical) problems
 Phase 1 fixed: broken lint (now in CI), missing PWA icons, sharp-only enharmonic spelling + no key signature, latent flat-root bug, unmemoized melodies, no state persistence, README drift.
 Phase 2 fixed: Melody Studio couldn't layer/sync with chords — now a unified transport with master volume + reverb and Play-All.
+Phase 3 fixed: All Phase 3 features implemented plus drum pattern regeneration, share button feedback, synth selection during playback, and genre-specific drum patterns.
 
-Still open (folded into Phase 3d): bundle size / no code-splitting; no undo for chord edits.
+Still open: bundle size / no code-splitting (≈1.6 MB / ≈828 KB gzip).
