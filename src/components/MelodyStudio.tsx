@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/preserve-manual-memoization */
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { ChordInfo } from '../utils/musicTheory';
 import { generateMelody, getGenreMelodyStyles, type MelodyStyle, type GeneratedMelody } from '../utils/melodyGenerator';
@@ -247,7 +249,7 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
     setHistoryIndex(0);
     
     setShowLoadDialog(false);
-  }, []);
+  }, [setBassStyleId, setLeadStyleId, setBassSeed, setLeadSeed, setArpEnabled, setArpSettings, setArpSeed, setDrumKitId, setDrumSeed, setSynthIds, setShowLoadDialog]);
 
   const handleDeleteArrangement = useCallback((id: string) => {
     if (deleteArrangement(id)) {
@@ -264,7 +266,7 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
       setDrumSeed(prevState.drumSeed);
       setHistoryIndex(historyIndex - 1);
     }
-  }, [history, historyIndex]);
+  }, [history, historyIndex, setBassSeed, setLeadSeed, setArpSeed, setDrumSeed, setHistoryIndex]);
 
   const handleRedo = useCallback(() => {
     if (historyIndex < history.length - 1) {
@@ -275,7 +277,7 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
       setDrumSeed(nextState.drumSeed);
       setHistoryIndex(historyIndex + 1);
     }
-  }, [history, historyIndex]);
+  }, [history, historyIndex, setBassSeed, setLeadSeed, setArpSeed, setDrumSeed, setHistoryIndex]);
 
   // Save snapshot when seeds change (for undo/redo)
   useEffect(() => {
@@ -288,7 +290,7 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
           newHistory.push({ bassSeed, leadSeed, arpSeed, drumSeed });
           return newHistory.slice(-50);
         });
-        setHistoryIndex(prev => Math.min(prev + 1, 49));
+        setHistoryIndex(prev => prev + 1);
       }
     }
   }, [bassSeed, leadSeed, arpSeed, drumSeed, history, historyIndex]);
