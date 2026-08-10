@@ -41,6 +41,10 @@ export interface SavedArrangement {
     drumKitId: DrumKitId;
     drumSeed: number;
     synthIds: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId; drums: SynthPresetId };
+    // Chord inversions (optional for backward compatibility)
+    chordInversions?: number[];
+    // Per-track mixer settings (optional for backward compatibility)
+    mixerSettings?: Record<string, { volume: number; mute: boolean; solo: boolean }>;
   };
 }
 
