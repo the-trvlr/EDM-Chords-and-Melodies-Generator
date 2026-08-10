@@ -8,6 +8,8 @@ import { initAudio, playChord, playProgression, stopPlayback, setVolume } from '
 import type { SynthPresetId } from './utils/audioEngine';
 import { stopArrangement } from './utils/mixer';
 import { loadPersistedState, savePersistedState, loadProject, encodeShareablePreset, decodeShareablePreset, type ShareablePreset } from './utils/persistence';
+import type { ArpPattern, ArpRate } from './utils/arpeggiator';
+import type { DrumKitId } from './data/drumKits';
 import { exportProgressionToMidi } from './utils/midiExport';
 import { KeySelector } from './components/KeySelector';
 import { GenreSelector } from './components/GenreSelector';
@@ -63,6 +65,20 @@ export default function App() {
   const [progressionHistory, setProgressionHistory] = useState<ChordInfo[][]>([]);
   const [progressionHistoryIndex, setProgressionHistoryIndex] = useState(-1);
 
+  // Melody Studio persisted state
+  const [melodyStudioState, setMelodyStudioState] = useState({
+    bassStyleId: persisted.bassStyleId || '',
+    leadStyleId: persisted.leadStyleId || '',
+    bassSeed: persisted.bassSeed || 1,
+    leadSeed: persisted.leadSeed || 1,
+    arpEnabled: persisted.arpEnabled || false,
+    arpSettings: persisted.arpSettings || { pattern: 'up' as const, rate: 'eighth' as const, octaveRange: 1, gate: 0.8 },
+    arpSeed: persisted.arpSeed || 1,
+    drumKitId: persisted.drumKitId || 'acoustic',
+    drumSeed: persisted.drumSeed || 1,
+    synthIds: persisted.synthIds || { chord: 'pad' as const, bass: 'pluck' as const, lead: 'supersaw' as const, drums: 'piano' as const },
+  });
+
   // Check for shared preset in URL on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -79,6 +95,31 @@ export default function App() {
         setBpm(decoded.b);
         setChordComplexity(decoded.c as ChordComplexity);
         setSelectedRhythm(genre.rhythmPatterns.find(r => r.name === decoded.r) ?? genre.rhythmPatterns[0]);
+        // Restore Melody Studio state if present
+        if (decoded.bs || decoded.ls || decoded.si) {
+          setMelodyStudioState({
+            bassStyleId: decoded.bs || '',
+            leadStyleId: decoded.ls || '',
+            bassSeed: decoded.bsd || 1,
+            leadSeed: decoded.lsd || 1,
+            arpEnabled: decoded.ae || false,
+            arpSettings: decoded.as ? {
+              pattern: decoded.as.pattern as ArpPattern,
+              rate: decoded.as.rate as ArpRate,
+              octaveRange: decoded.as.octaveRange,
+              gate: decoded.as.gate,
+            } : { pattern: 'up' as const, rate: 'eighth' as const, octaveRange: 1, gate: 0.8 },
+            arpSeed: decoded.asd || 1,
+            drumKitId: (decoded.dk || 'acoustic') as DrumKitId,
+            drumSeed: decoded.dsd || 1,
+            synthIds: decoded.si ? {
+              chord: decoded.si.chord as SynthPresetId,
+              bass: decoded.si.bass as SynthPresetId,
+              lead: decoded.si.lead as SynthPresetId,
+              drums: decoded.si.drums as SynthPresetId,
+            } : { chord: 'pad' as const, bass: 'pluck' as const, lead: 'supersaw' as const, drums: 'piano' as const },
+          });
+        }
         // Clear URL params
         window.history.replaceState({}, '', window.location.pathname);
       }
@@ -160,6 +201,17 @@ export default function App() {
       b: bpm,
       c: chordComplexity,
       r: selectedRhythm.name,
+      // Melody Studio state
+      bs: melodyStudioState.bassStyleId,
+      ls: melodyStudioState.leadStyleId,
+      bsd: melodyStudioState.bassSeed,
+      lsd: melodyStudioState.leadSeed,
+      ae: melodyStudioState.arpEnabled,
+      as: melodyStudioState.arpSettings,
+      asd: melodyStudioState.arpSeed,
+      dk: melodyStudioState.drumKitId,
+      dsd: melodyStudioState.drumSeed,
+      si: melodyStudioState.synthIds,
     };
     const encoded = encodeShareablePreset(preset);
     const url = `${window.location.origin}${window.location.pathname}?preset=${encoded}`;
@@ -169,7 +221,7 @@ export default function App() {
       console.error('Failed to copy:', err);
       alert('Failed to copy link. Please try again.');
     });
-  }, [selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth, bpm, chordComplexity, selectedRhythm.name]);
+  }, [selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth, bpm, chordComplexity, selectedRhythm.name, melodyStudioState]);
 
   const availableChords = getChordsInKey(selectedKey, selectedScale, chordComplexity);
   const templateProgression = buildProgression(selectedGenre, selectedProgressionIdx, selectedKey, selectedScale, chordComplexity);
@@ -205,8 +257,9 @@ export default function App() {
     savePersistedState({
       selectedKey, selectedScale, genreId: selectedGenre.id, selectedProgressionIdx,
       selectedSynth, bpm, volume, loop, doubleTime, chordComplexity, activeTab,
+      ...melodyStudioState,
     });
-  }, [selectedKey, selectedScale, selectedGenre, selectedProgressionIdx, selectedSynth, bpm, volume, loop, doubleTime, chordComplexity, activeTab]);
+  }, [selectedKey, selectedScale, selectedGenre, selectedProgressionIdx, selectedSynth, bpm, volume, loop, doubleTime, chordComplexity, activeTab, melodyStudioState]);
 
   const handleInitAudio = useCallback(async () => {
     await initAudio();
@@ -596,6 +649,17 @@ export default function App() {
             chordSynthId={selectedSynth}
             loop={loop}
             doubleTime={doubleTime}
+            persistedBassStyleId={melodyStudioState.bassStyleId}
+            persistedLeadStyleId={melodyStudioState.leadStyleId}
+            persistedBassSeed={melodyStudioState.bassSeed}
+            persistedLeadSeed={melodyStudioState.leadSeed}
+            persistedArpEnabled={melodyStudioState.arpEnabled}
+            persistedArpSettings={melodyStudioState.arpSettings}
+            persistedArpSeed={melodyStudioState.arpSeed}
+            persistedDrumKitId={melodyStudioState.drumKitId}
+            persistedDrumSeed={melodyStudioState.drumSeed}
+            persistedSynthIds={melodyStudioState.synthIds}
+            onSaveState={setMelodyStudioState}
           />
         )}
       </main>
