@@ -104,6 +104,121 @@ const DRUM_PRESETS: DrumPatternPreset[] = [
       hat: [1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0],
     },
   },
+  // DnB patterns
+  {
+    id: 'dnb-liquid',
+    name: 'Liquid DnB',
+    genreId: 'dnb',
+    pattern: {
+      kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+    },
+  },
+  {
+    id: 'dnb-breakbeat',
+    name: 'Breakbeat',
+    genreId: 'dnb',
+    pattern: {
+      kick: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0],
+      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      hat: [0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1],
+    },
+  },
+  // Dubstep patterns
+  {
+    id: 'dubstep-half',
+    name: 'Dubstep Half-time',
+    genreId: 'dubstep',
+    pattern: {
+      kick: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      snare: [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+    },
+  },
+  {
+    id: 'dubstep-wobble',
+    name: 'Wobble',
+    genreId: 'dubstep',
+    pattern: {
+      kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      snare: [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+    },
+  },
+  // Future Bass patterns
+  {
+    id: 'futurebass-kawaii',
+    name: 'Kawaii Future Bass',
+    genreId: 'futureBass',
+    pattern: {
+      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+    },
+  },
+  {
+    id: 'futurebass-chill',
+    name: 'Chill Future Bass',
+    genreId: 'futureBass',
+    pattern: {
+      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+    },
+  },
+  // Progressive House patterns
+  {
+    id: 'prog-house-building',
+    name: 'Building Prog',
+    genreId: 'progressiveHouse',
+    pattern: {
+      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+    },
+  },
+  {
+    id: 'prog-house-pluck',
+    name: 'Pluck Prog',
+    genreId: 'progressiveHouse',
+    pattern: {
+      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+    },
+  },
+  // Hardstyle patterns
+  {
+    id: 'hardstyle-euphoric',
+    name: 'Euphoric Hardstyle',
+    genreId: 'hardstyle',
+    pattern: {
+      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+    },
+  },
+  {
+    id: 'hardstyle-raw',
+    name: 'Raw Hardstyle',
+    genreId: 'hardstyle',
+    pattern: {
+      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      hat: [0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1],
+    },
+  },
 ];
 
 export function getDrumPatternsForGenre(genreId: string): DrumPatternPreset[] {
@@ -117,20 +232,39 @@ export function generateDrums(
 ): DrumPattern {
   const rng = new SeededRandom(seed);
   const presets = getDrumPatternsForGenre(genreId);
-  
+
   if (presets.length === 0) {
-    // Fallback to a basic pattern
-    return {
-      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    };
+    // Fallback to a basic pattern with variation based on seed
+    const kick: number[] = [];
+    const snare: number[] = [];
+    const clap: number[] = [];
+    const hat: number[] = [];
+
+    for (let bar = 0; bar < bars; bar++) {
+      kick.push(...[1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0].map((v) => {
+        if (rng.chance(0.1)) return 0;
+        return v;
+      }));
+      snare.push(...[0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0].map((v) => {
+        if (rng.chance(0.2)) return 1;
+        return v;
+      }));
+      clap.push(...[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].map((v) => {
+        if (rng.chance(0.1)) return 1;
+        return v;
+      }));
+      hat.push(...[0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1].map((v) => {
+        if (rng.chance(0.3)) return 1;
+        return v;
+      }));
+    }
+
+    return { kick, snare, clap, hat };
   }
 
   const preset = rng.pick(presets);
   const basePattern = preset.pattern;
-  
+
   // Extend pattern for multiple bars
   const kick: number[] = [];
   const snare: number[] = [];
@@ -140,7 +274,7 @@ export function generateDrums(
   for (let bar = 0; bar < bars; bar++) {
     // Add some variation based on seed
     const variation = rng.chance(0.3);
-    
+
     kick.push(...basePattern.kick.map((v) => {
       if (variation && rng.chance(0.2)) return 0;
       return v;

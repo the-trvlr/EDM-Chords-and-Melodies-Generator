@@ -11,7 +11,7 @@ import { stopPlayback } from '../utils/audioEngine';
 import { SynthSelector } from './SynthSelector';
 import { getSavedArrangements, saveArrangement, deleteArrangement, type SavedArrangement } from '../utils/persistence';
 import { arpeggiate, type ArpSettings, type ArpPattern, type ArpRate } from '../utils/arpeggiator';
-import { generateDrums } from '../utils/drumGenerator';
+import { generateDrums, type DrumPattern } from '../utils/drumGenerator';
 import { DRUM_KITS, type DrumKitId } from '../data/drumKits';
 
 interface MelodyStudioProps {
@@ -91,6 +91,7 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
   // Drum state
   const [drumKitId, setDrumKitId] = useState<DrumKitId>('acoustic');
   const [drumSeed, setDrumSeed] = useState(1);
+  const [customDrumPattern, setCustomDrumPattern] = useState<DrumPattern | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeStep, setActiveStep] = useState<number | null>(null);
@@ -141,9 +142,27 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
 
   // Drum pattern
   const drumPattern = useMemo(
-    () => generateDrums(genreId, progression.length, drumSeed),
-    [genreId, progression.length, drumSeed],
+    () => customDrumPattern || generateDrums(genreId, progression.length, drumSeed),
+    [customDrumPattern, genreId, progression.length, drumSeed],
   );
+
+  const handleToggleDrumNote = useCallback((instrument: keyof DrumPattern, step: number) => {
+    setCustomDrumPattern(prev => {
+      if (!prev) {
+        const generated = generateDrums(genreId, progression.length, drumSeed);
+        const newPattern = { ...generated };
+        newPattern[instrument][step] = newPattern[instrument][step] ? 0 : 1;
+        return newPattern;
+      }
+      const newPattern = { ...prev };
+      newPattern[instrument][step] = newPattern[instrument][step] ? 0 : 1;
+      return newPattern;
+    });
+  }, [genreId, progression.length, drumSeed]);
+
+  const handleResetDrumPattern = useCallback(() => {
+    setCustomDrumPattern(null);
+  }, []);
 
   // Engine start carries no direct setState — playback state is owned by isPlaying
   // and driven via the effect below, so changing inputs mid-play re-syncs the mix.
@@ -722,7 +741,8 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
                             {drumPattern.kick.slice(0, 16).map((v, i) => (
                               <div
                                 key={i}
-                                className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-red-400' : 'bg-gray-800'} ${activeStep !== null && activeStep % 16 === i ? 'ring-1 ring-white shadow-lg shadow-red-500/50 scale-110' : ''}`}
+                                onClick={() => handleToggleDrumNote('kick', i)}
+                                className={`flex-1 h-3 rounded-sm transition-all cursor-pointer hover:opacity-80 ${v ? 'bg-red-400' : 'bg-gray-800'} ${activeStep !== null && activeStep % 16 === i ? 'ring-1 ring-white shadow-lg shadow-red-500/50 scale-110' : ''}`}
                               />
                             ))}
                           </div>
@@ -733,7 +753,8 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
                             {drumPattern.snare.slice(0, 16).map((v, i) => (
                               <div
                                 key={i}
-                                className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-orange-400' : 'bg-gray-800'} ${activeStep !== null && activeStep % 16 === i ? 'ring-1 ring-white shadow-lg shadow-orange-500/50 scale-110' : ''}`}
+                                onClick={() => handleToggleDrumNote('snare', i)}
+                                className={`flex-1 h-3 rounded-sm transition-all cursor-pointer hover:opacity-80 ${v ? 'bg-orange-400' : 'bg-gray-800'} ${activeStep !== null && activeStep % 16 === i ? 'ring-1 ring-white shadow-lg shadow-orange-500/50 scale-110' : ''}`}
                               />
                             ))}
                           </div>
@@ -744,7 +765,8 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
                             {drumPattern.clap.slice(0, 16).map((v, i) => (
                               <div
                                 key={i}
-                                className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-yellow-400' : 'bg-gray-800'} ${activeStep !== null && activeStep % 16 === i ? 'ring-1 ring-white shadow-lg shadow-yellow-500/50 scale-110' : ''}`}
+                                onClick={() => handleToggleDrumNote('clap', i)}
+                                className={`flex-1 h-3 rounded-sm transition-all cursor-pointer hover:opacity-80 ${v ? 'bg-yellow-400' : 'bg-gray-800'} ${activeStep !== null && activeStep % 16 === i ? 'ring-1 ring-white shadow-lg shadow-yellow-500/50 scale-110' : ''}`}
                               />
                             ))}
                           </div>
@@ -755,7 +777,8 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
                             {drumPattern.hat.slice(0, 16).map((v, i) => (
                               <div
                                 key={i}
-                                className={`flex-1 h-3 rounded-sm transition-all ${v ? 'bg-green-400' : 'bg-gray-800'} ${activeStep !== null && activeStep % 16 === i ? 'ring-1 ring-white shadow-lg shadow-green-500/50 scale-110' : ''}`}
+                                onClick={() => handleToggleDrumNote('hat', i)}
+                                className={`flex-1 h-3 rounded-sm transition-all cursor-pointer hover:opacity-80 ${v ? 'bg-green-400' : 'bg-gray-800'} ${activeStep !== null && activeStep % 16 === i ? 'ring-1 ring-white shadow-lg shadow-green-500/50 scale-110' : ''}`}
                               />
                             ))}
                           </div>
@@ -787,6 +810,14 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
                   >
                     Regenerate
                   </button>
+                  {customDrumPattern && (
+                    <button
+                      onClick={handleResetDrumPattern}
+                      className="px-2 py-0.5 rounded text-[11px] text-red-400 hover:text-red-200 border border-red-700/50 hover:border-red-600 transition-all"
+                    >
+                      Reset
+                    </button>
+                  )}
                 </div>
               </div>
             </>
