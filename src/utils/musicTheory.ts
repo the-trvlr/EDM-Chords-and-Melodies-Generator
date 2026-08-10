@@ -15,6 +15,7 @@ export interface ChordInfo {
   notes: string[];
   midiNotes: number[];
   display: string;
+  inversion?: number; // 0 = root position, 1 = first inversion, 2 = second inversion
 }
 
 export const CHORD_TYPES: Record<string, ChordType> = {
@@ -36,6 +37,11 @@ export const CHORD_TYPES: Record<string, ChordType> = {
 export const SCALE_INTERVALS: Record<string, number[]> = {
   major: [0, 2, 4, 5, 7, 9, 11],
   minor: [0, 2, 3, 5, 7, 8, 10],
+  dorian: [0, 2, 3, 5, 7, 9, 10],
+  phrygian: [0, 1, 3, 5, 7, 8, 10],
+  lydian: [0, 2, 4, 6, 7, 9, 11],
+  mixolydian: [0, 2, 4, 5, 7, 9, 10],
+  locrian: [0, 1, 3, 5, 6, 8, 10],
   harmonicMinor: [0, 2, 3, 5, 7, 8, 11],
   melodicMinor: [0, 2, 3, 5, 7, 9, 11],
 };
@@ -46,24 +52,44 @@ const SCALE_CHORD_TYPES_BY_COMPLEXITY: Record<ChordComplexity, Record<string, st
   basic: {
     major: ['major', 'minor', 'minor', 'major', 'major', 'minor', 'dim'],
     minor: ['minor', 'dim', 'major', 'minor', 'minor', 'major', 'major'],
+    dorian: ['minor', 'minor', 'major', 'major', 'minor', 'dim', 'major'],
+    phrygian: ['minor', 'major', 'major', 'minor', 'dim', 'major', 'minor'],
+    lydian: ['major', 'major', 'minor', 'dim', 'major', 'minor', 'minor'],
+    mixolydian: ['major', 'minor', 'dim', 'major', 'minor', 'minor', 'major'],
+    locrian: ['dim', 'major', 'minor', 'minor', 'major', 'major', 'minor'],
     harmonicMinor: ['minor', 'dim', 'aug', 'minor', 'major', 'major', 'dim'],
     melodicMinor: ['minor', 'minor', 'aug', 'major', 'major', 'dim', 'dim'],
   },
   '7ths': {
     major: ['maj7', 'min7', 'min7', 'maj7', 'dom7', 'min7', 'dim7'],
     minor: ['min7', 'dim7', 'maj7', 'min7', 'min7', 'maj7', 'dom7'],
+    dorian: ['min7', 'min7', 'maj7', 'dom7', 'min7', 'dim7', 'maj7'],
+    phrygian: ['min7', 'dom7', 'maj7', 'min7', 'dim7', 'maj7', 'min7'],
+    lydian: ['maj7', 'dom7', 'min7', 'dim7', 'maj7', 'min7', 'min7'],
+    mixolydian: ['dom7', 'min7', 'dim7', 'maj7', 'min7', 'min7', 'maj7'],
+    locrian: ['dim7', 'maj7', 'min7', 'min7', 'dom7', 'maj7', 'min7'],
     harmonicMinor: ['min7', 'dim7', 'maj7', 'min7', 'dom7', 'maj7', 'dim7'],
     melodicMinor: ['min7', 'min7', 'maj7', 'dom7', 'dom7', 'dim7', 'dim7'],
   },
   '9ths': {
     major: ['maj9', 'min9', 'min7', 'maj9', 'dom7', 'min9', 'dim7'],
     minor: ['min9', 'dim7', 'maj9', 'min9', 'min7', 'maj9', 'dom7'],
+    dorian: ['min9', 'min9', 'maj9', 'dom7', 'min7', 'dim7', 'maj9'],
+    phrygian: ['min9', 'dom7', 'maj9', 'min7', 'dim7', 'maj9', 'min7'],
+    lydian: ['maj9', 'dom7', 'min7', 'dim7', 'maj9', 'min7', 'min7'],
+    mixolydian: ['dom7', 'min9', 'dim7', 'maj9', 'min7', 'min7', 'maj9'],
+    locrian: ['dim7', 'maj9', 'min7', 'min7', 'dom7', 'maj9', 'min7'],
     harmonicMinor: ['min9', 'dim7', 'maj9', 'min7', 'dom7', 'maj9', 'dim7'],
     melodicMinor: ['min9', 'min9', 'maj9', 'dom7', 'dom7', 'dim7', 'dim7'],
   },
   jazzy: {
     major: ['maj9', 'min9', 'sus4', 'maj7', 'dom7', 'min9', 'dim7'],
     minor: ['min9', 'dim7', 'maj9', 'sus2', 'dom7', 'maj9', 'dom7'],
+    dorian: ['min9', 'min9', 'maj9', 'sus4', 'min7', 'dim7', 'maj9'],
+    phrygian: ['min9', 'dom7', 'maj9', 'sus2', 'dim7', 'maj9', 'min7'],
+    lydian: ['maj9', 'dom7', 'sus4', 'dim7', 'maj9', 'min7', 'min7'],
+    mixolydian: ['dom7', 'min9', 'dim7', 'maj9', 'min7', 'sus2', 'maj9'],
+    locrian: ['dim7', 'maj9', 'sus2', 'min7', 'dom7', 'maj9', 'min7'],
     harmonicMinor: ['min9', 'dim7', 'maj9', 'sus4', 'dom7', 'maj9', 'dim7'],
     melodicMinor: ['min9', 'sus2', 'maj9', 'dom7', 'dom7', 'dim7', 'dim7'],
   },
@@ -97,6 +123,10 @@ export function noteNameToPc(name: string): number {
 }
 
 export function getKeyNamesForScale(scaleType: string): readonly string[] {
+  // Modes use minor key naming convention
+  if (['dorian', 'phrygian', 'lydian', 'mixolydian', 'locrian'].includes(scaleType)) {
+    return MINOR_KEY_NAMES;
+  }
   return scaleType === 'major' ? MAJOR_KEY_NAMES : MINOR_KEY_NAMES;
 }
 
@@ -109,7 +139,11 @@ export function getPreferredKeyName(pc: number, scaleType: string): string {
 // Whether a key should be spelled with flats (vs sharps).
 export function keyPrefersFlats(pc: number, scaleType: string): boolean {
   const idx = ((pc % 12) + 12) % 12;
-  return scaleType === 'major' ? MAJOR_FLAT_PCS.has(idx) : MINOR_FLAT_PCS.has(idx);
+  if (scaleType === 'major') {
+    return MAJOR_FLAT_PCS.has(idx);
+  }
+  // Modes and minor scales use the same flat/sharp preferences
+  return MINOR_FLAT_PCS.has(idx);
 }
 
 export function noteToMidi(note: string, octave: number): number {
@@ -176,4 +210,86 @@ export function getRomanNumeral(index: number, scaleType: string): string {
 export function midiNoteToToneName(midi: number): string {
   const { note, octave } = midiToNote(midi);
   return `${note}${octave}`;
+}
+
+export function invertChord(chord: ChordInfo, inversion: number): ChordInfo {
+  const maxInversion = chord.midiNotes.length - 1;
+  const safeInversion = Math.max(0, Math.min(inversion, maxInversion));
+  
+  if (safeInversion === 0) {
+    return { ...chord, inversion: 0 };
+  }
+  
+  const invertedMidiNotes = [...chord.midiNotes];
+  const invertedNotes = [...chord.notes];
+  
+  // Move the first n notes up an octave
+  for (let i = 0; i < safeInversion; i++) {
+    invertedMidiNotes[i] += 12;
+  }
+  
+  // Sort the MIDI notes to maintain ascending order
+  invertedMidiNotes.sort((a, b) => a - b);
+  
+  // Update note names based on new MIDI notes
+  const names = chord.root.includes('b') ? FLAT_NAMES : NOTE_NAMES;
+  
+  for (let i = 0; i < invertedMidiNotes.length; i++) {
+    const pc = invertedMidiNotes[i] % 12;
+    invertedNotes[i] = names[pc];
+  }
+  
+  // Update display to show inversion (e.g., C/G for first inversion)
+  const bassNote = invertedNotes[0];
+  let display = chord.display;
+  if (safeInversion === 1) {
+    display = `${chord.root}${chord.type.symbol}/${bassNote}`;
+  } else if (safeInversion === 2) {
+    display = `${chord.root}${chord.type.symbol}/${bassNote}`;
+  }
+  
+  return {
+    ...chord,
+    notes: invertedNotes,
+    midiNotes: invertedMidiNotes,
+    display,
+    inversion: safeInversion,
+  };
+}
+
+export function voiceLeading(chords: ChordInfo[]): ChordInfo[] {
+  if (chords.length < 2) return chords;
+  
+  const result = [...chords];
+  
+  for (let i = 1; i < result.length; i++) {
+    const prevChord = result[i - 1];
+    const currChord = result[i];
+    
+    // Find the inversion that minimizes voice movement
+    let bestInversion = 0;
+    let minMovement = Infinity;
+    
+    const maxInversion = currChord.midiNotes.length - 1;
+    
+    for (let inv = 0; inv <= maxInversion; inv++) {
+      const inverted = invertChord(currChord, inv);
+      let totalMovement = 0;
+      
+      // Calculate total movement between corresponding voices
+      for (let j = 0; j < Math.min(prevChord.midiNotes.length, inverted.midiNotes.length); j++) {
+        const movement = Math.abs(prevChord.midiNotes[j] - inverted.midiNotes[j]);
+        totalMovement += movement;
+      }
+      
+      if (totalMovement < minMovement) {
+        minMovement = totalMovement;
+        bestInversion = inv;
+      }
+    }
+    
+    result[i] = invertChord(currChord, bestInversion);
+  }
+  
+  return result;
 }

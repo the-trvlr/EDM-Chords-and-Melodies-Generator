@@ -30,4 +30,25 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/tone')) {
+            return 'tone-js';
+          }
+          if (id.includes('node_modules/vexflow')) {
+            return 'vexflow';
+          }
+          if (id.includes('MelodyStudio')) {
+            return 'melody-studio';
+          }
+          if (id.includes('ChordDisplay')) {
+            return 'chord-display';
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+  },
 })
