@@ -7,7 +7,7 @@ import type { ChordInfo, ChordComplexity } from './utils/musicTheory';
 import { initAudio, playChord, playProgression, stopPlayback, setVolume } from './utils/audioEngine';
 import type { SynthPresetId } from './utils/audioEngine';
 import { stopArrangement } from './utils/mixer';
-import { loadPersistedState, savePersistedState, saveProject, getSavedProjects, loadProject, deleteProject, type SavedProject, encodeShareablePreset, decodeShareablePreset, type ShareablePreset } from './utils/persistence';
+import { loadPersistedState, savePersistedState, loadProject, encodeShareablePreset, decodeShareablePreset, type ShareablePreset } from './utils/persistence';
 import { exportProgressionToMidi } from './utils/midiExport';
 import { KeySelector } from './components/KeySelector';
 import { GenreSelector } from './components/GenreSelector';
@@ -62,7 +62,6 @@ export default function App() {
   const [customProgression, setCustomProgression] = useState<ChordInfo[] | null>(null);
   const [progressionHistory, setProgressionHistory] = useState<ChordInfo[][]>([]);
   const [progressionHistoryIndex, setProgressionHistoryIndex] = useState(-1);
-  const [savedProjects, setSavedProjects] = useState<SavedProject[]>(getSavedProjects());
 
   // Check for shared preset in URL on mount
   useEffect(() => {
@@ -87,9 +86,8 @@ export default function App() {
   }, []);
 
   const handleSaveProject = useCallback(() => {
-    const name = `Project ${savedProjects.length + 1}`;
-    const newProject = saveProject({
-      name,
+    const projectData = {
+      name: `Project_${new Date().toISOString().slice(0, 10)}`,
       data: {
         selectedKey,
         selectedScale,
@@ -105,32 +103,51 @@ export default function App() {
         customProgression,
         selectedRhythmName: selectedRhythm.name,
       },
-    });
-    setSavedProjects(prev => [...prev, newProject]);
-  }, [savedProjects.length, selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth, bpm, volume, loop, doubleTime, chordComplexity, activeTab, customProgression, selectedRhythm.name]);
+    };
+    const json = JSON.stringify(projectData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${projectData.name}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth, bpm, volume, loop, doubleTime, chordComplexity, activeTab, customProgression, selectedRhythm.name]);
 
-  const handleLoadProject = useCallback((project: SavedProject) => {
-    const loaded = loadProject(project);
-    const genre = GENRES.find(g => g.id === loaded.genreId) ?? GENRES[0];
-    setSelectedKey(loaded.selectedKey ?? 'C');
-    setSelectedScale(loaded.selectedScale ?? 'minor');
-    setSelectedGenre(genre);
-    setSelectedProgressionIdx(loaded.selectedProgressionIdx ?? 0);
-    setSelectedSynth(loaded.selectedSynth ?? 'pad');
-    setBpm(loaded.bpm ?? genre.defaultBpm);
-    setVolumeState(loaded.volume ?? -6);
-    setLoop(loaded.loop ?? true);
-    setDoubleTime(loaded.doubleTime ?? false);
-    setChordComplexity(loaded.chordComplexity ?? 'basic');
-    setActiveTab(loaded.activeTab ?? 'chords');
-    setCustomProgression(loaded.customProgression);
-    setSelectedRhythm(genre.rhythmPatterns.find(r => r.name === loaded.selectedRhythmName) ?? genre.rhythmPatterns[0]);
-  }, []);
+  const handleLoadProject = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-  const handleDeleteProject = useCallback((id: string) => {
-    if (deleteProject(id)) {
-      setSavedProjects(prev => prev.filter(p => p.id !== id));
-    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = e.target?.result as string;
+        const project = JSON.parse(json);
+        const loaded = loadProject(project);
+        const genre = GENRES.find(g => g.id === loaded.genreId) ?? GENRES[0];
+        setSelectedKey(loaded.selectedKey ?? 'C');
+        setSelectedScale(loaded.selectedScale ?? 'minor');
+        setSelectedGenre(genre);
+        setSelectedProgressionIdx(loaded.selectedProgressionIdx ?? 0);
+        setSelectedSynth(loaded.selectedSynth ?? 'pad');
+        setBpm(loaded.bpm ?? genre.defaultBpm);
+        setVolumeState(loaded.volume ?? -6);
+        setLoop(loaded.loop ?? true);
+        setDoubleTime(loaded.doubleTime ?? false);
+        setChordComplexity(loaded.chordComplexity ?? 'basic');
+        setActiveTab(loaded.activeTab ?? 'chords');
+        setCustomProgression(loaded.customProgression);
+        setSelectedRhythm(genre.rhythmPatterns.find(r => r.name === loaded.selectedRhythmName) ?? genre.rhythmPatterns[0]);
+      } catch (err) {
+        console.error('Failed to load project:', err);
+        alert('Failed to load project file. Please check the file format.');
+      }
+    };
+    reader.readAsText(file);
+    // Reset input
+    event.target.value = '';
   }, []);
 
   const handleSharePreset = useCallback(() => {
@@ -147,8 +164,10 @@ export default function App() {
     const encoded = encodeShareablePreset(preset);
     const url = `${window.location.origin}${window.location.pathname}?preset=${encoded}`;
     navigator.clipboard.writeText(url).then(() => {
-      // Could add a toast notification here
-      console.log('Preset link copied to clipboard');
+      alert('Preset link copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+      alert('Failed to copy link. Please try again.');
     });
   }, [selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth, bpm, chordComplexity, selectedRhythm.name]);
 
@@ -397,39 +416,19 @@ export default function App() {
           <button
             onClick={handleSaveProject}
             className="px-3 py-1.5 rounded text-xs font-medium bg-purple-600/20 border border-purple-600/30 text-purple-300 hover:bg-purple-600/30 transition-all"
-            title="Save current project"
+            title="Save current project as JSON file"
           >
             Save Project
           </button>
-          <div className="relative">
-            <button
-              className="px-3 py-1.5 rounded text-xs font-medium bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600 transition-all"
-              title="Load saved project"
-            >
-              Load ({savedProjects.length})
-            </button>
-            {savedProjects.length > 0 && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
-                {savedProjects.map(project => (
-                  <div key={project.id} className="flex items-center justify-between px-3 py-2 hover:bg-gray-800 border-b border-gray-800 last:border-0">
-                    <button
-                      onClick={() => handleLoadProject(project)}
-                      className="text-xs text-gray-300 hover:text-white truncate flex-1 text-left"
-                    >
-                      {project.name}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteProject(project.id)}
-                      className="ml-2 text-xs text-red-400 hover:text-red-300"
-                      title="Delete project"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <label className="px-3 py-1.5 rounded text-xs font-medium bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600 transition-all cursor-pointer">
+            Load Project
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleLoadProject}
+              className="hidden"
+            />
+          </label>
         </div>
       </header>
 
