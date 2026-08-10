@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ChordInfo } from '../utils/musicTheory';
 import { getRomanNumeral } from '../utils/musicTheory';
 
@@ -10,6 +11,11 @@ interface ChordPaletteProps {
   onPreviewChord: (chord: ChordInfo) => void;
   onInversionChange: (index: number, inversion: number) => void;
   onAutoVoiceLead: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onReorderChord: (fromIndex: number, toIndex: number) => void;
 }
 
 export function ChordPalette({
@@ -21,7 +27,36 @@ export function ChordPalette({
   onPreviewChord,
   onInversionChange,
   onAutoVoiceLead,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  onReorderChord,
 }: ChordPaletteProps) {
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== dropIndex) {
+      onReorderChord(draggedIndex, dropIndex);
+    }
+    setDraggedIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <label className="text-xs font-semibold uppercase tracking-wider text-gray-400">
@@ -30,21 +65,49 @@ export function ChordPalette({
 
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500 mb-1 block">Current sequence (click to remove)</span>
-          <button
-            onClick={onAutoVoiceLead}
-            className="px-2 py-1 rounded text-[10px] font-medium bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/30 transition-all"
-            title="Auto voice-lead progression"
-          >
-            Auto Voice-Lead
-          </button>
+          <span className="text-xs text-gray-500 mb-1 block">Current sequence (drag to reorder, click to remove)</span>
+          <div className="flex gap-1">
+            <button
+              onClick={onUndo}
+              disabled={!canUndo}
+              className="px-2 py-1 rounded text-[10px] font-medium bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              title="Undo (Cmd/Ctrl+Z)"
+            >
+              ↶ Undo
+            </button>
+            <button
+              onClick={onRedo}
+              disabled={!canRedo}
+              className="px-2 py-1 rounded text-[10px] font-medium bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              title="Redo (Cmd/Ctrl+Shift+Z)"
+            >
+              ↷ Redo
+            </button>
+            <button
+              onClick={onAutoVoiceLead}
+              className="px-2 py-1 rounded text-[10px] font-medium bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/30 transition-all"
+              title="Auto voice-lead progression"
+            >
+              Auto Voice-Lead
+            </button>
+          </div>
         </div>
         <div className="flex gap-2 flex-wrap min-h-[44px] p-2 rounded-lg border border-gray-700/50 bg-gray-800/30">
           {progression.length === 0 ? (
             <span className="text-xs text-gray-600 self-center">Add chords from the palette below</span>
           ) : (
             progression.map((chord, i) => (
-              <div key={i} className="flex items-center gap-1">
+              <div
+                key={i}
+                draggable
+                onDragStart={(e) => handleDragStart(e, i)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, i)}
+                onDragEnd={handleDragEnd}
+                className={`flex items-center gap-1 cursor-move transition-all ${
+                  draggedIndex === i ? 'opacity-50' : 'opacity-100'
+                }`}
+              >
                 <button
                   onClick={() => onRemoveChord(i)}
                   className="group px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-500/20 border border-purple-500/30 text-purple-300 hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-300 transition-all"

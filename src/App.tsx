@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useCallback, useEffect } from 'react';
 import { GENRES } from './data/genres';
 import type { Genre, RhythmPattern } from './data/genres';
@@ -6,7 +7,7 @@ import type { ChordInfo, ChordComplexity } from './utils/musicTheory';
 import { initAudio, playChord, playProgression, stopPlayback, setVolume } from './utils/audioEngine';
 import type { SynthPresetId } from './utils/audioEngine';
 import { stopArrangement } from './utils/mixer';
-import { loadPersistedState, savePersistedState } from './utils/persistence';
+import { loadPersistedState, savePersistedState, saveProject, getSavedProjects, loadProject, deleteProject, type SavedProject, encodeShareablePreset, decodeShareablePreset, type ShareablePreset } from './utils/persistence';
 import { exportProgressionToMidi } from './utils/midiExport';
 import { KeySelector } from './components/KeySelector';
 import { GenreSelector } from './components/GenreSelector';
@@ -57,8 +58,99 @@ export default function App() {
   const [loop, setLoop] = useState(persisted.loop ?? true);
   const [doubleTime, setDoubleTime] = useState(persisted.doubleTime ?? false);
   const [chordComplexity, setChordComplexity] = useState<ChordComplexity>(persisted.chordComplexity ?? 'basic');
-  const [activeTab, setActiveTab] = useState<'chords' | 'melodies'>(persisted.activeTab === 'mix' ? 'melodies' : persisted.activeTab ?? 'chords');
+  const [activeTab, setActiveTab] = useState<'chords' | 'melodies'>(persisted.activeTab ?? 'chords');
   const [customProgression, setCustomProgression] = useState<ChordInfo[] | null>(null);
+  const [progressionHistory, setProgressionHistory] = useState<ChordInfo[][]>([]);
+  const [progressionHistoryIndex, setProgressionHistoryIndex] = useState(-1);
+  const [savedProjects, setSavedProjects] = useState<SavedProject[]>(getSavedProjects());
+
+  // Check for shared preset in URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const preset = params.get('preset');
+    if (preset) {
+      const decoded = decodeShareablePreset(preset);
+      if (decoded) {
+        const genre = GENRES.find(g => g.id === decoded.g) ?? GENRES[0];
+        setSelectedKey(decoded.k);
+        setSelectedScale(decoded.s);
+        setSelectedGenre(genre);
+        setSelectedProgressionIdx(decoded.p);
+        setSelectedSynth(decoded.y as SynthPresetId);
+        setBpm(decoded.b);
+        setChordComplexity(decoded.c as ChordComplexity);
+        setSelectedRhythm(genre.rhythmPatterns.find(r => r.name === decoded.r) ?? genre.rhythmPatterns[0]);
+        // Clear URL params
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, []);
+
+  const handleSaveProject = useCallback(() => {
+    const name = `Project ${savedProjects.length + 1}`;
+    const newProject = saveProject({
+      name,
+      data: {
+        selectedKey,
+        selectedScale,
+        genreId: selectedGenre.id,
+        selectedProgressionIdx,
+        selectedSynth,
+        bpm,
+        volume,
+        loop,
+        doubleTime,
+        chordComplexity,
+        activeTab,
+        customProgression,
+        selectedRhythmName: selectedRhythm.name,
+      },
+    });
+    setSavedProjects(prev => [...prev, newProject]);
+  }, [savedProjects.length, selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth, bpm, volume, loop, doubleTime, chordComplexity, activeTab, customProgression, selectedRhythm.name]);
+
+  const handleLoadProject = useCallback((project: SavedProject) => {
+    const loaded = loadProject(project);
+    const genre = GENRES.find(g => g.id === loaded.genreId) ?? GENRES[0];
+    setSelectedKey(loaded.selectedKey ?? 'C');
+    setSelectedScale(loaded.selectedScale ?? 'minor');
+    setSelectedGenre(genre);
+    setSelectedProgressionIdx(loaded.selectedProgressionIdx ?? 0);
+    setSelectedSynth(loaded.selectedSynth ?? 'pad');
+    setBpm(loaded.bpm ?? genre.defaultBpm);
+    setVolumeState(loaded.volume ?? -6);
+    setLoop(loaded.loop ?? true);
+    setDoubleTime(loaded.doubleTime ?? false);
+    setChordComplexity(loaded.chordComplexity ?? 'basic');
+    setActiveTab(loaded.activeTab ?? 'chords');
+    setCustomProgression(loaded.customProgression);
+    setSelectedRhythm(genre.rhythmPatterns.find(r => r.name === loaded.selectedRhythmName) ?? genre.rhythmPatterns[0]);
+  }, []);
+
+  const handleDeleteProject = useCallback((id: string) => {
+    if (deleteProject(id)) {
+      setSavedProjects(prev => prev.filter(p => p.id !== id));
+    }
+  }, []);
+
+  const handleSharePreset = useCallback(() => {
+    const preset: ShareablePreset = {
+      k: selectedKey,
+      s: selectedScale,
+      g: selectedGenre.id,
+      p: selectedProgressionIdx,
+      y: selectedSynth,
+      b: bpm,
+      c: chordComplexity,
+      r: selectedRhythm.name,
+    };
+    const encoded = encodeShareablePreset(preset);
+    const url = `${window.location.origin}${window.location.pathname}?preset=${encoded}`;
+    navigator.clipboard.writeText(url).then(() => {
+      // Could add a toast notification here
+      console.log('Preset link copied to clipboard');
+    });
+  }, [selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth, bpm, chordComplexity, selectedRhythm.name]);
 
   const availableChords = getChordsInKey(selectedKey, selectedScale, chordComplexity);
   const templateProgression = buildProgression(selectedGenre, selectedProgressionIdx, selectedKey, selectedScale, chordComplexity);
@@ -74,6 +166,21 @@ export default function App() {
   }
 
   const progression = customProgression || templateProgression;
+
+  const handleReorderChord = useCallback((fromIndex: number, toIndex: number) => {
+    const current = customProgression || [...templateProgression];
+    const newProgression = [...current];
+    const [movedChord] = newProgression.splice(fromIndex, 1);
+    newProgression.splice(toIndex, 0, movedChord);
+    setCustomProgression(newProgression);
+    // Save to history
+    setProgressionHistory(prev => {
+      const newHistory = prev.slice(0, progressionHistoryIndex + 1);
+      newHistory.push(newProgression);
+      return newHistory.slice(-50);
+    });
+    setProgressionHistoryIndex(prev => Math.min(prev + 1, 49));
+  }, [customProgression, templateProgression, progressionHistoryIndex]);
 
   useEffect(() => {
     savePersistedState({
@@ -151,13 +258,29 @@ export default function App() {
 
   const handleAddChord = useCallback((chord: ChordInfo) => {
     const current = customProgression || [...templateProgression];
-    setCustomProgression([...current, chord]);
-  }, [customProgression, templateProgression]);
+    const newProgression = [...current, chord];
+    setCustomProgression(newProgression);
+    // Save to history
+    setProgressionHistory(prev => {
+      const newHistory = prev.slice(0, progressionHistoryIndex + 1);
+      newHistory.push(newProgression);
+      return newHistory.slice(-50);
+    });
+    setProgressionHistoryIndex(prev => Math.min(prev + 1, 49));
+  }, [customProgression, templateProgression, progressionHistoryIndex]);
 
   const handleRemoveChord = useCallback((index: number) => {
     const current = customProgression || [...templateProgression];
-    setCustomProgression(current.filter((_, i) => i !== index));
-  }, [customProgression, templateProgression]);
+    const newProgression = current.filter((_, i) => i !== index);
+    setCustomProgression(newProgression);
+    // Save to history
+    setProgressionHistory(prev => {
+      const newHistory = prev.slice(0, progressionHistoryIndex + 1);
+      newHistory.push(newProgression);
+      return newHistory.slice(-50);
+    });
+    setProgressionHistoryIndex(prev => Math.min(prev + 1, 49));
+  }, [customProgression, templateProgression, progressionHistoryIndex]);
 
   const handleResetProgression = useCallback(() => {
     setCustomProgression(null);
@@ -175,7 +298,64 @@ export default function App() {
     const current = customProgression || [...templateProgression];
     const voiced = voiceLeading(current);
     setCustomProgression(voiced);
-  }, [customProgression, templateProgression]);
+    // Save to history
+    setProgressionHistory(prev => {
+      const newHistory = prev.slice(0, progressionHistoryIndex + 1);
+      newHistory.push(voiced);
+      return newHistory.slice(-50);
+    });
+    setProgressionHistoryIndex(prev => Math.min(prev + 1, 49));
+  }, [customProgression, templateProgression, progressionHistoryIndex]);
+
+  const handleUndo = useCallback(() => {
+    if (progressionHistoryIndex > 0) {
+      setProgressionHistoryIndex(prev => prev - 1);
+      setCustomProgression([...progressionHistory[progressionHistoryIndex - 1]]);
+    }
+  }, [progressionHistoryIndex, progressionHistory]);
+
+  const handleRedo = useCallback(() => {
+    if (progressionHistoryIndex < progressionHistory.length - 1) {
+      setProgressionHistoryIndex(prev => prev + 1);
+      setCustomProgression([...progressionHistory[progressionHistoryIndex + 1]]);
+    }
+  }, [progressionHistoryIndex, progressionHistory]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+      // Undo: Cmd/Ctrl + Z
+      if (cmdOrCtrl && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+      // Redo: Cmd/Ctrl + Shift + Z or Cmd/Ctrl + Y
+      else if ((cmdOrCtrl && e.key === 'z' && e.shiftKey) || (cmdOrCtrl && e.key === 'y')) {
+        e.preventDefault();
+        handleRedo();
+      }
+      // Play/Stop: Space
+      else if (e.key === ' ') {
+        e.preventDefault();
+        if (isPlaying) {
+          handleStop();
+        } else {
+          handlePlay();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlaying, handleUndo, handleRedo, handlePlay, handleStop]);
 
   const viewedChord = selectedChordForView !== null ? progression[selectedChordForView] : null;
 
@@ -199,17 +379,56 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-      <header className="border-b border-gray-800 px-4 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center font-bold text-sm">E</div>
-            <div>
-              <h1 className="text-lg font-bold leading-tight">EDM Chord Generator</h1>
-              <p className="text-xs text-gray-500">Offline Chord Progression Tool</p>
-            </div>
-          </div>
+      <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-gray-950/50 backdrop-blur">
+        <div>
+          <h1 className="text-xl font-bold text-white">EDM Chord Generator</h1>
           <div className="text-xs text-gray-600">
             {selectedKey} {selectedScale} · {selectedGenre.name} · {bpm} BPM
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handleSharePreset}
+            className="px-3 py-1.5 rounded text-xs font-medium bg-cyan-600/20 border border-cyan-600/30 text-cyan-300 hover:bg-cyan-600/30 transition-all"
+            title="Copy shareable link"
+          >
+            Share
+          </button>
+          <button
+            onClick={handleSaveProject}
+            className="px-3 py-1.5 rounded text-xs font-medium bg-purple-600/20 border border-purple-600/30 text-purple-300 hover:bg-purple-600/30 transition-all"
+            title="Save current project"
+          >
+            Save Project
+          </button>
+          <div className="relative">
+            <button
+              className="px-3 py-1.5 rounded text-xs font-medium bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600 transition-all"
+              title="Load saved project"
+            >
+              Load ({savedProjects.length})
+            </button>
+            {savedProjects.length > 0 && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
+                {savedProjects.map(project => (
+                  <div key={project.id} className="flex items-center justify-between px-3 py-2 hover:bg-gray-800 border-b border-gray-800 last:border-0">
+                    <button
+                      onClick={() => handleLoadProject(project)}
+                      className="text-xs text-gray-300 hover:text-white truncate flex-1 text-left"
+                    >
+                      {project.name}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProject(project.id)}
+                      className="ml-2 text-xs text-red-400 hover:text-red-300"
+                      title="Delete project"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -358,6 +577,11 @@ export default function App() {
                 onPreviewChord={handlePreviewChord}
                 onInversionChange={handleInversionChange}
                 onAutoVoiceLead={handleAutoVoiceLead}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                canUndo={progressionHistoryIndex > 0}
+                canRedo={progressionHistoryIndex < progressionHistory.length - 1}
+                onReorderChord={handleReorderChord}
               />
             </div>
           </div>
