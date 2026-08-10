@@ -8,6 +8,8 @@ interface ChordPaletteProps {
   onAddChord: (chord: ChordInfo) => void;
   onRemoveChord: (index: number) => void;
   onPreviewChord: (chord: ChordInfo) => void;
+  onInversionChange: (index: number, inversion: number) => void;
+  onAutoVoiceLead: () => void;
 }
 
 export function ChordPalette({
@@ -17,6 +19,8 @@ export function ChordPalette({
   onAddChord,
   onRemoveChord,
   onPreviewChord,
+  onInversionChange,
+  onAutoVoiceLead,
 }: ChordPaletteProps) {
   return (
     <div className="flex flex-col gap-3">
@@ -25,15 +29,23 @@ export function ChordPalette({
       </label>
 
       <div className="flex flex-col gap-3">
-        <div>
+        <div className="flex items-center justify-between">
           <span className="text-xs text-gray-500 mb-1 block">Current sequence (click to remove)</span>
-          <div className="flex gap-2 flex-wrap min-h-[44px] p-2 rounded-lg border border-gray-700/50 bg-gray-800/30">
-            {progression.length === 0 ? (
-              <span className="text-xs text-gray-600 self-center">Add chords from the palette below</span>
-            ) : (
-              progression.map((chord, i) => (
+          <button
+            onClick={onAutoVoiceLead}
+            className="px-2 py-1 rounded text-[10px] font-medium bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/30 transition-all"
+            title="Auto voice-lead progression"
+          >
+            Auto Voice-Lead
+          </button>
+        </div>
+        <div className="flex gap-2 flex-wrap min-h-[44px] p-2 rounded-lg border border-gray-700/50 bg-gray-800/30">
+          {progression.length === 0 ? (
+            <span className="text-xs text-gray-600 self-center">Add chords from the palette below</span>
+          ) : (
+            progression.map((chord, i) => (
+              <div key={i} className="flex items-center gap-1">
                 <button
-                  key={i}
                   onClick={() => onRemoveChord(i)}
                   className="group px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-500/20 border border-purple-500/30 text-purple-300 hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-300 transition-all"
                   title="Click to remove"
@@ -41,9 +53,25 @@ export function ChordPalette({
                   <span className="group-hover:hidden">{chord.display}</span>
                   <span className="hidden group-hover:inline">✕ {chord.display}</span>
                 </button>
-              ))
-            )}
-          </div>
+                <div className="flex gap-0.5">
+                  {[0, 1, 2].map(inv => (
+                    <button
+                      key={inv}
+                      onClick={() => onInversionChange(i, inv)}
+                      className={`w-5 h-5 rounded text-[9px] font-medium transition-all ${
+                        chord.inversion === inv
+                          ? 'bg-cyan-500 text-white'
+                          : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                      }`}
+                      title={`Inversion ${inv}`}
+                    >
+                      {inv}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         <div>

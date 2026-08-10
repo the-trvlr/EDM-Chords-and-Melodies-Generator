@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { GENRES } from './data/genres';
 import type { Genre, RhythmPattern } from './data/genres';
-import { getChordsInKey, getChordNotes, keyPrefersFlats, noteNameToPc, getPreferredKeyName } from './utils/musicTheory';
+import { getChordsInKey, getChordNotes, keyPrefersFlats, noteNameToPc, getPreferredKeyName, invertChord, voiceLeading } from './utils/musicTheory';
 import type { ChordInfo, ChordComplexity } from './utils/musicTheory';
 import { initAudio, playChord, playProgression, stopPlayback, setVolume } from './utils/audioEngine';
 import type { SynthPresetId } from './utils/audioEngine';
@@ -163,6 +163,19 @@ export default function App() {
     setCustomProgression(null);
     setSelectedChordForView(null);
   }, []);
+
+  const handleInversionChange = useCallback((index: number, inversion: number) => {
+    const current = customProgression || [...templateProgression];
+    const updated = [...current];
+    updated[index] = invertChord(updated[index], inversion);
+    setCustomProgression(updated);
+  }, [customProgression, templateProgression]);
+
+  const handleAutoVoiceLead = useCallback(() => {
+    const current = customProgression || [...templateProgression];
+    const voiced = voiceLeading(current);
+    setCustomProgression(voiced);
+  }, [customProgression, templateProgression]);
 
   const viewedChord = selectedChordForView !== null ? progression[selectedChordForView] : null;
 
@@ -343,6 +356,8 @@ export default function App() {
                 onAddChord={handleAddChord}
                 onRemoveChord={handleRemoveChord}
                 onPreviewChord={handlePreviewChord}
+                onInversionChange={handleInversionChange}
+                onAutoVoiceLead={handleAutoVoiceLead}
               />
             </div>
           </div>

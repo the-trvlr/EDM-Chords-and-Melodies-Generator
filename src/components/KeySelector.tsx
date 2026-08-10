@@ -8,8 +8,13 @@ interface KeySelectorProps {
 }
 
 const SCALES = [
-  { id: 'minor', name: 'Minor (Natural)' },
   { id: 'major', name: 'Major' },
+  { id: 'minor', name: 'Minor (Natural)' },
+  { id: 'dorian', name: 'Dorian' },
+  { id: 'phrygian', name: 'Phrygian' },
+  { id: 'lydian', name: 'Lydian' },
+  { id: 'mixolydian', name: 'Mixolydian' },
+  { id: 'locrian', name: 'Locrian' },
   { id: 'harmonicMinor', name: 'Harmonic Minor' },
   { id: 'melodicMinor', name: 'Melodic Minor' },
 ];
