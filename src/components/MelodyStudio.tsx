@@ -24,6 +24,29 @@ interface MelodyStudioProps {
   chordSynthId: SynthPresetId;
   loop: boolean;
   doubleTime: boolean;
+  // Persisted state
+  persistedBassStyleId?: string;
+  persistedLeadStyleId?: string;
+  persistedBassSeed?: number;
+  persistedLeadSeed?: number;
+  persistedArpEnabled?: boolean;
+  persistedArpSettings?: ArpSettings;
+  persistedArpSeed?: number;
+  persistedDrumKitId?: DrumKitId;
+  persistedDrumSeed?: number;
+  persistedSynthIds?: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId; drums: SynthPresetId };
+  onSaveState: (state: {
+    bassStyleId: string;
+    leadStyleId: string;
+    bassSeed: number;
+    leadSeed: number;
+    arpEnabled: boolean;
+    arpSettings: ArpSettings;
+    arpSeed: number;
+    drumKitId: DrumKitId;
+    drumSeed: number;
+    synthIds: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId; drums: SynthPresetId };
+  }) => void;
 }
 
 const STEPS_PER_CHORD = 16;
@@ -69,28 +92,28 @@ function MelodyLane({
   );
 }
 
-export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, genreId, chordSynthId, loop, doubleTime }: MelodyStudioProps) {
+export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, genreId, chordSynthId, loop, doubleTime, persistedBassStyleId, persistedLeadStyleId, persistedBassSeed, persistedLeadSeed, persistedArpEnabled, persistedArpSettings, persistedArpSeed, persistedDrumKitId, persistedDrumSeed, persistedSynthIds, onSaveState }: MelodyStudioProps) {
   const bassStyles = getGenreMelodyStyles(genreId, 'bass');
   const leadStyles = getGenreMelodyStyles(genreId, 'lead');
 
-  const [bassStyleId, setBassStyleId] = useState(bassStyles[0]?.id || '');
-  const [leadStyleId, setLeadStyleId] = useState(leadStyles[0]?.id || '');
-  const [bassSeed, setBassSeed] = useState(1);
-  const [leadSeed, setLeadSeed] = useState(1);
+  const [bassStyleId, setBassStyleId] = useState(persistedBassStyleId || bassStyles[0]?.id || '');
+  const [leadStyleId, setLeadStyleId] = useState(persistedLeadStyleId || leadStyles[0]?.id || '');
+  const [bassSeed, setBassSeed] = useState(persistedBassSeed || 1);
+  const [leadSeed, setLeadSeed] = useState(persistedLeadSeed || 1);
 
   // Arpeggiator state
-  const [arpEnabled, setArpEnabled] = useState(false);
-  const [arpSettings, setArpSettings] = useState<ArpSettings>({
+  const [arpEnabled, setArpEnabled] = useState(persistedArpEnabled || false);
+  const [arpSettings, setArpSettings] = useState<ArpSettings>(persistedArpSettings || {
     pattern: 'up',
     rate: 'eighth',
     octaveRange: 1,
     gate: 0.8,
   });
-  const [arpSeed, setArpSeed] = useState(1);
+  const [arpSeed, setArpSeed] = useState(persistedArpSeed || 1);
 
   // Drum state
-  const [drumKitId, setDrumKitId] = useState<DrumKitId>('acoustic');
-  const [drumSeed, setDrumSeed] = useState(1);
+  const [drumKitId, setDrumKitId] = useState<DrumKitId>(persistedDrumKitId || 'acoustic');
+  const [drumSeed, setDrumSeed] = useState(persistedDrumSeed || 1);
   const [customDrumPattern, setCustomDrumPattern] = useState<DrumPattern | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -108,7 +131,7 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
     chord: initTrack(), bass: initTrack(), lead: initTrack(), drums: initTrack(),
   });
 
-  const [synthIds, setSynthIds] = useState<{ chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId; drums: SynthPresetId }>({
+  const [synthIds, setSynthIds] = useState<{ chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId; drums: SynthPresetId }>(persistedSynthIds || {
     chord: chordSynthId,
     bass: 'pluck',
     lead: 'supersaw',
@@ -222,6 +245,22 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
       startEngine();
     }
   }, [synthIds, isPlaying, startEngine]);
+
+  // Save state to parent when it changes
+  useEffect(() => {
+    onSaveState({
+      bassStyleId,
+      leadStyleId,
+      bassSeed,
+      leadSeed,
+      arpEnabled,
+      arpSettings,
+      arpSeed,
+      drumKitId,
+      drumSeed,
+      synthIds,
+    });
+  }, [bassStyleId, leadStyleId, bassSeed, leadSeed, arpEnabled, arpSettings, arpSeed, drumKitId, drumSeed, synthIds, onSaveState]);
 
   useEffect(() => () => { stopArrangement(); }, []);
 
@@ -813,7 +852,10 @@ export function MelodyStudio({ progression, rhythm, rootKey, scaleType, bpm, gen
                     ))}
                   </select>
                   <button
-                    onClick={() => setDrumSeed(s => s + 1)}
+                    onClick={() => {
+                      setCustomDrumPattern(null);
+                      setDrumSeed(s => s + 1);
+                    }}
                     className="px-2 py-0.5 rounded text-[11px] text-gray-400 hover:text-gray-200 border border-gray-700/50 hover:border-gray-600 transition-all"
                   >
                     Regenerate

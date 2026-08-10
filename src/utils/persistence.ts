@@ -19,6 +19,17 @@ export interface PersistedState {
   doubleTime: boolean;
   chordComplexity: ChordComplexity;
   activeTab: 'chords' | 'melodies';
+  // Melody Studio state (optional for backward compatibility)
+  bassStyleId?: string;
+  leadStyleId?: string;
+  bassSeed?: number;
+  leadSeed?: number;
+  arpEnabled?: boolean;
+  arpSettings?: ArpSettings;
+  arpSeed?: number;
+  drumKitId?: DrumKitId;
+  drumSeed?: number;
+  synthIds?: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId; drums: SynthPresetId };
 }
 
 export interface SavedArrangement {
@@ -77,7 +88,21 @@ export function loadPersistedState(): Partial<PersistedState> {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    return typeof parsed === 'object' && parsed !== null ? parsed : {};
+    const state = typeof parsed === 'object' && parsed !== null ? parsed : {};
+    // Provide defaults for new Melody Studio fields for backward compatibility
+    return {
+      bassStyleId: state.bassStyleId || '',
+      leadStyleId: state.leadStyleId || '',
+      bassSeed: state.bassSeed || 1,
+      leadSeed: state.leadSeed || 1,
+      arpEnabled: state.arpEnabled || false,
+      arpSettings: state.arpSettings || { pattern: 'up', rate: 'eighth', octaveRange: 1, gate: 0.8 },
+      arpSeed: state.arpSeed || 1,
+      drumKitId: state.drumKitId || 'acoustic',
+      drumSeed: state.drumSeed || 1,
+      synthIds: state.synthIds || { chord: 'pad', bass: 'pluck', lead: 'supersaw', drums: 'piano' },
+      ...state,
+    };
   } catch {
     return {};
   }
@@ -218,6 +243,17 @@ export interface ShareablePreset {
   b: number; // bpm
   c: string; // complexity
   r: string; // rhythm name
+  // Melody Studio state
+  bs?: string; // bass style id
+  ls?: string; // lead style id
+  bsd?: number; // bass seed
+  lsd?: number; // lead seed
+  ae?: boolean; // arp enabled
+  as?: { pattern: string; rate: string; octaveRange: number; gate: number }; // arp settings
+  asd?: number; // arp seed
+  dk?: string; // drum kit id
+  dsd?: number; // drum seed
+  si?: { chord: string; bass: string; lead: string; drums: string }; // synth ids
 }
 
 export function encodeShareablePreset(data: ShareablePreset): string {

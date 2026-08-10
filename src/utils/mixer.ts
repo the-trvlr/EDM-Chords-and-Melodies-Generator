@@ -131,15 +131,10 @@ function disposeSynths(m: MixerNodes): void {
   }
 }
 
-function createTrackSynth(track: TrackId, chordSynthId: SynthPresetId): Tone.PolySynth {
-  if (track === 'chord') return createSynth(chordSynthId);
-  if (track === 'bass') {
-    return new Tone.PolySynth(Tone.Synth, {
-      oscillator: { type: 'sawtooth4' },
-      envelope: { attack: 0.01, decay: 0.2, sustain: 0.6, release: 0.5 },
-      volume: -8,
-    });
-  }
+function createTrackSynth(track: TrackId, synthId: SynthPresetId): Tone.PolySynth {
+  if (track === 'chord') return createSynth(synthId);
+  if (track === 'bass') return createSynth(synthId);
+  if (track === 'lead') return createSynth(synthId);
   if (track === 'drums') {
     // Return a placeholder synth for drums - actual drum sounds will be synthesized
     return new Tone.PolySynth(Tone.Synth, {
@@ -148,11 +143,7 @@ function createTrackSynth(track: TrackId, chordSynthId: SynthPresetId): Tone.Pol
       volume: -5,
     });
   }
-  return new Tone.PolySynth(Tone.Synth, {
-    oscillator: { type: 'triangle8' },
-    envelope: { attack: 0.01, decay: 0.15, sustain: 0.3, release: 0.8 },
-    volume: -10,
-  });
+  return createSynth(synthId);
 }
 
 export interface ArrangementOptions {
