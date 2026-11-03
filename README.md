@@ -5,19 +5,18 @@ A fully offline Progressive Web App (PWA) for turning an EDM idea into a playabl
 **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
 **Roadmap:** [`docs/PLAN-UIUX-2026.md`](docs/PLAN-UIUX-2026.md) · **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 
-![Arrangement on desktop](docs/release-0.4/desktop-arrangement.jpg)
+![Arrangement with song sections](docs/release-0.6/desktop-sections.jpg)
 
 ---
 
-## What's new in 0.4
+## What's new in 0.6
 
-- **Mobile-ready Arrangement**: tracks are compact, lanes span the full width, no horizontal page scroll.
-- **One transport** in the sticky header (play, bar counter, BPM, loop, master volume) that keeps playing when you switch sections.
-- **WYSIWYG export**: live playback, WAV and MIDI share one event schedule, so exports include the arpeggiator, the selected drum kit and your mixer settings.
-- **Full-fidelity share links and project files** (chords, inversions, mixer, drum edits, styles).
-- **A11y pass**: 44 px touch targets, focus styles, labelled controls, accessible modals, toasts instead of alerts, reduced-motion support.
-- **~168 KB gzip of initial JS** before the staff is needed (down from ~843 KB); VexFlow loads only when the notation is on screen and uses the single-font Bravura build (387 KB gzip).
-- **27 unit tests** wired into CI.
+- **Song sections**: Intro/Build/Drop/Break/Outro blocks with per-section track gating, reordering and duplication.
+- **Piano-roll editing** for bass and lead, plus swing and humanize that also affect WAV, stems and MIDI.
+- **Per-track octave transposition** for chords, bass and lead.
+- **Stems export**: four separate WAVs packed into a zip.
+- **Audio fixes**: master limiter, supersaw voice budget, per-rhythm ADSR so tails do not collide, genre-accurate drum patterns.
+- **40 unit tests** wired into CI.
 
 See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 
@@ -36,6 +35,9 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 ### Arrangement
 
 - **Four tracks:** Chords (block or arpeggiated), Bass, Lead, Drums.
+- **Song sections** with per-section track gating and song-length playback.
+- **Piano-roll editing** for bass/lead (draw, move, resize, delete) and per-track octave shift.
+- **Swing and humanize** applied consistently to playback and all exports.
 - Per-track instrument, volume, mute and solo; solo preview per track.
 - **Arpeggiator:** up/down/up-down/random, 1/8 or 1/16, 1–3 octaves, gate.
 - **Bass and lead generators** with genre-specific styles, seeded and regenerable.
@@ -47,7 +49,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 - Sticky transport: play/stop, bar counter, BPM (slider + input), loop, master volume.
 - `Cmd/Ctrl+Space`/`Space` play-stop, `Cmd/Ctrl+Z`/`Shift+Z` undo-redo, `Cmd/Ctrl+S` save, `Cmd/Ctrl+O` open.
 - **MIDI:** chord progression, full arrangement, and per-track files (bass, lead, drums on GM channel 10).
-- **WAV mix** rendered offline with the same instruments, kit and effects as playback.
+- **WAV mix** and **stems** (4-track zip) rendered offline with the same instruments, kit and effects as playback.
 - **Project files** (`.json`) with harmony + arrangement; browser-stored arrangement snapshots.
 - **Share links** that restore the whole project, including custom chords and mixer.
 
@@ -61,7 +63,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 
 | Desktop | Mobile |
 |---|---|
-| ![Desktop arrangement](docs/release-0.4/desktop-arrangement.jpg) | ![Mobile arrangement](docs/release-0.4/mobile-arrangement.jpg) |
+| ![Desktop arrangement](docs/release-0.6/desktop-sections.jpg) | ![Mobile arrangement](docs/release-0.6/mobile-sections.jpg) |
 
 ## Using the app offline
 
@@ -107,8 +109,9 @@ src/
 │   └── useToast.ts            # toast context + hook
 ├── components/
 │   ├── TransportBar.tsx       # unified transport
-│   ├── MelodyStudio.tsx       # arranger (tracks, mixer, export, dialogs)
-│   ├── lanes.tsx              # chord lane, piano-roll lane, drum grid
+│   ├── MelodyStudio.tsx       # arranger (sections, tracks, mixer, export, dialogs)
+│   ├── SectionsTimeline.tsx   # song structure editor
+│   ├── lanes.tsx              # chord lane, editable piano roll, drum grid
 │   ├── Menu.tsx, Modal.tsx, Toast.tsx, Skeleton.tsx, ErrorBoundary.tsx
 │   ├── ChordDisplay.tsx, ChordPalette.tsx, PianoKeyboard.tsx, StaffNotation.tsx
 │   ├── KeySelector.tsx, GenreSelector.tsx, ProgressionSelector.tsx,
@@ -117,7 +120,8 @@ src/
 │   ├── genres.ts              # genres, progressions, rhythms
 │   └── drumKits.ts
 └── utils/
-    ├── schedule.ts            # single event schedule for live/WAV/MIDI (WYSIWYG)
+    ├── schedule.ts            # single event schedule for live/WAV/MIDI (sections, octaves, swing)
+    ├── audioProfiles.ts       # envelopes, voice budgets, per-rhythm ADSR
     ├── audioEngine.ts         # chord playback
     ├── mixer.ts               # multi-track playback + offline WAV render
     ├── musicTheory.ts         # scales, chords, inversions, voice leading

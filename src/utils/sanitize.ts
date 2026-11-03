@@ -1,9 +1,10 @@
 import { CHORD_TYPES, SCALE_INTERVALS, type ChordComplexity, type ChordInfo } from './musicTheory';
 import { DRUM_KITS, type DrumKitId } from '../data/drumKits';
 import { isDrumPattern } from './drumGenerator';
-import { defaultMelodyState, emptyMixer, type MelodyState, type MixerState, type TrackMix } from '../types';
+import { defaultMelodyState, emptyMixer, type MelodyState, type MixerState, type SongSection, type TrackMix } from '../types';
 import type { SynthPresetId } from './audioEngine';
 import type { TrackId } from './schedule';
+import type { MelodyNote } from './melodyGenerator';
 
 export const SYNTH_IDS: SynthPresetId[] = ['piano', 'pad', 'organ', 'supersaw', 'pluck', 'dark', 'bell'];
 export const TRACK_IDS: TrackId[] = ['chord', 'bass', 'lead', 'drums'];
@@ -12,6 +13,7 @@ export const COMPLEXITIES: ChordComplexity[] = ['basic', '7ths', '9ths', 'jazzy'
 export const DRUM_KIT_IDS: DrumKitId[] = DRUM_KITS.map(kit => kit.id);
 export const ARP_PATTERNS = ['up', 'down', 'up-down', 'random'] as const;
 export const ARP_RATES = ['eighth', 'sixteenth'] as const;
+export const SECTION_KINDS = ['intro', 'build', 'drop', 'break', 'outro'] as const;
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -21,12 +23,62 @@ export function numIn(value: unknown, min: number, max: number, fallback: number
   return typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max ? value : fallback;
 }
 
+/** Clamps a numeric value into range (unlike numIn, which rejects it). */
+export function clampNum(value: unknown, min: number, max: number, fallback: number): number {
+  const number = typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+  return Math.max(min, Math.min(max, number));
+}
+
+export function clampIn(value: unknown, min: number, max: number, fallback: number): number {
+  return Math.round(clampNum(value, min, max, fallback));
+}
+
 export function boolOr(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
 export function sanitizeSynthId(value: unknown, fallback: SynthPresetId): SynthPresetId {
   return typeof value === 'string' && (SYNTH_IDS as string[]).includes(value) ? (value as SynthPresetId) : fallback;
+}
+
+export function sanitizeSections(value: unknown): SongSection[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 16).flatMap((raw, index) => {
+    if (!isRecord(raw)) return [];
+    const kind = (SECTION_KINDS as readonly string[]).includes(String(raw.kind))
+      ? (raw.kind as SongSection['kind'])
+      : 'drop';
+    const tracks = Array.isArray(raw.tracks)
+      ? raw.tracks.filter((track): track is TrackId => TRACK_IDS.includes(track as TrackId))
+      : [...TRACK_IDS];
+    return [{
+      id: typeof raw.id === 'string' ? raw.id.slice(0, 64) : `section-${index}`,
+      kind,
+      bars: clampIn(raw.bars, 1, 32, 4),
+      tracks: [...new Set(tracks)],
+    }];
+  });
+}
+
+/** Returns null only when the value is not an array (i.e. "use generated notes"). */
+export function sanitizeNotes(value: unknown): MelodyNote[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.slice(0, 512).flatMap(raw => {
+    if (!isRecord(raw)) return [];
+    const step = clampIn(raw.step, 0, 4096, 0);
+    const midi = clampIn(raw.midi, 0, 127, 60);
+    const duration = clampIn(raw.duration, 1, 64, 1);
+    return [{ step, midi, duration }];
+  });
+}
+
+function sanitizeOctaves(value: unknown): MelodyState['octaves'] {
+  if (!isRecord(value)) return { chord: 0, bass: 0, lead: 0 };
+  return {
+    chord: clampIn(value.chord, -2, 2, 0),
+    bass: clampIn(value.bass, -2, 2, 0),
+    lead: clampIn(value.lead, -2, 2, 0),
+  };
 }
 
 export function sanitizeMixer(value: unknown): MixerState {
@@ -65,6 +117,7 @@ export function sanitizeMelody(value: unknown): MelodyState {
     : isRecord(value.arpSettings)
       ? value.arpSettings
       : {};
+  const octaveTuple = Array.isArray(value.oc) ? value.oc : null;
 
   return {
     ...melody,
@@ -108,6 +161,14 @@ export function sanitizeMelody(value: unknown): MelodyState {
           }
         : melody.synthIds,
     mixer: sanitizeMixer(value.mx ?? value.mixer ?? value.mixerSettings),
+    octaves: octaveTuple
+      ? sanitizeOctaves({ chord: octaveTuple[0], bass: octaveTuple[1], lead: octaveTuple[2] })
+      : sanitizeOctaves(value.octaves),
+    sections: sanitizeSections(value.sections ?? value.sc),
+    swing: clampNum(value.swing ?? value.sw, 0, 0.6, 0),
+    humanize: boolOr(value.humanize ?? value.hu, false),
+    bassNotes: sanitizeNotes(value.bassNotes ?? value.bn),
+    leadNotes: sanitizeNotes(value.leadNotes ?? value.ln),
   };
 }
 

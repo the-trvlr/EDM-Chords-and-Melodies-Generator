@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import type { ChordInfo } from '../utils/musicTheory';
 import type { MelodyNote } from '../utils/melodyGenerator';
 import type { DrumPattern } from '../utils/drumGenerator';
@@ -176,6 +177,188 @@ export function DrumGrid({
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+interface EditableLaneProps extends LaneProps {
+  notes: MelodyNote[];
+  onChange: (notes: MelodyNote[]) => void;
+  color: string;
+  activeColor: string;
+  label: string;
+}
+
+/**
+ * Minimal piano-roll editor: drag a note to move it, drag its right edge to
+ * resize, double-click (or right-click) to delete, click empty space to add.
+ */
+export function EditablePianoRoll({
+  notes,
+  onChange,
+  activeStep,
+  totalSteps,
+  bars,
+  color,
+  activeColor,
+  label,
+}: EditableLaneProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{
+    mode: 'move' | 'resize';
+    index: number;
+    startX: number;
+    startY: number;
+    note: MelodyNote;
+    moved: boolean;
+  } | null>(null);
+  const [draft, setDraft] = useState<MelodyNote[] | null>(null);
+
+  const rendered = draft ?? notes;
+  const midis = rendered.map(note => note.midi);
+  const minMidi = midis.length ? Math.min(...midis) : 48;
+  const maxMidi = midis.length ? Math.max(...midis) : 60;
+  const range = Math.max(maxMidi - minMidi + 10, 12);
+  const topMidi = maxMidi + 5;
+
+  const positionFromEvent = (clientX: number, clientY: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0) return { step: 0, midi: topMidi - 5 };
+    const step = Math.max(0, Math.min(totalSteps - 1, Math.round(((clientX - rect.left) / rect.width) * totalSteps)));
+    const midi = Math.max(12, Math.min(108, Math.round(topMidi - ((clientY - rect.top) / rect.height) * range)));
+    return { step, midi };
+  };
+
+  const startMove = (event: React.PointerEvent, index: number) => {
+    event.preventDefault();
+    event.stopPropagation();
+    containerRef.current?.setPointerCapture(event.pointerId);
+    dragRef.current = {
+      mode: 'move',
+      index,
+      startX: event.clientX,
+      startY: event.clientY,
+      note: { ...rendered[index] },
+      moved: false,
+    };
+    setDraft(rendered.map(note => ({ ...note })));
+  };
+
+  const startResize = (event: React.PointerEvent, index: number) => {
+    event.preventDefault();
+    event.stopPropagation();
+    containerRef.current?.setPointerCapture(event.pointerId);
+    dragRef.current = {
+      mode: 'resize',
+      index,
+      startX: event.clientX,
+      startY: event.clientY,
+      note: { ...rendered[index] },
+      moved: false,
+    };
+    setDraft(rendered.map(note => ({ ...note })));
+  };
+
+  const handlePointerDown = (event: React.PointerEvent) => {
+    if (event.button !== 0) return;
+    const { step, midi } = positionFromEvent(event.clientX, event.clientY);
+    const next = [...rendered, { step, midi, duration: 1 }].sort((a, b) => a.step - b.step);
+    const index = next.findIndex(note => note.step === step && note.midi === midi);
+    containerRef.current?.setPointerCapture(event.pointerId);
+    dragRef.current = { mode: 'move', index, startX: event.clientX, startY: event.clientY, note: { ...next[index] }, moved: false };
+    setDraft(next);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const dxSteps = Math.round(((event.clientX - drag.startX) / rect.width) * totalSteps);
+    const dyMidi = Math.round(((event.clientY - drag.startY) / rect.height) * range);
+    if (dxSteps !== 0 || dyMidi !== 0) drag.moved = true;
+    setDraft(prev => {
+      if (!prev) return prev;
+      return prev.map((note, index) => {
+        if (index !== drag.index) return note;
+        if (drag.mode === 'resize') {
+          return { ...note, duration: Math.max(1, Math.min(64, drag.note.duration + dxSteps)) };
+        }
+        return {
+          ...note,
+          step: Math.max(0, Math.min(totalSteps - 1, drag.note.step + dxSteps)),
+          midi: Math.max(12, Math.min(108, drag.note.midi - dyMidi)),
+        };
+      });
+    });
+  };
+
+  const handlePointerUp = () => {
+    if (!dragRef.current || !draft) {
+      dragRef.current = null;
+      setDraft(null);
+      return;
+    }
+    const next = [...draft]
+      .filter((note, index, list) => list.findIndex(other => other.step === note.step && other.midi === note.midi && other.duration === note.duration) === index)
+      .sort((a, b) => a.step - b.step);
+    dragRef.current = null;
+    setDraft(null);
+    onChange(next);
+  };
+
+  const removeNote = (index: number) => {
+    onChange(rendered.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="min-w-0">
+      <BarRuler bars={bars} />
+      <div
+        ref={containerRef}
+        role="application"
+        aria-label={`${label} piano roll editor, ${notes.length} notes`}
+        className={`relative ${LANE_HEIGHT} w-full min-w-0 touch-none select-none overflow-hidden rounded-lg border border-gray-700/60 bg-gray-950/60`}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
+        <BarLines bars={bars} />
+        {rendered.length === 0 && (
+          <div className="pointer-events-none flex h-full items-center justify-center text-[11px] text-gray-400">
+            Click to draw a note
+          </div>
+        )}
+        {rendered.map((note, index) => {
+          const isActive =
+            activeStep !== null && activeStep >= note.step && activeStep < note.step + note.duration;
+          const left = (note.step / totalSteps) * 100;
+          const width = Math.max((note.duration / totalSteps) * 100, 0.6);
+          const top = ((topMidi - note.midi) / range) * 100;
+          return (
+            <div
+              key={`${note.step}-${note.midi}-${index}`}
+              className={`absolute rounded-sm ${isActive ? activeColor : color}`}
+              style={{ left: `${left}%`, width: `${width}%`, top: `${top}%`, height: 8 }}
+              onPointerDown={event => startMove(event, index)}
+              onDoubleClick={() => removeNote(index)}
+              onContextMenu={event => {
+                event.preventDefault();
+                removeNote(index);
+              }}
+              title={`MIDI ${note.midi} · step ${note.step + 1} · ${note.duration} step(s)`}
+            >
+              <span
+                className="absolute -right-1 top-0 h-full w-2 cursor-ew-resize rounded-r-sm bg-white/20"
+                onPointerDown={event => startResize(event, index)}
+                aria-hidden="true"
+              />
+            </div>
+          );
+        })}
+        {activeStep !== null && <Playhead position={activeStep / totalSteps} />}
       </div>
     </div>
   );

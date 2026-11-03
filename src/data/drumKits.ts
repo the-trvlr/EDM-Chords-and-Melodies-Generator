@@ -33,3 +33,15 @@ export const DRUM_KITS: DrumKit[] = [
     description: 'Funky breakbeat kit',
   },
 ];
+
+/** Genre-appropriate default kit so patterns do not all sound like the same drum machine. */
+export const DEFAULT_DRUM_KIT_BY_GENRE: Record<string, DrumKitId> = {
+  house: '909',
+  techno: '909',
+  trance: '909',
+  dnb: 'breakbeat',
+  dubstep: '808',
+  futureBass: '808',
+  progressiveHouse: '909',
+  hardstyle: 'acoustic',
+};

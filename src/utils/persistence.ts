@@ -1,4 +1,4 @@
-import type { ChordComplexity } from './musicTheory';
+import type { ChordComplexity, ChordInfo } from './musicTheory';
 import { GENRES } from '../data/genres';
 import type { MelodyState, ProjectSnapshot } from '../types';
 import { defaultMelodyState } from '../types';
@@ -27,8 +27,10 @@ export interface PersistedState {
   doubleTime: boolean;
   chordComplexity: ChordComplexity;
   activeTab: 'chords' | 'melodies';
-  /** Full arranger state (styles, seeds, mixer, drum edits). */
+  /** Full arranger state (styles, seeds, mixer, drum edits, sections). */
   melody: MelodyState;
+  /** Manual chord edits; restored on reload like the rest of the session. */
+  customProgression?: ChordInfo[] | null;
 }
 
 export interface SavedArrangement {
@@ -110,7 +112,8 @@ export function loadPersistedState(): Partial<PersistedState> {
         ? (parsed.chordComplexity as ChordComplexity)
         : 'basic',
       activeTab: parsed.activeTab === 'melodies' ? 'melodies' : 'chords',
-      melody: sanitizeMelody(parsed),
+      melody: sanitizeMelody(isRecord(parsed.melody) ? parsed.melody : parsed),
+      customProgression: sanitizeChords(parsed.customProgression),
     };
   } catch {
     return {};

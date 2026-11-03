@@ -4,6 +4,7 @@ import type { DrumKitId } from './data/drumKits';
 import type { DrumPattern } from './utils/drumGenerator';
 import type { SynthPresetId } from './utils/audioEngine';
 import type { TrackId } from './utils/schedule';
+import type { MelodyNote } from './utils/melodyGenerator';
 
 export interface TrackMix {
   volume: number;
@@ -12,6 +13,21 @@ export interface TrackMix {
 }
 
 export type MixerState = Record<TrackId, TrackMix>;
+
+export type SectionKind = 'intro' | 'build' | 'drop' | 'break' | 'outro';
+
+export interface SongSection {
+  id: string;
+  kind: SectionKind;
+  bars: number;
+  tracks: TrackId[];
+}
+
+export interface TrackOctaves {
+  chord: number;
+  bass: number;
+  lead: number;
+}
 
 export type SynthIds = {
   chord: SynthPresetId;
@@ -34,6 +50,16 @@ export interface MelodyState {
   customDrumPattern: DrumPattern | null;
   synthIds: SynthIds;
   mixer: MixerState;
+  /** Per-track octave transposition in the arranger. */
+  octaves: TrackOctaves;
+  /** Song structure; empty means "loop the progression". */
+  sections: SongSection[];
+  /** 0..0.6, delays odd 16th steps. */
+  swing: number;
+  humanize: boolean;
+  /** Edited notes; null means "use the generated melody". */
+  bassNotes: MelodyNote[] | null;
+  leadNotes: MelodyNote[] | null;
 }
 
 /** Full project snapshot: harmony + arranger, used by files, share links and storage. */
@@ -73,4 +99,10 @@ export const defaultMelodyState = (): MelodyState => ({
   customDrumPattern: null,
   synthIds: { chord: 'pad', bass: 'pluck', lead: 'supersaw', drums: 'piano' },
   mixer: emptyMixer(),
+  octaves: { chord: 0, bass: 0, lead: 0 },
+  sections: [],
+  swing: 0,
+  humanize: false,
+  bassNotes: null,
+  leadNotes: null,
 });

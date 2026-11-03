@@ -64,13 +64,23 @@ const DRUM_PRESETS: DrumPatternPreset[] = [
     id: 'techno-driving',
     name: 'Driving Techno',
     genreId: 'techno',
-    pattern: p(FOUR_ON_FLOOR, EMPTY, BACKBEAT, OFFBEAT_HATS),
+    pattern: p(
+      FOUR_ON_FLOOR,
+      EMPTY,
+      BACKBEAT,
+      [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1],
+    ),
   },
   {
     id: 'techno-minimal',
     name: 'Minimal Techno',
     genreId: 'techno',
-    pattern: p(FOUR_ON_FLOOR, EMPTY, EMPTY, [0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0]),
+    pattern: p(
+      [1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0],
+      EMPTY,
+      [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      [0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
+    ),
   },
   // Trance
   {
@@ -159,14 +169,24 @@ const DRUM_PRESETS: DrumPatternPreset[] = [
     id: 'progressive-house',
     name: 'Progressive House',
     genreId: 'progressiveHouse',
-    pattern: p(FOUR_ON_FLOOR, EMPTY, BACKBEAT, OFFBEAT_HATS),
+    pattern: p(
+      [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+      EMPTY,
+      BACKBEAT,
+      OFFBEAT_HATS,
+    ),
   },
   // Hardstyle
   {
     id: 'hardstyle-euphoric',
     name: 'Euphoric Hardstyle',
     genreId: 'hardstyle',
-    pattern: p(FOUR_ON_FLOOR, EMPTY, BACKBEAT, OFFBEAT_HATS),
+    pattern: p(
+      FOUR_ON_FLOOR,
+      BACKBEAT,
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+      OFFBEAT_HATS,
+    ),
   },
   {
     id: 'hardstyle-raw',

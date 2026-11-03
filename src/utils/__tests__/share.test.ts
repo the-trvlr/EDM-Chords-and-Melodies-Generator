@@ -114,6 +114,30 @@ describe('share codec', () => {
     expect(decodeShare('a'.repeat(9000))).toBeNull();
   });
 
+  it('keeps sections, octaves, edited notes and groove', () => {
+    const melody = {
+      ...defaultMelodyState(),
+      octaves: { chord: 1, bass: -1, lead: 2 },
+      swing: 0.3,
+      humanize: true,
+      sections: [
+        { id: 's1', kind: 'intro' as const, bars: 4, tracks: ['chord' as const] },
+        { id: 's2', kind: 'drop' as const, bars: 8, tracks: ['chord' as const, 'bass' as const, 'lead' as const, 'drums' as const] },
+      ],
+      bassNotes: [{ step: 0, midi: 40, duration: 2 }, { step: 4, midi: 43, duration: 1 }],
+    };
+    const decoded = decodeShare(encodeShare(snapshot({ melody })));
+    expect(decoded?.melody.octaves).toEqual({ chord: 1, bass: -1, lead: 2 });
+    expect(decoded?.melody.swing).toBe(0.3);
+    expect(decoded?.melody.humanize).toBe(true);
+    expect(decoded?.melody.sections).toHaveLength(2);
+    expect(decoded?.melody.sections[1]).toMatchObject({ kind: 'drop', bars: 8 });
+    expect(decoded?.melody.sections[1].tracks).toHaveLength(4);
+    expect(decoded?.melody.bassNotes).toEqual(melody.bassNotes);
+    expect(decoded?.melody.leadNotes).toBeNull();
+    expect(encodeShare(snapshot({ melody })).length).toBeLessThan(4000);
+  });
+
   it('maps chord types to stable keys', () => {
     expect(chordTypeKey(getChordNotes('A', 'min7', 4))).toBe('min7');
     expect(chordTypeKey(getChordNotes('C', 'maj9', 4))).toBe('maj9');

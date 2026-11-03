@@ -1,5 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { GENRES } from './data/genres';
+import { DEFAULT_DRUM_KIT_BY_GENRE } from './data/drumKits';
 import type { Genre, RhythmPattern } from './data/genres';
 import {
   FLAT_NAMES,
@@ -19,6 +20,7 @@ import { setArrangementBpm, setArrangementLoop, stopArrangement } from './utils/
 import { loadPersistedState, parseProjectFile, savePersistedState, serializeProject } from './utils/persistence';
 import { chordTypeKey, decodeShare, encodeShare, expandChord } from './utils/share';
 import { exportProgressionToMidi } from './utils/midiExport';
+import { songBars } from './utils/schedule';
 import { defaultMelodyState, type MelodyState, type ProjectSnapshot } from './types';
 import { ChordDisplay } from './components/ChordDisplay';
 import { ChordPalette } from './components/ChordPalette';
@@ -174,8 +176,9 @@ function Studio() {
     if (param === 'harmony') return 'chords';
     return persisted.activeTab ?? 'chords';
   });
-  const [customProgression, setCustomProgression] = useState<ChordInfo[] | null>(sharedProject?.customProgression ?? null);
-  const [history, setHistory] = useState<{ list: ChordInfo[][]; index: number }>(sharedProject?.customProgression ? { list: [sharedProject.customProgression], index: 0 } : { list: [], index: -1 });
+  const initialCustomProgression = sharedProject?.customProgression ?? persisted.customProgression ?? null;
+  const [customProgression, setCustomProgression] = useState<ChordInfo[] | null>(initialCustomProgression);
+  const [history, setHistory] = useState<{ list: ChordInfo[][]; index: number }>(initialCustomProgression ? { list: [initialCustomProgression], index: 0 } : { list: [], index: -1 });
   const [melody, setMelody] = useState<MelodyState>(initialMelodyState);
 
   const studioRef = useRef<MelodyStudioHandle>(null);
@@ -336,10 +339,11 @@ function Studio() {
       chordComplexity,
       activeTab,
       melody,
+      customProgression,
     });
   }, [
     selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth,
-    bpm, volume, loop, doubleTime, chordComplexity, activeTab, melody,
+    bpm, volume, loop, doubleTime, chordComplexity, activeTab, melody, customProgression,
   ]);
 
   const chordsPlayingRef = useRef(chordsPlaying);
@@ -401,6 +405,10 @@ function Studio() {
     setSelectedScale(genre.preferredScale);
     setSelectedKey(current => getPreferredKeyName(noteNameToPc(current), genre.preferredScale));
     setSelectedSynth(genre.synthPreset as typeof selectedSynth);
+    setMelody(prev => ({
+      ...prev,
+      drumKitId: DEFAULT_DRUM_KIT_BY_GENRE[genre.id] ?? prev.drumKitId,
+    }));
     setSelectedChordForView(null);
   }, [chordsPlaying, arrangementPlaying, handleStopChords]);
 
@@ -415,7 +423,12 @@ function Studio() {
   }, []);
 
   const handleShare = useCallback(async () => {
-    const url = `${window.location.origin}${window.location.pathname}?preset=${encodeShare(snapshot)}`;
+    const encoded = encodeShare(snapshot);
+    if (encoded.length > 7000) {
+      toast.show('This project is too large for a link — use Save → Save project instead.', 'error');
+      return;
+    }
+    const url = `${window.location.origin}${window.location.pathname}?preset=${encoded}`;
     try {
       await navigator.clipboard.writeText(url);
       toast.show('Link copied — chords, mixer and drum edits included', 'success');
@@ -497,8 +510,8 @@ function Studio() {
 
   const previewChord = useCallback((chord: ChordInfo) => {
     if (!audioReady) return;
-    playChord(chord, selectedSynth, '4n');
-  }, [audioReady, selectedSynth]);
+    playChord(chord, selectedSynth, '4n', selectedRhythm.name);
+  }, [audioReady, selectedSynth, selectedRhythm.name]);
 
   if (!audioReady) {
     return (
@@ -522,7 +535,7 @@ function Studio() {
   }
 
   const playing = chordsPlaying || arrangementPlaying;
-  const totalBars = Math.max(progression.length, 1);
+  const totalBars = Math.max(1, songBars({ chords: progression, sections: melody.sections }));
   const position = chordsPlaying
     ? { bar: Math.min(activeChordIndex + 1, totalBars), totalBars }
     : { bar: Math.floor((arrangementStep ?? 0) / 16) + 1, totalBars };
@@ -556,6 +569,7 @@ function Studio() {
                   { label: 'Chord progression MIDI', onSelect: handleExportChordMidi },
                   { label: 'Arrangement MIDI', hint: 'Chords, bass, lead, drums', onSelect: () => studioRef.current?.exportMidi() },
                   { label: 'WAV mix', onSelect: () => studioRef.current?.exportWav() },
+                  { label: 'Stems (.zip)', hint: 'Chords, bass, lead and drums as separate WAVs', onSelect: () => studioRef.current?.exportStems() },
                   { label: 'Project JSON', onSelect: handleSaveProjectFile },
                 ]}
               />

@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { getChordNotes, invertChord, keyPrefersFlats, voiceLeading } from '../musicTheory';
-import { parseProjectFile, sanitizeProject, serializeProject } from '../persistence';
+import { loadPersistedState, parseProjectFile, sanitizeProject, savePersistedState, serializeProject } from '../persistence';
 import { defaultMelodyState } from '../../types';
 
 describe('music theory helpers', () => {
@@ -101,5 +101,66 @@ describe('project files', () => {
     expect(sanitized?.bpm).toBe(124);
     expect(sanitized?.volume).toBe(-6);
     expect(sanitized?.scale).toBe('minor');
+  });
+
+  it('sanitises octaves, sections and edited notes', () => {
+    const sanitized = sanitizeProject({
+      key: 'A',
+      scale: 'minor',
+      melody: {
+        octaves: { chord: 9, bass: -9, lead: 1 },
+        sections: [
+          { kind: 'drop', bars: 999, tracks: ['chord', 'nope'] },
+          { kind: 'unknown', bars: -2, tracks: [] },
+        ],
+        swing: 5,
+        humanize: true,
+        bassNotes: [{ step: -1, midi: 200, duration: 0 }],
+        leadNotes: 'not-an-array',
+      },
+    });
+    expect(sanitized?.melody.octaves).toEqual({ chord: 2, bass: -2, lead: 1 });
+    expect(sanitized?.melody.sections).toHaveLength(2);
+    expect(sanitized?.melody.sections[0]).toMatchObject({ kind: 'drop', bars: 32, tracks: ['chord'] });
+    expect(sanitized?.melody.sections[1].kind).toBe('drop');
+    expect(sanitized?.melody.swing).toBe(0.6);
+    expect(sanitized?.melody.humanize).toBe(true);
+    expect(sanitized?.melody.bassNotes).toEqual([{ step: 0, midi: 127, duration: 1 }]);
+    expect(sanitized?.melody.leadNotes).toBeNull();
+  });
+
+  it('restores the nested melody state, sections and manual chords', () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, value); },
+    });
+    const melody = {
+      ...defaultMelodyState(),
+      octaves: { chord: 1, bass: -1, lead: 0 },
+      sections: [{ id: 's1', kind: 'drop' as const, bars: 8, tracks: ['chord' as const, 'drums' as const] }],
+      swing: 0.25,
+    };
+    savePersistedState({
+      selectedKey: 'A',
+      selectedScale: 'minor',
+      genreId: 'house',
+      selectedProgressionIdx: 0,
+      selectedSynth: 'pad',
+      bpm: 124,
+      volume: -6,
+      loop: true,
+      doubleTime: false,
+      chordComplexity: 'basic',
+      activeTab: 'melodies',
+      melody,
+      customProgression: [getChordNotes('A', 'minor', 4, false)],
+    });
+    const loaded = loadPersistedState();
+    expect(loaded.melody?.sections).toHaveLength(1);
+    expect(loaded.melody?.octaves).toEqual({ chord: 1, bass: -1, lead: 0 });
+    expect(loaded.melody?.swing).toBe(0.25);
+    expect(loaded.customProgression).toHaveLength(1);
+    vi.unstubAllGlobals();
   });
 });
