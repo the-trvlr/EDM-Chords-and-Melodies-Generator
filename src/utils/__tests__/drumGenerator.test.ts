@@ -46,4 +46,31 @@ describe('generateDrums', () => {
       expect(getDrumPatternsForGenre(genre).length).toBeGreaterThan(0);
     }
   });
+
+  it('gives every genre a distinct full drum signature', () => {
+    const genres = ['house', 'techno', 'trance', 'dnb', 'dubstep', 'futureBass', 'progressiveHouse', 'hardstyle'];
+    const signatures = genres.map(genre => {
+      const pattern = getDrumPatternsForGenre(genre)[0].pattern;
+      return [pattern.kick, pattern.snare, pattern.clap, pattern.hat].map(line => line.join('')).join('|');
+    });
+    expect(new Set(signatures).size).toBe(genres.length);
+  });
+
+  it('keeps the signature elements of each genre', () => {
+    const house = getDrumPatternsForGenre('house')[0].pattern;
+    const dnb = getDrumPatternsForGenre('dnb')[0].pattern;
+    const dubstep = getDrumPatternsForGenre('dubstep')[0].pattern;
+    const hardstyle = getDrumPatternsForGenre('hardstyle')[0].pattern;
+
+    // House / hardstyle: four-on-the-floor kick.
+    expect(house.kick).toEqual([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]);
+    expect(hardstyle.kick).toEqual(house.kick);
+    // DnB: broken kick, backbeat snare.
+    expect(dnb.kick).not.toEqual(house.kick);
+    expect(dnb.snare[4]).toBe(1);
+    expect(dnb.snare[12]).toBe(1);
+    // Dubstep: half-time snare on beat 3 only.
+    expect(dubstep.snare.filter(Boolean)).toHaveLength(1);
+    expect(dubstep.snare[8]).toBe(1);
+  });
 });

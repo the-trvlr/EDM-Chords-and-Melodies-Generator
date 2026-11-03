@@ -50,7 +50,36 @@ interface SharePayloadV2 {
     dsd: number;
     dp: DrumPattern | null;
     si: { chord: string; bass: string; lead: string; drums: string };
+    oc?: [number, number, number];
+    sc?: [string, number, string][];
+    sw?: number;
+    hu?: boolean;
+    bn?: [number, number, number][] | null;
+    ln?: [number, number, number][] | null;
   };
+}
+
+function compactNotes(notes: { step: number; midi: number; duration: number }[] | null) {
+  return notes ? notes.map(note => [note.step, note.midi, note.duration] as [number, number, number]) : null;
+}
+
+function expandNotes(value: unknown): unknown {
+  if (!Array.isArray(value)) return undefined;
+  return value.map(item => Array.isArray(item)
+    ? { step: item[0], midi: item[1], duration: item[2] }
+    : item);
+}
+
+function expandSections(value: unknown): unknown {
+  if (!Array.isArray(value)) return undefined;
+  return value.map((item: unknown, index: number) => Array.isArray(item)
+    ? {
+        id: `s${index}`,
+        kind: item[0],
+        bars: item[1],
+        tracks: typeof item[2] === 'string' ? item[2].split(',').filter(Boolean) : [],
+      }
+    : item);
 }
 
 function isNoteName(value: unknown): value is string {
@@ -135,6 +164,12 @@ export function encodeShare(snapshot: ProjectSnapshot): string {
       dsd: melody.drumSeed,
       dp: melody.customDrumPattern,
       si: { ...melody.synthIds },
+      oc: [melody.octaves.chord, melody.octaves.bass, melody.octaves.lead],
+      sc: melody.sections.map(section => [section.kind, section.bars, section.tracks.join(',')]),
+      sw: melody.swing,
+      hu: melody.humanize,
+      bn: compactNotes(melody.bassNotes),
+      ln: compactNotes(melody.leadNotes),
     },
   };
 
@@ -165,7 +200,15 @@ export function decodeShare(encoded: string): ProjectSnapshot | null {
     : 'minor';
   const key = isNoteName(parsed.k) ? parsed.k : 'A';
 
-  const melodyValue = isV2 && isRecord(parsed.m) ? { ...parsed.m, mx: parsed.mx } : parsed;
+  const melodyValue = isV2 && isRecord(parsed.m)
+    ? {
+        ...parsed.m,
+        mx: parsed.mx,
+        sc: expandSections(parsed.m.sc),
+        bn: expandNotes(parsed.m.bn),
+        ln: expandNotes(parsed.m.ln),
+      }
+    : parsed;
   const melody: MelodyState = sanitizeMelody(melodyValue);
 
   return {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSchedule, eventsForTrack, groupByStep, totalSteps } from '../schedule';
+import { buildSchedule, eventsForTrack, groupByStep, songBars, totalSteps } from '../schedule';
 import { getChordNotes } from '../musicTheory';
 import type { RhythmPattern } from '../../data/genres';
 
@@ -81,5 +81,65 @@ describe('buildSchedule', () => {
 
   it('returns no events for an empty progression', () => {
     expect(buildSchedule({ chords: [], rhythm })).toEqual([]);
+  });
+
+  it('sums section bars and repeats the progression per section', () => {
+    const sections = [
+      { id: 'a', kind: 'intro' as const, bars: 2, tracks: ['chord' as const] },
+      { id: 'b', kind: 'drop' as const, bars: 2, tracks: ['chord' as const, 'bass' as const] },
+    ];
+    expect(songBars({ chords, sections })).toBe(4);
+    const bass = { notes: [{ midi: 40, step: 0, duration: 2 }], type: 'bass' as const, styleId: 't', stepsPerChord: 16 };
+    const events = buildSchedule({ chords, rhythm, bass, sections });
+    const bassEvents = events.filter(event => event.track === 'bass');
+    // Bass plays only in the drop section, once per progression cycle.
+    expect(bassEvents.map(event => event.step)).toEqual([32]);
+  });
+
+  it('gates tracks that are disabled in a section', () => {
+    const drums = {
+      kick: [1, ...new Array(15).fill(0)],
+      snare: new Array(16).fill(0),
+      clap: new Array(16).fill(0),
+      hat: new Array(16).fill(0),
+    };
+    const sections = [
+      { id: 'intro', kind: 'intro' as const, bars: 1, tracks: ['chord' as const] },
+      { id: 'drop', kind: 'drop' as const, bars: 1, tracks: ['chord' as const, 'drums' as const] },
+    ];
+    const events = buildSchedule({ chords, rhythm, drums, sections });
+    const kicks = events.filter(event => event.track === 'drums' && event.instrument === 'kick');
+    expect(kicks.map(event => event.step)).toEqual([16]);
+  });
+
+  it('transposes tracks by octaves', () => {
+    const base = buildSchedule({ chords, rhythm });
+    const shifted = buildSchedule({ chords, rhythm, octaves: { chord: 1, bass: 0, lead: 0 } });
+    const baseChord = base.find(event => event.track === 'chord');
+    const shiftedChord = shifted.find(event => event.track === 'chord');
+    expect(baseChord && shiftedChord && baseChord.track === 'chord' && shiftedChord.track === 'chord')
+      .toBeTruthy();
+    if (baseChord?.track === 'chord' && shiftedChord?.track === 'chord') {
+      expect(shiftedChord.midis[0]).toBe(baseChord.midis[0] + 12);
+    }
+  });
+
+  it('delays odd steps with swing and humanizes deterministically', () => {
+    const drums = {
+      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+      snare: new Array(16).fill(0),
+      clap: new Array(16).fill(0),
+      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+    };
+    const swung = buildSchedule({ chords, rhythm, drums, swing: 0.5 });
+    const hatOnOdd = swung.find(event => event.track === 'drums' && event.step === 1);
+    const kickOnEven = swung.find(event => event.track === 'drums' && event.step === 0);
+    expect(hatOnOdd?.offset).toBeCloseTo(0.25);
+    expect(kickOnEven?.offset).toBe(0);
+
+    const a = buildSchedule({ chords, rhythm, drums, humanize: true });
+    const b = buildSchedule({ chords, rhythm, drums, humanize: true });
+    expect(a).toEqual(b);
+    expect(a.some(event => event.offset !== 0)).toBe(true);
   });
 });

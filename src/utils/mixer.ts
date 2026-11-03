@@ -4,13 +4,14 @@ import { midiNoteToToneName } from './musicTheory';
 import type { RhythmPattern } from '../data/genres';
 import type { GeneratedMelody } from './melodyGenerator';
 import type { DrumPattern } from './drumGenerator';
-import { createSynth, type SynthPresetId } from './audioEngine';
+import { createSynth, getChordEnvelope, type SynthPresetId } from './audioEngine';
 import type { DrumKitId } from '../data/drumKits';
+import type { SongSection, TrackOctaves } from '../types';
 import {
   buildSchedule,
   eventsForTrack,
   groupByStep,
-  totalSteps,
+  songSteps,
   type DrumInstrument,
   type ScheduleEvent,
   type TrackId,
@@ -30,6 +31,7 @@ interface DrumSynths {
 
 interface MixerNodes {
   reverb: Tone.Freeverb;
+  limiter: Tone.Limiter;
   channels: Record<TrackId, Tone.Channel>;
   synths: Record<'chord' | 'bass' | 'lead', Tone.PolySynth | null>;
   drumSynths: DrumSynths | null;
@@ -88,7 +90,8 @@ function ensureMixer(): MixerNodes {
   if (mixer) return mixer;
   // Freeverb is deterministic and works synchronously in both live playback and
   // offline rendering, so the exported WAV matches what the user hears.
-  const reverb = new Tone.Freeverb({ roomSize: 0.7, dampening: 3000, wet: 0.25 }).toDestination();
+  const limiter = new Tone.Limiter(-1).toDestination();
+  const reverb = new Tone.Freeverb({ roomSize: 0.7, dampening: 3000, wet: 0.25 }).connect(limiter);
   const channels: Record<TrackId, Tone.Channel> = {
     chord: new Tone.Channel({ volume: 0 }).connect(reverb),
     bass: new Tone.Channel({ volume: 0 }).connect(reverb),
@@ -98,6 +101,7 @@ function ensureMixer(): MixerNodes {
 
   mixer = {
     reverb,
+    limiter,
     channels,
     synths: { chord: null, bass: null, lead: null },
     drumSynths: null,
@@ -141,8 +145,8 @@ function disposeMelodicSynths(m: MixerNodes): void {
   }
 }
 
-function createTrackSynth(synthId: SynthPresetId): Tone.PolySynth {
-  return createSynth(synthId);
+function createTrackSynth(synthId: SynthPresetId, envelope?: Parameters<typeof createSynth>[1]): Tone.PolySynth {
+  return createSynth(synthId, envelope);
 }
 
 function ensureDrumKit(m: MixerNodes, kitId: DrumKitId): DrumSynths {
@@ -223,6 +227,10 @@ interface ArrangementInput {
   bpm: number;
   drumKitId?: DrumKitId;
   masterVolume?: number;
+  sections?: SongSection[] | null;
+  octaves?: TrackOctaves;
+  swing?: number;
+  humanize?: boolean;
 }
 
 export interface ArrangementOptions extends ArrangementInput {
@@ -244,14 +252,17 @@ function prepareMixer(input: ArrangementInput): { mixer: MixerNodes; byStep: Map
 
   disposeMelodicSynths(m);
   for (const id of ['chord', 'bass', 'lead'] as const) {
-    const synth = createTrackSynth(input.synthIds[id]);
+    const synth = createTrackSynth(
+      input.synthIds[id],
+      id === 'chord' ? getChordEnvelope(input.rhythm.name) : undefined,
+    );
     synth.connect(m.channels[id]);
     m.synths[id] = synth;
   }
   ensureDrumKit(m, input.drumKitId ?? currentKitId);
 
   const events = buildSchedule(input);
-  return { mixer: m, byStep: groupByStep(events), steps: totalSteps(input.chords) };
+  return { mixer: m, byStep: groupByStep(events), steps: songSteps(input) };
 }
 
 export function playArrangement(opts: ArrangementOptions): void {
@@ -264,7 +275,9 @@ export function playArrangement(opts: ArrangementOptions): void {
   let step = 0;
   arrLoop = new Tone.Loop((time) => {
     const sixteenth = Tone.Time('16n').toSeconds();
-    for (const event of byStep.get(step) ?? []) playEvent(m, event, sixteenth, time);
+    for (const event of byStep.get(step) ?? []) {
+      playEvent(m, event, sixteenth, time + event.offset * sixteenth);
+    }
 
     const currentStep = step;
     if (opts.onStep) Tone.getDraw().schedule(() => opts.onStep!(currentStep), time);
@@ -321,7 +334,9 @@ export function playTrackPreview(opts: TrackPreviewOptions): void {
   let step = 0;
   previewLoop = new Tone.Loop((time) => {
     const sixteenth = Tone.Time('16n').toSeconds();
-    for (const event of previewEvents.get(step) ?? []) playEvent(m, event, sixteenth, time);
+    for (const event of previewEvents.get(step) ?? []) {
+      playEvent(m, event, sixteenth, time + event.offset * sixteenth);
+    }
 
     const currentStep = step;
     if (opts.onStep) Tone.getDraw().schedule(() => opts.onStep!(currentStep), time);
@@ -378,6 +393,10 @@ export interface RenderOptions {
   tracks: Record<TrackId, { volume: number; mute: boolean; solo: boolean }>;
   drumKitId?: DrumKitId;
   masterVolume?: number;
+  sections?: SongSection[] | null;
+  octaves?: TrackOctaves;
+  swing?: number;
+  humanize?: boolean;
 }
 
 function audioBufferToWav(buffer: AudioBuffer): Blob {
@@ -427,14 +446,15 @@ function trackIsAudible(
 }
 
 export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob> {
-  const steps = totalSteps(opts.chords);
+  const steps = songSteps(opts);
   const secPer16 = 60 / opts.bpm / 4;
   const duration = steps * secPer16 + 2.5;
   const events = buildSchedule(opts);
 
   const rendered = await Tone.Offline(() => {
     if (typeof opts.masterVolume === 'number') Tone.getDestination().volume.value = opts.masterVolume;
-    const reverb = new Tone.Freeverb({ roomSize: 0.7, dampening: 3000, wet: 0.25 }).toDestination();
+    const limiter = new Tone.Limiter(-1).toDestination();
+    const reverb = new Tone.Freeverb({ roomSize: 0.7, dampening: 3000, wet: 0.25 }).connect(limiter);
     const channels: Record<TrackId, Tone.Channel> = {
       chord: new Tone.Channel({ volume: opts.tracks.chord.volume }).connect(reverb),
       bass: new Tone.Channel({ volume: opts.tracks.bass.volume }).connect(reverb),
@@ -442,7 +462,7 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
       drums: new Tone.Channel({ volume: opts.tracks.drums.volume }).connect(reverb),
     };
     const synths = {
-      chord: createTrackSynth(opts.synthIds.chord).connect(channels.chord),
+      chord: createTrackSynth(opts.synthIds.chord, getChordEnvelope(opts.rhythm.name)).connect(channels.chord),
       bass: createTrackSynth(opts.synthIds.bass).connect(channels.bass),
       lead: createTrackSynth(opts.synthIds.lead).connect(channels.lead),
     };
@@ -450,7 +470,7 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
 
     for (const event of events) {
       if (!trackIsAudible(event.track, opts.tracks)) continue;
-      const time = event.step * secPer16;
+      const time = (event.step + event.offset) * secPer16;
       switch (event.track) {
         case 'chord':
           synths.chord.triggerAttackRelease(

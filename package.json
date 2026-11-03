@@ -1,7 +1,7 @@
 {
   "name": "edm-chord-generator",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
+    "fflate": "^0.8.3",
     "midi-writer-js": "^3.2.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",

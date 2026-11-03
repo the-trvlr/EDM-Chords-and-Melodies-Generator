@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { ChordInfo } from '../utils/musicTheory';
 import { SYNTH_PRESETS, type SynthPresetId } from '../utils/audioEngine';
-import { generateMelody, getGenreMelodyStyles, type MelodyStyle } from '../utils/melodyGenerator';
+import { generateMelody, getGenreMelodyStyles, type GeneratedMelody, type MelodyNote, type MelodyStyle } from '../utils/melodyGenerator';
 import type { RhythmPattern } from '../data/genres';
 import { DRUM_KITS, type DrumKitId } from '../data/drumKits';
 import {
@@ -23,10 +23,13 @@ import { stopPlayback } from '../utils/audioEngine';
 import { arpeggiate, type ArpPattern, type ArpRate } from '../utils/arpeggiator';
 import { generateDrums, type DrumPattern } from '../utils/drumGenerator';
 import { deleteArrangement, getSavedArrangements, saveArrangement, type SavedArrangement } from '../utils/persistence';
-import type { MelodyState, MixerState, ProjectSnapshot, TrackMix } from '../types';
+import type { MelodyState, MixerState, ProjectSnapshot, SongSection, TrackMix } from '../types';
 import { Modal } from './Modal';
-import { ChordLane, DrumGrid, PianoRollLane } from './lanes';
+import { ChordLane, DrumGrid, EditablePianoRoll, PianoRollLane } from './lanes';
 import { useToast } from '../hooks/useToast';
+import { SectionsTimeline } from './SectionsTimeline';
+import { songBars } from '../utils/schedule';
+import { zipSync } from 'fflate';
 
 export interface MelodyStudioHandle {
   undo: () => void;
@@ -35,6 +38,7 @@ export interface MelodyStudioHandle {
   openLoadDialog: () => void;
   exportMidi: () => void;
   exportWav: () => void;
+  exportStems: () => void;
 }
 
 interface MelodyStudioProps {
@@ -172,6 +176,34 @@ function TrackHeader({
   );
 }
 
+function OctaveStepper({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+  return (
+    <div className="flex items-center gap-0.5" role="group" aria-label={`${label} octave`}>
+      <button
+        type="button"
+        onClick={() => onChange(value - 1)}
+        disabled={value <= -2}
+        aria-label={`Octave down for ${label}`}
+        className="h-11 w-8 rounded-md border border-gray-700 text-sm text-gray-200 hover:border-gray-500 disabled:opacity-40 sm:h-8"
+      >
+        −
+      </button>
+      <span className="w-11 text-center text-[11px] tabular-nums text-gray-300">
+        Oct {value > 0 ? '+' : ''}{value}
+      </span>
+      <button
+        type="button"
+        onClick={() => onChange(value + 1)}
+        disabled={value >= 2}
+        aria-label={`Octave up for ${label}`}
+        className="h-11 w-8 rounded-md border border-gray-700 text-sm text-gray-200 hover:border-gray-500 disabled:opacity-40 sm:h-8"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
 export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(function MelodyStudio({
   progression,
   rhythm,
@@ -195,6 +227,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [previewingTrack, setPreviewingTrack] = useState<TrackId | null>(null);
   const [rendering, setRendering] = useState(false);
+  const [renderingStems, setRenderingStems] = useState(false);
   const [history, setHistory] = useState<MelodyHistory>({ list: [melody], index: 0 });
   const [saveDialog, setSaveDialog] = useState(false);
   const [loadDialog, setLoadDialog] = useState(false);
@@ -214,18 +247,28 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     ? melody.leadStyleId
     : leadStyles[0]?.id ?? '';
 
-  const bassMelody = useMemo(
+  const generatedBass = useMemo(
     () => generateMelody(progression, 'bass', bassStyleId, rootKey, scaleType, melody.bassSeed),
     // Melodies are pure functions of these values; memoisation keeps the
     // playhead (16 updates per bar) from regenerating them on every tick.
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
     [progression, bassStyleId, rootKey, scaleType, melody.bassSeed],
   );
-  const leadMelody = useMemo(
+  const generatedLead = useMemo(
     () => generateMelody(progression, 'lead', leadStyleId, rootKey, scaleType, melody.leadSeed),
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
     [progression, leadStyleId, rootKey, scaleType, melody.leadSeed],
   );
+  const bassMelody: GeneratedMelody = useMemo(() => (
+    melody.bassNotes
+      ? { notes: melody.bassNotes, type: 'bass', styleId: 'edited', stepsPerChord: 16 }
+      : generatedBass
+  ), [melody.bassNotes, generatedBass]);
+  const leadMelody: GeneratedMelody = useMemo(() => (
+    melody.leadNotes
+      ? { notes: melody.leadNotes, type: 'lead', styleId: 'edited', stepsPerChord: 16 }
+      : generatedLead
+  ), [melody.leadNotes, generatedLead]);
   const arpMelody = useMemo(
     () => melody.arpEnabled ? arpeggiate(progression, melody.arpSettings, melody.arpSeed) : null,
     [progression, melody.arpEnabled, melody.arpSettings, melody.arpSeed],
@@ -235,8 +278,9 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     [melody.customDrumPattern, genreId, melody.drumSeed],
   );
 
-  const bars = Math.max(1, progression.length);
-  const totalSteps = bars * 16;
+  const bars = Math.max(1, songBars({ chords: progression, sections: melody.sections }));
+  const laneBars = Math.max(1, progression.length);
+  const laneSteps = laneBars * 16;
 
   const apply = useCallback((patch: Partial<MelodyState>) => {
     const next: MelodyState = { ...melody, ...patch };
@@ -285,7 +329,10 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         onPlayingChange(false);
       },
     });
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, onPlayingChange, onStepChange, onStopOtherPlayback]);
+  // Restart when the sounding configuration changes (structure, octaves, groove),
+  // but not when unrelated melody state (e.g. preview dialogs) changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, onPlayingChange, onStepChange, onStopOtherPlayback]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -344,6 +391,10 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       synthIds: melody.synthIds,
       bpm,
       drumKitId: melody.drumKitId,
+      sections: melody.sections,
+      octaves: melody.octaves,
+      swing: melody.swing,
+      humanize: melody.humanize,
       trackId,
       onStep: (step) => {
         setActiveStep(step);
@@ -355,7 +406,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         onStepChange?.(null);
       },
     });
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.drumKitId, bpm, onStepChange, onStopOtherPlayback]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, bpm, onStepChange, onStopOtherPlayback]);
 
   const handleToggleDrumNote = useCallback((instrument: keyof DrumPattern, step: number) => {
     const base = melody.customDrumPattern ?? generateDrums(genreId, melody.drumSeed);
@@ -366,12 +417,70 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     apply({ customDrumPattern: nextPattern });
   }, [apply, genreId, melody.customDrumPattern, melody.drumSeed]);
 
+  const handleSectionsChange = useCallback((sections: SongSection[]) => {
+    apply({ sections });
+  }, [apply]);
+
+  const handleBassNotes = useCallback((notes: MelodyNote[]) => {
+    apply({ bassNotes: notes });
+  }, [apply]);
+
+  const handleLeadNotes = useCallback((notes: MelodyNote[]) => {
+    apply({ leadNotes: notes });
+  }, [apply]);
+
+  const handleExportStems = useCallback(async () => {
+    setRenderingStems(true);
+    try {
+      const files: Record<string, Uint8Array> = {};
+      for (const track of ['chord', 'bass', 'lead', 'drums'] as TrackId[]) {
+        const tracks = { ...melody.mixer };
+        for (const id of Object.keys(tracks) as TrackId[]) {
+          tracks[id] = { ...tracks[id], mute: false, solo: id === track };
+        }
+        const blob = await renderArrangementToWav({
+          chords: progression,
+          rhythm,
+          bass: bassMelody,
+          lead: leadMelody,
+          arpMelody,
+          drums: drumPattern,
+          synthIds: melody.synthIds,
+          bpm,
+          tracks,
+          drumKitId: melody.drumKitId,
+          masterVolume,
+          sections: melody.sections,
+          octaves: melody.octaves,
+          swing: melody.swing,
+          humanize: melody.humanize,
+        });
+        files[`${track}.wav`] = new Uint8Array(await blob.arrayBuffer());
+      }
+      const zipped = zipSync(files, { level: 0 });
+      const blob = new Blob([zipped], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `edm-stems-${rootKey}-${scaleType}-${bpm}bpm.zip`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.show('Stems exported (chords, bass, lead, drums)', 'success');
+    } catch (error) {
+      console.error('Stem render failed', error);
+      toast.show('Could not render stems. Try again.', 'error');
+    } finally {
+      setRenderingStems(false);
+    }
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, bpm, rootKey, scaleType, masterVolume, toast]);
+
   const handleExportMidi = useCallback(() => {
     exportArrangementToMidi(
       progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
+      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize },
     );
     toast.show('Arrangement MIDI exported', 'success');
-  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, toast]);
 
   const handleExportWav = useCallback(async () => {
     setRendering(true);
@@ -388,6 +497,10 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         tracks: melody.mixer,
         drumKitId: melody.drumKitId,
         masterVolume,
+        sections: melody.sections,
+        octaves: melody.octaves,
+        swing: melody.swing,
+        humanize: melody.humanize,
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -402,7 +515,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRendering(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, bpm, rootKey, scaleType, masterVolume, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, bpm, rootKey, scaleType, masterVolume, toast]);
 
   const handleSaveArrangement = useCallback(() => {
     const saved = saveArrangement(saveName, project);
@@ -443,7 +556,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     openLoadDialog,
     exportMidi: handleExportMidi,
     exportWav: handleExportWav,
-  }), [undo, redo, openSaveDialog, openLoadDialog, handleExportMidi, handleExportWav]);
+    exportStems: handleExportStems,
+  }), [undo, redo, openSaveDialog, openLoadDialog, handleExportMidi, handleExportWav, handleExportStems]);
 
   if (progression.length === 0) {
     return (
@@ -456,6 +570,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
   const busy = isPlaying || previewingTrack !== null;
   const displayStep = isPlaying || previewingTrack !== null ? activeStep : null;
+  const laneStep = displayStep !== null ? displayStep % laneSteps : null;
 
   const styleChips = (styles: MelodyStyle[], selected: string, onPick: (id: string) => void, onRegenerate: () => void, label: string) => (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -492,7 +607,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         <div>
           <h2 className="text-lg font-semibold text-white">Arrangement</h2>
           <p className="text-xs text-gray-400">
-            {bars} {bars === 1 ? 'bar' : 'bars'} · {bpm} BPM · {genresLabel(genreId)} · edits are saved in the project
+            {bars} {bars === 1 ? 'bar' : 'bars'}{melody.sections.length > 0 ? ` · ${laneBars}-bar pattern` : ''} · {bpm} BPM · {genresLabel(genreId)} · edits are saved in the project
           </p>
         </div>
         <div className="ml-auto flex flex-wrap gap-1.5">
@@ -529,6 +644,38 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         </div>
       </div>
 
+      <SectionsTimeline sections={melody.sections} onChange={handleSectionsChange} />
+
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-800 bg-gray-900/50 p-2">
+        <label className="flex items-center gap-2 text-xs text-gray-300">
+          Swing
+          <input
+            type="range"
+            min={0}
+            max={60}
+            step={5}
+            value={Math.round(melody.swing * 100)}
+            onChange={event => apply({ swing: Number(event.target.value) / 100 })}
+            aria-label="Swing amount"
+            className="w-24 accent-purple-500"
+          />
+          <span className="w-9 text-right text-[11px] tabular-nums text-gray-400">{Math.round(melody.swing * 100)}%</span>
+        </label>
+        <button
+          type="button"
+          onClick={() => apply({ humanize: !melody.humanize })}
+          aria-pressed={melody.humanize}
+          className={`h-11 rounded-md px-2 text-[11px] font-medium transition-colors sm:h-8 ${
+            melody.humanize
+              ? 'bg-amber-400/20 text-amber-200 ring-1 ring-amber-400/60'
+              : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+          }`}
+        >
+          Humanize
+        </button>
+        <span className="hidden text-[11px] text-gray-400 sm:inline">Groove applies to playback, WAV, stems and MIDI</span>
+      </div>
+
       {/* Chords */}
       <section className="min-w-0 rounded-xl border border-gray-800 bg-gray-900/50 p-2 sm:p-3">
         <TrackHeader
@@ -541,34 +688,41 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           onPreview={() => handlePreview('chord')}
           previewing={previewingTrack === 'chord'}
           busy={busy}
-          extra={
-            <button
-              type="button"
-              onClick={() => apply({ arpEnabled: !melody.arpEnabled })}
-              aria-pressed={melody.arpEnabled}
-              className={`h-11 rounded-md px-2 text-[11px] font-medium transition-colors sm:h-8 ${
-                melody.arpEnabled
-                  ? 'bg-purple-500/20 text-purple-200 ring-1 ring-purple-500/60'
-                  : 'border border-gray-700/70 text-gray-300 hover:border-gray-500'
-              }`}
-            >
-              Arp {melody.arpEnabled ? 'ON' : 'OFF'}
-            </button>
-          }
+          extra={(
+            <>
+              <OctaveStepper
+                label="Chords"
+                value={melody.octaves.chord}
+                onChange={value => apply({ octaves: { ...melody.octaves, chord: value } })}
+              />
+              <button
+                type="button"
+                onClick={() => apply({ arpEnabled: !melody.arpEnabled })}
+                aria-pressed={melody.arpEnabled}
+                className={`h-11 rounded-md px-2 text-[11px] font-medium transition-colors sm:h-8 ${
+                  melody.arpEnabled
+                    ? 'bg-purple-500/20 text-purple-200 ring-1 ring-purple-500/60'
+                    : 'border border-gray-700/70 text-gray-300 hover:border-gray-500'
+                }`}
+              >
+                Arp {melody.arpEnabled ? 'ON' : 'OFF'}
+              </button>
+            </>
+          )}
         />
         <div className="mt-2">
           {arpMelody ? (
             <PianoRollLane
               notes={arpMelody.notes}
               activeStep={displayStep}
-              totalSteps={totalSteps}
-              bars={bars}
+              totalSteps={laneSteps}
+              bars={laneBars}
               color="bg-purple-400/80"
               activeColor="bg-purple-300"
               label="Arpeggiated chords"
             />
           ) : (
-            <ChordLane chords={progression} activeStep={displayStep} totalSteps={totalSteps} bars={bars} />
+            <ChordLane chords={progression} activeStep={laneStep} totalSteps={laneSteps} bars={laneBars} />
           )}
         </div>
         {melody.arpEnabled && (
@@ -647,7 +801,21 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           busy={busy}
           extra={(
             <>
-              {styleChips(bassStyles, bassStyleId, id => apply({ bassStyleId: id }), () => apply({ bassSeed: melody.bassSeed + 1 }), 'bass')}
+              <OctaveStepper
+                label="Bass"
+                value={melody.octaves.bass}
+                onChange={value => apply({ octaves: { ...melody.octaves, bass: value } })}
+              />
+              {styleChips(bassStyles, bassStyleId, id => apply({ bassStyleId: id, bassNotes: null }), () => apply({ bassSeed: melody.bassSeed + 1, bassNotes: null }), 'bass')}
+              {melody.bassNotes && (
+                <button
+                  type="button"
+                  onClick={() => apply({ bassNotes: null })}
+                  className="h-11 rounded-md border border-amber-500/50 px-2 text-[11px] text-amber-200 hover:border-amber-400 sm:h-8"
+                >
+                  Reset edits
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -662,11 +830,12 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           )}
         />
         <div className="mt-2">
-          <PianoRollLane
+          <EditablePianoRoll
             notes={bassMelody.notes}
-            activeStep={displayStep}
-            totalSteps={totalSteps}
-            bars={bars}
+            onChange={handleBassNotes}
+            activeStep={laneStep}
+            totalSteps={laneSteps}
+            bars={laneBars}
             color="bg-orange-400/80"
             activeColor="bg-orange-300"
             label="Bass"
@@ -688,7 +857,21 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           busy={busy}
           extra={(
             <>
-              {styleChips(leadStyles, leadStyleId, id => apply({ leadStyleId: id }), () => apply({ leadSeed: melody.leadSeed + 1 }), 'lead')}
+              <OctaveStepper
+                label="Lead"
+                value={melody.octaves.lead}
+                onChange={value => apply({ octaves: { ...melody.octaves, lead: value } })}
+              />
+              {styleChips(leadStyles, leadStyleId, id => apply({ leadStyleId: id, leadNotes: null }), () => apply({ leadSeed: melody.leadSeed + 1, leadNotes: null }), 'lead')}
+              {melody.leadNotes && (
+                <button
+                  type="button"
+                  onClick={() => apply({ leadNotes: null })}
+                  className="h-11 rounded-md border border-amber-500/50 px-2 text-[11px] text-amber-200 hover:border-amber-400 sm:h-8"
+                >
+                  Reset edits
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -703,11 +886,12 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           )}
         />
         <div className="mt-2">
-          <PianoRollLane
+          <EditablePianoRoll
             notes={leadMelody.notes}
-            activeStep={displayStep}
-            totalSteps={totalSteps}
-            bars={bars}
+            onChange={handleLeadNotes}
+            activeStep={laneStep}
+            totalSteps={laneSteps}
+            bars={laneBars}
             color="bg-cyan-400/80"
             activeColor="bg-cyan-300"
             label="Lead"
@@ -766,16 +950,24 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
               <button
                 type="button"
                 onClick={handleExportWav}
-                disabled={rendering}
+                disabled={rendering || renderingStems}
                 className="h-11 rounded-md border border-gray-700 px-2 text-xs font-medium text-gray-200 hover:border-gray-500 disabled:opacity-50 sm:h-8"
               >
                 {rendering ? 'Rendering…' : 'WAV'}
+              </button>
+              <button
+                type="button"
+                onClick={handleExportStems}
+                disabled={rendering || renderingStems}
+                className="h-11 rounded-md border border-gray-700 px-2 text-xs font-medium text-gray-200 hover:border-gray-500 disabled:opacity-50 sm:h-8"
+              >
+                {renderingStems ? 'Stems…' : 'Stems'}
               </button>
             </>
           )}
         />
         <div className="mt-2">
-          <DrumGrid pattern={drumPattern} activeStep={displayStep} onToggle={handleToggleDrumNote} />
+          <DrumGrid pattern={drumPattern} activeStep={laneStep} onToggle={handleToggleDrumNote} />
         </div>
       </section>
 

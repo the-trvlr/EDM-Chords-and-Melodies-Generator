@@ -1,6 +1,8 @@
 import * as Tone from 'tone';
 import type { ChordInfo } from './musicTheory';
 import type { RhythmPattern } from '../data/genres';
+import { PRESET_ENVELOPES, PRESET_VOICES, getChordEnvelope, type Envelope } from './audioProfiles';
+export { getChordEnvelope, getVoiceBudget } from './audioProfiles';
 
 export type SynthPresetId = 'piano' | 'pad' | 'supersaw' | 'pluck' | 'dark' | 'bell' | 'organ';
 
@@ -21,60 +23,53 @@ export const SYNTH_PRESETS: SynthPreset[] = [
   { id: 'bell', name: 'Bell', description: 'FM bell sound', category: 'genre' },
 ];
 
-export function createSynth(presetId: SynthPresetId): Tone.PolySynth {
+function buildSynthOptions(presetId: SynthPresetId, envelope: Envelope): Record<string, unknown> {
   switch (presetId) {
     case 'piano':
-      return new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: 'triangle8' },
-        envelope: { attack: 0.005, decay: 0.3, sustain: 0.4, release: 1.2 },
-        volume: -8,
-      });
+      return { oscillator: { type: 'triangle8' }, envelope, volume: -10 };
     case 'pad':
-      return new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: 'sawtooth4' },
-        envelope: { attack: 0.4, decay: 0.5, sustain: 0.8, release: 2.0 },
-        volume: -12,
-      });
+      return { oscillator: { type: 'sawtooth4' }, envelope, volume: -14 };
+    case 'organ':
+      return { oscillator: { type: 'sine4' }, envelope, volume: -10 };
     case 'supersaw':
-      return new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: 'fatsawtooth', spread: 40, count: 5 } as unknown as Tone.OmniOscillatorOptions,
-        envelope: { attack: 0.05, decay: 0.3, sustain: 0.7, release: 1.5 },
-        volume: -14,
-      });
+      return {
+        oscillator: { type: 'fatsawtooth', spread: 25, count: 3 },
+        envelope,
+        volume: -18,
+      };
     case 'pluck':
-      return new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: 'triangle' },
-        envelope: { attack: 0.001, decay: 0.2, sustain: 0.1, release: 0.4 },
-        volume: -8,
-      });
+      return { oscillator: { type: 'triangle' }, envelope, volume: -10 };
     case 'dark':
-      return new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: 'square8' },
-        envelope: { attack: 0.1, decay: 0.4, sustain: 0.5, release: 1.0 },
-        volume: -12,
-      });
+      return { oscillator: { type: 'square8' }, envelope, volume: -14 };
     case 'bell':
-      return new Tone.PolySynth(Tone.FMSynth, {
+      return {
         harmonicity: 3.01,
         modulationIndex: 14,
-        envelope: { attack: 0.002, decay: 0.5, sustain: 0.2, release: 1.5 },
+        envelope,
         modulation: { type: 'square' },
         modulationEnvelope: { attack: 0.002, decay: 0.2, sustain: 0, release: 0.5 },
-        volume: -10,
-      } as unknown as Tone.FMSynthOptions);
-    case 'organ':
-      return new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: 'sine4' },
-        envelope: { attack: 0.01, decay: 0.1, sustain: 0.9, release: 0.3 },
-        volume: -8,
-      });
+        volume: -12,
+      };
     default:
-      return new Tone.PolySynth(Tone.Synth, { volume: -8 });
+      return { envelope, volume: -12 };
   }
+}
+
+export function createSynth(presetId: SynthPresetId, envelopeOverride?: Partial<Envelope>): Tone.PolySynth {
+  const envelope: Envelope = { ...PRESET_ENVELOPES[presetId], ...envelopeOverride };
+  const options = buildSynthOptions(presetId, envelope);
+  const Voice = presetId === 'bell' ? Tone.FMSynth : Tone.Synth;
+  const synth = new Tone.PolySynth(
+    Voice as typeof Tone.Synth,
+    options as unknown as Tone.SynthOptions,
+  );
+  synth.maxPolyphony = PRESET_VOICES[presetId];
+  return synth;
 }
 
 let currentSynth: Tone.PolySynth | null = null;
 let reverb: Tone.Reverb | null = null;
+let limiter: Tone.Limiter | null = null;
 let isPlaying = false;
 let loopRef: Tone.Loop | null = null;
 
@@ -82,25 +77,34 @@ export async function initAudio(): Promise<void> {
   await Tone.start();
 }
 
+function ensureOutput(): Tone.Limiter {
+  if (!limiter) {
+    // A master limiter keeps dense supersaw chords and fast rhythm patterns
+    // below 0 dBFS instead of clipping the destination.
+    limiter = new Tone.Limiter(-1).toDestination();
+  }
+  return limiter;
+}
+
 function ensureEffects(): Tone.Reverb {
   if (!reverb) {
-    reverb = new Tone.Reverb({ decay: 2.5, wet: 0.3 }).toDestination();
+    reverb = new Tone.Reverb({ decay: 2.5, wet: 0.3 }).connect(ensureOutput());
   }
   return reverb;
 }
 
-function getSynth(presetId: SynthPresetId): Tone.PolySynth {
+function getSynth(presetId: SynthPresetId, envelope?: Partial<Envelope>): Tone.PolySynth {
   if (currentSynth) {
     currentSynth.disconnect();
     currentSynth.dispose();
   }
-  currentSynth = createSynth(presetId);
+  currentSynth = createSynth(presetId, envelope);
   currentSynth.connect(ensureEffects());
   return currentSynth;
 }
 
-export function playChord(chord: ChordInfo, presetId: SynthPresetId, duration = '2n'): void {
-  const synth = getSynth(presetId);
+export function playChord(chord: ChordInfo, presetId: SynthPresetId, duration = '2n', rhythmName?: string): void {
+  const synth = getSynth(presetId, getChordEnvelope(rhythmName));
   const noteNames = chord.midiNotes.map(midi => {
     const octave = Math.floor(midi / 12) - 1;
     const noteIdx = midi % 12;
@@ -123,7 +127,7 @@ export function playProgression(
   stopPlayback();
   Tone.getTransport().bpm.value = bpm;
 
-  const synth = getSynth(presetId);
+  const synth = getSynth(presetId, getChordEnvelope(rhythm.name));
   let chordIndex = 0;
   const barsPerChord = doubleTime ? 2 : 1;
   const stepsPerChord = rhythm.subdivisions * barsPerChord;
