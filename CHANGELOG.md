@@ -50,5 +50,7 @@ Sprint 1 «Mobile-ready» and Sprint 2 «Консолидация» from [`docs/
 
 - VexFlow still loads on desktop as soon as the staff scrolls into view; it is only deferred on small screens.
 - Drum step cells stay smaller than 44 px so that 16 steps fit a phone screen; the grid scrolls horizontally when needed.
+- On narrow screens the staff notation scrolls inside its own card (the page itself never scrolls horizontally).
+- Drag-to-reorder of chords uses the native HTML5 drag API, so it is desktop-only for now; touch users edit by adding/removing chords.
 - No browser E2E suite yet (Playwright is planned in the next sprint); CI runs unit tests, lint, type-check and build.
 - Sections timeline, piano-roll editing, stems export and i18n are the next milestones (v0.5 / v0.6).

@@ -95,13 +95,13 @@ export function StaffNotation({ progression, activeIndex, isPlaying }: StaffNota
   }, [progression, activeIndex, isPlaying]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-w-0 flex-col gap-3">
       <label className="text-xs font-semibold uppercase tracking-wider text-gray-400">Staff Notation</label>
       <div
         ref={containerRef}
         role="img"
         aria-label={`Staff notation of ${progression.length} chords`}
-        className="overflow-x-auto rounded-xl border border-gray-700/50 bg-white/5 p-2"
+        className="w-full max-w-full overflow-x-auto rounded-xl border border-gray-700/50 bg-white/5 p-2"
         style={{ minHeight: '160px' }}
       />
     </div>
