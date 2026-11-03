@@ -9,6 +9,7 @@ Sprint 1 «Mobile-ready» and Sprint 2 «Консолидация» from [`docs/
 
 ### Fixed — P0
 
+- **Staff notation and the piano keyboard stay inside their cards** on narrow screens (`min-w-0`, local horizontal scroll), so the page never grows after VexFlow mounts.
 - **Mobile Arrangement works again.** Track headers wrap, lanes span the full width (`min-w-0`, no more `w-32` strips and `pl-[140px]`), toolbars wrap, and the page no longer scrolls horizontally on 320–414 px. A melody lane is now 340 px wide at a 390 px viewport instead of 2 px.
 - **Export matches what you hear (WYSIWYG).** Live playback, WAV rendering and MIDI export now consume one shared event schedule (`src/utils/schedule.ts`). WAV includes the arpeggiator, the selected drum kit and the same reverb as playback; the master volume is applied.
 - **Drums use a single 16-step bar model.** `generateDrums()` returns one bar that repeats every bar; playback, the editor and MIDI export all use the same grid. Previously patterns were generated for `bars × 16` steps but only the first 16 were ever played.
