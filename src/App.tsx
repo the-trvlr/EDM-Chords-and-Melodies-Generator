@@ -510,8 +510,8 @@ function Studio() {
 
   const previewChord = useCallback((chord: ChordInfo) => {
     if (!audioReady) return;
-    playChord(chord, selectedSynth, '4n', selectedRhythm.name);
-  }, [audioReady, selectedSynth, selectedRhythm.name]);
+    playChord(chord, selectedSynth, '4n', selectedRhythm.name, bpm, selectedRhythm.pattern);
+  }, [audioReady, selectedSynth, selectedRhythm.name, selectedRhythm.pattern, bpm]);
 
   if (!audioReady) {
     return (

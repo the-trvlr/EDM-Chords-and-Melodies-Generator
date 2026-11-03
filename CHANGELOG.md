@@ -3,6 +3,18 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [0.6.1] — 2026-11-03
+
+### Fixed
+
+- **Live octave transposition did not reach the engine.** The arranger's `startEngine` never forwarded `octaves` (and, for the same reason, `sections`, `swing` and `humanize`), so the steppers changed the UI and the rendered WAV but not the live playback. All four options are now passed, and a test asserts that live note names move by an octave.
+- **Dense patterns and supersaw.** The chord envelope is now shaped to the shortest hit gap at the current tempo: attack, decay and release shrink together for 16th-note patterns, so a Pulsing pattern no longer stacks overlapping supersaw voices. Polyphony budget for the supersaw is 16 (two chord generations of headroom) and its level is balanced against the other presets; the master limiter stays at −1 dBFS.
+- Removed a development-only debug hook.
+
+### Tests
+
+- 41 unit tests, including the tempo/density envelope cap and the voice budget.
+
 ## [0.6.0] — 2026-11-03
 
 Sprint 3 «Глубина» and Sprint 4 «Экспорт и библиотека», plus the audio and drum fixes requested after 0.4.

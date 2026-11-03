@@ -319,6 +319,10 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       bpm: liveRef.current.bpm,
       loop: liveRef.current.loop,
       drumKitId: liveRef.current.drumKitId,
+      sections: melody.sections,
+      octaves: melody.octaves,
+      swing: melody.swing,
+      humanize: melody.humanize,
       onStep: (step) => {
         setActiveStep(step);
         onStepChange?.(step);
@@ -331,7 +335,6 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     });
   // Restart when the sounding configuration changes (structure, octaves, groove),
   // but not when unrelated melody state (e.g. preview dialogs) changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, onPlayingChange, onStepChange, onStopOtherPlayback]);
 
   useEffect(() => {

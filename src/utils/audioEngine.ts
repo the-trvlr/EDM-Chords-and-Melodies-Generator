@@ -33,9 +33,9 @@ function buildSynthOptions(presetId: SynthPresetId, envelope: Envelope): Record<
       return { oscillator: { type: 'sine4' }, envelope, volume: -10 };
     case 'supersaw':
       return {
-        oscillator: { type: 'fatsawtooth', spread: 25, count: 3 },
+        oscillator: { type: 'fatsawtooth', spread: 20, count: 3 },
         envelope,
-        volume: -18,
+        volume: -13,
       };
     case 'pluck':
       return { oscillator: { type: 'triangle' }, envelope, volume: -10 };
@@ -103,8 +103,15 @@ function getSynth(presetId: SynthPresetId, envelope?: Partial<Envelope>): Tone.P
   return currentSynth;
 }
 
-export function playChord(chord: ChordInfo, presetId: SynthPresetId, duration = '2n', rhythmName?: string): void {
-  const synth = getSynth(presetId, getChordEnvelope(rhythmName));
+export function playChord(
+  chord: ChordInfo,
+  presetId: SynthPresetId,
+  duration = '2n',
+  rhythmName?: string,
+  bpm?: number,
+  pattern?: number[],
+): void {
+  const synth = getSynth(presetId, getChordEnvelope(rhythmName, bpm, pattern));
   const noteNames = chord.midiNotes.map(midi => {
     const octave = Math.floor(midi / 12) - 1;
     const noteIdx = midi % 12;
@@ -127,7 +134,7 @@ export function playProgression(
   stopPlayback();
   Tone.getTransport().bpm.value = bpm;
 
-  const synth = getSynth(presetId, getChordEnvelope(rhythm.name));
+  const synth = getSynth(presetId, getChordEnvelope(rhythm.name, bpm, rhythm.pattern));
   let chordIndex = 0;
   const barsPerChord = doubleTime ? 2 : 1;
   const stepsPerChord = rhythm.subdivisions * barsPerChord;
@@ -204,3 +211,4 @@ export function setPlaybackBpm(bpm: number): void {
 export function setVolume(db: number): void {
   Tone.getDestination().volume.value = db;
 }
+

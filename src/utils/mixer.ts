@@ -254,7 +254,7 @@ function prepareMixer(input: ArrangementInput): { mixer: MixerNodes; byStep: Map
   for (const id of ['chord', 'bass', 'lead'] as const) {
     const synth = createTrackSynth(
       input.synthIds[id],
-      id === 'chord' ? getChordEnvelope(input.rhythm.name) : undefined,
+      id === 'chord' ? getChordEnvelope(input.rhythm.name, input.bpm, input.rhythm.pattern) : undefined,
     );
     synth.connect(m.channels[id]);
     m.synths[id] = synth;
@@ -462,7 +462,7 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
       drums: new Tone.Channel({ volume: opts.tracks.drums.volume }).connect(reverb),
     };
     const synths = {
-      chord: createTrackSynth(opts.synthIds.chord, getChordEnvelope(opts.rhythm.name)).connect(channels.chord),
+      chord: createTrackSynth(opts.synthIds.chord, getChordEnvelope(opts.rhythm.name, opts.bpm, opts.rhythm.pattern)).connect(channels.chord),
       bass: createTrackSynth(opts.synthIds.bass).connect(channels.bass),
       lead: createTrackSynth(opts.synthIds.lead).connect(channels.lead),
     };
