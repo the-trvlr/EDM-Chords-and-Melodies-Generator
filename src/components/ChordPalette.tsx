@@ -65,36 +65,39 @@ export function ChordPalette({
 
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500 mb-1 block">Current sequence (drag to reorder, click to remove)</span>
-          <div className="flex gap-1">
+          <span className="mb-1 block text-xs text-gray-400">Drag to reorder · ✕ removes a chord</span>
+          <div className="flex flex-wrap gap-1">
             <button
+              type="button"
               onClick={onUndo}
               disabled={!canUndo}
-              className="px-2 py-1 rounded text-[10px] font-medium bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="h-11 rounded-md border border-gray-600 bg-gray-800 px-2 text-[11px] font-medium text-gray-200 transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40 sm:h-8"
               title="Undo (Cmd/Ctrl+Z)"
             >
               ↶ Undo
             </button>
             <button
+              type="button"
               onClick={onRedo}
               disabled={!canRedo}
-              className="px-2 py-1 rounded text-[10px] font-medium bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="h-11 rounded-md border border-gray-600 bg-gray-800 px-2 text-[11px] font-medium text-gray-200 transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40 sm:h-8"
               title="Redo (Cmd/Ctrl+Shift+Z)"
             >
               ↷ Redo
             </button>
             <button
+              type="button"
               onClick={onAutoVoiceLead}
-              className="px-2 py-1 rounded text-[10px] font-medium bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/30 transition-all"
-              title="Auto voice-lead progression"
+              className="h-11 rounded-md border border-cyan-500/40 bg-cyan-500/15 px-2 text-[11px] font-medium text-cyan-200 transition-colors hover:bg-cyan-500/25 sm:h-8"
+              title="Smooth voice leading between chords"
             >
-              Auto Voice-Lead
+              Voice-lead
             </button>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap min-h-[44px] p-2 rounded-lg border border-gray-700/50 bg-gray-800/30">
           {progression.length === 0 ? (
-            <span className="text-xs text-gray-600 self-center">Add chords from the palette below</span>
+            <span className="self-center text-xs text-gray-400">Add chords from the palette below</span>
           ) : (
             progression.map((chord, i) => (
               <div
@@ -108,23 +111,30 @@ export function ChordPalette({
                   draggedIndex === i ? 'opacity-50' : 'opacity-100'
                 }`}
               >
-                <button
-                  onClick={() => onRemoveChord(i)}
-                  className="group px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-500/20 border border-purple-500/30 text-purple-300 hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-300 transition-all"
-                  title="Click to remove"
-                >
-                  <span className="group-hover:hidden">{chord.display}</span>
-                  <span className="hidden group-hover:inline">✕ {chord.display}</span>
-                </button>
-                <div className="flex gap-0.5">
+                <div className="flex items-center gap-0.5 rounded-lg border border-purple-500/30 bg-purple-500/15 pl-2">
+                  <span className="text-xs font-medium text-purple-200">{chord.display}</span>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveChord(i)}
+                    aria-label={`Remove ${chord.display}`}
+                    className="flex h-11 w-11 items-center justify-center rounded-md text-gray-300 transition-colors hover:bg-rose-500/20 hover:text-rose-200 sm:h-8 sm:w-8"
+                    title={`Remove ${chord.display}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex gap-0.5" role="group" aria-label={`Inversion for ${chord.display}`}>
                   {[0, 1, 2].map(inv => (
                     <button
                       key={inv}
+                      type="button"
                       onClick={() => onInversionChange(i, inv)}
-                      className={`w-5 h-5 rounded text-[9px] font-medium transition-all ${
-                        chord.inversion === inv
+                      aria-pressed={(chord.inversion ?? 0) === inv}
+                      aria-label={`${chord.display}: inversion ${inv}`}
+                      className={`h-11 w-9 rounded text-[10px] font-medium transition-colors sm:h-8 sm:w-7 ${
+                        (chord.inversion ?? 0) === inv
                           ? 'bg-cyan-500 text-white'
-                          : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                          : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                       }`}
                       title={`Inversion ${inv}`}
                     >
@@ -138,7 +148,7 @@ export function ChordPalette({
         </div>
 
         <div>
-          <span className="text-xs text-gray-500 mb-1 block">Available chords in key (click to add)</span>
+          <span className="mb-1 block text-xs text-gray-400">Available chords in key · click to add</span>
           <div className="flex gap-2 flex-wrap">
             {availableChords.map((chord, i) => (
               <button
@@ -147,10 +157,10 @@ export function ChordPalette({
                   onAddChord(chord);
                   onPreviewChord(chord);
                 }}
-                className="flex flex-col items-center px-3 py-2 rounded-lg text-xs border border-gray-700 bg-gray-800/50 text-gray-300 hover:border-cyan-500 hover:text-cyan-300 transition-all"
+                className="flex min-h-11 flex-col items-center rounded-lg border border-gray-700 bg-gray-800/50 px-3 py-2 text-xs text-gray-200 transition-colors hover:border-cyan-500 hover:text-cyan-200"
               >
                 <span className="font-semibold">{chord.display}</span>
-                <span className="text-[10px] opacity-40">{getRomanNumeral(i, scaleName)}</span>
+                <span className="text-[10px] text-gray-400">{getRomanNumeral(i, scaleName)}</span>
               </button>
             ))}
           </div>

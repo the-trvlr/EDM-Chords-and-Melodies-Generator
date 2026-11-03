@@ -15,10 +15,10 @@ export function GenreSelector({ selectedGenre, onGenreChange }: GenreSelectorPro
           <button
             key={genre.id}
             onClick={() => onGenreChange(genre)}
-            className={`px-3 py-2 rounded-lg text-xs font-medium transition-all border ${
+            className={`min-h-11 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
               selectedGenre.id === genre.id
                 ? 'border-transparent text-white shadow-lg scale-105'
-                : 'border-gray-700 text-gray-300 hover:border-gray-500 bg-gray-800/50'
+                : 'border-gray-700 bg-gray-800/50 text-gray-200 hover:border-gray-500'
             }`}
             style={selectedGenre.id === genre.id ? { backgroundColor: genre.color } : undefined}
           >
@@ -26,7 +26,7 @@ export function GenreSelector({ selectedGenre, onGenreChange }: GenreSelectorPro
           </button>
         ))}
       </div>
-      <p className="text-xs text-gray-500">{selectedGenre.description} · {selectedGenre.bpmRange[0]}-{selectedGenre.bpmRange[1]} BPM</p>
+      <p className="text-xs text-gray-400">{selectedGenre.description} · {selectedGenre.bpmRange[0]}-{selectedGenre.bpmRange[1]} BPM</p>
     </div>
   );
 }

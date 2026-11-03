@@ -1,29 +1,72 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-import { useState, useCallback, useEffect } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { GENRES } from './data/genres';
 import type { Genre, RhythmPattern } from './data/genres';
-import { getChordsInKey, getChordNotes, keyPrefersFlats, noteNameToPc, getPreferredKeyName, invertChord, voiceLeading } from './utils/musicTheory';
-import type { ChordInfo, ChordComplexity } from './utils/musicTheory';
-import { initAudio, playChord, playProgression, stopPlayback, setVolume } from './utils/audioEngine';
-import type { SynthPresetId } from './utils/audioEngine';
-import { stopArrangement } from './utils/mixer';
-import { loadPersistedState, savePersistedState, loadProject, encodeShareablePreset, decodeShareablePreset, type ShareablePreset } from './utils/persistence';
-import type { ArpPattern, ArpRate } from './utils/arpeggiator';
-import type { DrumKitId } from './data/drumKits';
+import {
+  FLAT_NAMES,
+  NOTE_NAMES,
+  getChordNotes,
+  getChordsInKey,
+  getPreferredKeyName,
+  invertChord,
+  keyPrefersFlats,
+  noteNameToPc,
+  voiceLeading,
+  type ChordComplexity,
+  type ChordInfo,
+} from './utils/musicTheory';
+import { initAudio, playChord, playProgression, setPlaybackBpm, setVolume, stopPlayback } from './utils/audioEngine';
+import { setArrangementBpm, setArrangementLoop, stopArrangement } from './utils/mixer';
+import { loadPersistedState, parseProjectFile, savePersistedState, serializeProject } from './utils/persistence';
+import { chordTypeKey, decodeShare, encodeShare, expandChord } from './utils/share';
 import { exportProgressionToMidi } from './utils/midiExport';
-import { KeySelector } from './components/KeySelector';
-import { GenreSelector } from './components/GenreSelector';
-import { ProgressionSelector } from './components/ProgressionSelector';
+import { defaultMelodyState, type MelodyState, type ProjectSnapshot } from './types';
 import { ChordDisplay } from './components/ChordDisplay';
-import { RhythmSelector } from './components/RhythmSelector';
-import { SynthSelector } from './components/SynthSelector';
-import { TransportControls } from './components/TransportControls';
-import { PianoKeyboard } from './components/PianoKeyboard';
-import { StaffNotation } from './components/StaffNotation';
 import { ChordPalette } from './components/ChordPalette';
-import { MelodyStudio } from './components/MelodyStudio';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { GenreSelector } from './components/GenreSelector';
+import { KeySelector } from './components/KeySelector';
+import { MelodyStudio, type MelodyStudioHandle } from './components/MelodyStudio';
+import { Menu } from './components/Menu';
+import { PianoKeyboard } from './components/PianoKeyboard';
+import { ProgressionSelector } from './components/ProgressionSelector';
+import { RhythmSelector } from './components/RhythmSelector';
+import { StaffSkeleton } from './components/Skeleton';
+import { SynthSelector } from './components/SynthSelector';
+import { ToastProvider } from './components/Toast';
+import { useToast } from './hooks/useToast';
+import { TransportBar } from './components/TransportBar';
 
-function buildProgression(genre: Genre, progressionIdx: number, key: string, scale: string, complexity: ChordComplexity = 'basic'): ChordInfo[] {
+const StaffNotation = lazy(() => import('./components/StaffNotation'));
+
+const persisted = loadPersistedState();
+
+function readSharedProject(): ProjectSnapshot | null {
+  try {
+    const preset = new URLSearchParams(window.location.search).get('preset');
+    return preset ? decodeShare(preset) : null;
+  } catch {
+    return null;
+  }
+}
+
+const sharedProject = readSharedProject();
+const initialGenre = sharedProject
+  ? GENRES.find(genre => genre.id === sharedProject.genreId) ?? GENRES[0]
+  : GENRES.find(genre => genre.id === persisted.genreId) ?? GENRES[0];
+const initialScale = sharedProject?.scale ?? persisted.selectedScale ?? 'minor';
+const initialKey = sharedProject?.key ?? getPreferredKeyName(noteNameToPc(persisted.selectedKey ?? 'A'), initialScale);
+const initialRhythm = sharedProject
+  ? initialGenre.rhythmPatterns.find(rhythm => rhythm.name === sharedProject.rhythmName) ?? initialGenre.rhythmPatterns[0]
+  : initialGenre.rhythmPatterns[0];
+const initialMelodyState = sharedProject?.melody ?? persisted.melody ?? defaultMelodyState();
+
+function buildProgression(
+  genre: Genre,
+  progressionIdx: number,
+  key: string,
+  scale: string,
+  complexity: ChordComplexity = 'basic',
+): ChordInfo[] {
   const scaleChords = getChordsInKey(key, scale, complexity);
   const useFlats = keyPrefersFlats(noteNameToPc(key), scale);
   const prog = genre.progressions[progressionIdx];
@@ -39,634 +82,712 @@ function buildProgression(genre: Genre, progressionIdx: number, key: string, sca
   });
 }
 
-const persisted = loadPersistedState();
-const initialGenre = GENRES.find(g => g.id === persisted.genreId) ?? GENRES[0];
-const initialScale = persisted.selectedScale ?? 'minor';
-const initialKey = getPreferredKeyName(noteNameToPc(persisted.selectedKey ?? 'A'), initialScale);
+const cloneChords = (chords: ChordInfo[]): ChordInfo[] =>
+  chords.map(chord => ({ ...chord, notes: [...chord.notes], midiNotes: [...chord.midiNotes] }));
 
-export default function App() {
+function transposeChord(chord: ChordInfo, delta: number, useFlats: boolean): ChordInfo {
+  const names = useFlats ? FLAT_NAMES : NOTE_NAMES;
+  const root = names[((noteNameToPc(chord.root) + delta) % 12 + 12) % 12];
+  return expandChord([root, chordTypeKey(chord), chord.inversion ?? 0], useFlats) ?? chord;
+}
+
+function downloadText(filename: string, text: string): void {
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function StaffSection({
+  progression,
+  activeIndex,
+  isPlaying,
+}: {
+  progression: ChordInfo[];
+  activeIndex: number;
+  isPlaying: boolean;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(() => typeof IntersectionObserver === 'undefined');
+
+  useEffect(() => {
+    if (visible) return;
+    const node = containerRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '300px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [visible]);
+
+  return (
+    <div ref={containerRef}>
+      {visible ? (
+        <Suspense fallback={<StaffSkeleton />}>
+          <StaffNotation progression={progression} activeIndex={activeIndex} isPlaying={isPlaying} />
+        </Suspense>
+      ) : (
+        <StaffSkeleton />
+      )}
+    </div>
+  );
+}
+
+const COMPLEXITY_OPTIONS: { id: ChordComplexity; label: string; hint: string }[] = [
+  { id: 'basic', label: 'Simple', hint: 'Triads only' },
+  { id: '7ths', label: '7ths', hint: 'Seventh chords' },
+  { id: '9ths', label: '9ths', hint: 'Ninth chords' },
+  { id: 'jazzy', label: 'Jazzy', hint: 'Sus and extended voicings' },
+];
+
+function Studio() {
+  const toast = useToast();
   const [audioReady, setAudioReady] = useState(false);
   const [selectedKey, setSelectedKey] = useState(initialKey);
   const [selectedScale, setSelectedScale] = useState(initialScale);
   const [selectedGenre, setSelectedGenre] = useState<Genre>(initialGenre);
-  const [selectedProgressionIdx, setSelectedProgressionIdx] = useState(persisted.selectedProgressionIdx ?? 0);
-  const [selectedRhythm, setSelectedRhythm] = useState<RhythmPattern>(initialGenre.rhythmPatterns[0]);
-  const [selectedSynth, setSelectedSynth] = useState<SynthPresetId>(persisted.selectedSynth ?? 'pad');
-  const [bpm, setBpm] = useState(persisted.bpm ?? initialGenre.defaultBpm);
-  const [volume, setVolumeState] = useState(persisted.volume ?? -6);
+  const [selectedProgressionIdx, setSelectedProgressionIdx] = useState(sharedProject?.progressionIdx ?? persisted.selectedProgressionIdx ?? 0);
+  const [selectedRhythm, setSelectedRhythm] = useState<RhythmPattern>(initialRhythm);
+  const [selectedSynth, setSelectedSynth] = useState(sharedProject?.synth ?? persisted.selectedSynth ?? 'pad');
+  const [bpm, setBpm] = useState(sharedProject?.bpm ?? persisted.bpm ?? initialGenre.defaultBpm);
+  const [volume, setVolumeState] = useState(sharedProject?.volume ?? persisted.volume ?? -6);
   const [activeChordIndex, setActiveChordIndex] = useState(0);
   const [selectedChordForView, setSelectedChordForView] = useState<number | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [loop, setLoop] = useState(persisted.loop ?? true);
-  const [doubleTime, setDoubleTime] = useState(persisted.doubleTime ?? false);
-  const [chordComplexity, setChordComplexity] = useState<ChordComplexity>(persisted.chordComplexity ?? 'basic');
-  const [activeTab, setActiveTab] = useState<'chords' | 'melodies'>(persisted.activeTab ?? 'chords');
-  const [customProgression, setCustomProgression] = useState<ChordInfo[] | null>(null);
-  const [progressionHistory, setProgressionHistory] = useState<ChordInfo[][]>([]);
-  const [progressionHistoryIndex, setProgressionHistoryIndex] = useState(-1);
-
-  // Melody Studio persisted state
-  const [melodyStudioState, setMelodyStudioState] = useState({
-    bassStyleId: persisted.bassStyleId || '',
-    leadStyleId: persisted.leadStyleId || '',
-    bassSeed: persisted.bassSeed || 1,
-    leadSeed: persisted.leadSeed || 1,
-    arpEnabled: persisted.arpEnabled || false,
-    arpSettings: persisted.arpSettings || { pattern: 'up' as const, rate: 'eighth' as const, octaveRange: 1, gate: 0.8 },
-    arpSeed: persisted.arpSeed || 1,
-    drumKitId: persisted.drumKitId || 'acoustic',
-    drumSeed: persisted.drumSeed || 1,
-    synthIds: persisted.synthIds || { chord: 'pad' as const, bass: 'pluck' as const, lead: 'supersaw' as const, drums: 'piano' as const },
+  const [chordsPlaying, setChordsPlaying] = useState(false);
+  const [arrangementPlaying, setArrangementPlaying] = useState(false);
+  const [arrangementStep, setArrangementStep] = useState<number | null>(null);
+  const [loop, setLoop] = useState(sharedProject?.loop ?? persisted.loop ?? true);
+  const [doubleTime, setDoubleTime] = useState(sharedProject?.doubleTime ?? persisted.doubleTime ?? false);
+  const [chordComplexity, setChordComplexity] = useState<ChordComplexity>(sharedProject?.chordComplexity ?? persisted.chordComplexity ?? 'basic');
+  const [activeTab, setActiveTab] = useState<'chords' | 'melodies'>(() => {
+    const param = new URLSearchParams(window.location.search).get('tab');
+    if (param === 'arrangement' || param === 'melody') return 'melodies';
+    if (param === 'harmony') return 'chords';
+    return persisted.activeTab ?? 'chords';
   });
+  const [customProgression, setCustomProgression] = useState<ChordInfo[] | null>(sharedProject?.customProgression ?? null);
+  const [history, setHistory] = useState<{ list: ChordInfo[][]; index: number }>(sharedProject?.customProgression ? { list: [sharedProject.customProgression], index: 0 } : { list: [], index: -1 });
+  const [melody, setMelody] = useState<MelodyState>(initialMelodyState);
 
-  // Check for shared preset in URL on mount
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const preset = params.get('preset');
-    if (preset) {
-      const decoded = decodeShareablePreset(preset);
-      if (decoded) {
-        const genre = GENRES.find(g => g.id === decoded.g) ?? GENRES[0];
-        setSelectedKey(decoded.k);
-        setSelectedScale(decoded.s);
-        setSelectedGenre(genre);
-        setSelectedProgressionIdx(decoded.p);
-        setSelectedSynth(decoded.y as SynthPresetId);
-        setBpm(decoded.b);
-        setChordComplexity(decoded.c as ChordComplexity);
-        setSelectedRhythm(genre.rhythmPatterns.find(r => r.name === decoded.r) ?? genre.rhythmPatterns[0]);
-        // Restore Melody Studio state if present
-        if (decoded.bs || decoded.ls || decoded.si) {
-          setMelodyStudioState({
-            bassStyleId: decoded.bs || '',
-            leadStyleId: decoded.ls || '',
-            bassSeed: decoded.bsd || 1,
-            leadSeed: decoded.lsd || 1,
-            arpEnabled: decoded.ae || false,
-            arpSettings: decoded.as ? {
-              pattern: decoded.as.pattern as ArpPattern,
-              rate: decoded.as.rate as ArpRate,
-              octaveRange: decoded.as.octaveRange,
-              gate: decoded.as.gate,
-            } : { pattern: 'up' as const, rate: 'eighth' as const, octaveRange: 1, gate: 0.8 },
-            arpSeed: decoded.asd || 1,
-            drumKitId: (decoded.dk || 'acoustic') as DrumKitId,
-            drumSeed: decoded.dsd || 1,
-            synthIds: decoded.si ? {
-              chord: decoded.si.chord as SynthPresetId,
-              bass: decoded.si.bass as SynthPresetId,
-              lead: decoded.si.lead as SynthPresetId,
-              drums: decoded.si.drums as SynthPresetId,
-            } : { chord: 'pad' as const, bass: 'pluck' as const, lead: 'supersaw' as const, drums: 'piano' as const },
-          });
-        }
-        // Clear URL params
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-    }
+  const studioRef = useRef<MelodyStudioHandle>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const availableChords = useMemo(
+    () => getChordsInKey(selectedKey, selectedScale, chordComplexity),
+    [selectedKey, selectedScale, chordComplexity],
+  );
+  const templateProgression = useMemo(
+    () => buildProgression(selectedGenre, selectedProgressionIdx, selectedKey, selectedScale, chordComplexity),
+    [selectedGenre, selectedProgressionIdx, selectedKey, selectedScale, chordComplexity],
+  );
+  const progression = customProgression ?? templateProgression;
+  const viewedChord = selectedChordForView !== null ? progression[selectedChordForView] ?? null : null;
+
+  const snapshot = useMemo<ProjectSnapshot>(() => ({
+    key: selectedKey,
+    scale: selectedScale,
+    genreId: selectedGenre.id,
+    progressionIdx: selectedProgressionIdx,
+    rhythmName: selectedRhythm.name,
+    synth: selectedSynth,
+    bpm,
+    volume,
+    loop,
+    doubleTime,
+    chordComplexity,
+    customProgression,
+    melody,
+  }), [
+    selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedRhythm.name,
+    selectedSynth, bpm, volume, loop, doubleTime, chordComplexity, customProgression, melody,
+  ]);
+
+  const stopAll = useCallback(() => {
+    stopPlayback();
+    stopArrangement();
+    setChordsPlaying(false);
+    setArrangementPlaying(false);
+    setActiveChordIndex(0);
+    setArrangementStep(null);
   }, []);
 
-  const handleSaveProject = useCallback(() => {
-    const projectData = {
-      name: `Project_${new Date().toISOString().slice(0, 10)}`,
-      data: {
-        selectedKey,
-        selectedScale,
-        genreId: selectedGenre.id,
-        selectedProgressionIdx,
-        selectedSynth,
-        bpm,
-        volume,
-        loop,
-        doubleTime,
-        chordComplexity,
-        activeTab,
-        customProgression,
-        selectedRhythmName: selectedRhythm.name,
-      },
-    };
-    const json = JSON.stringify(projectData, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${projectData.name}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth, bpm, volume, loop, doubleTime, chordComplexity, activeTab, customProgression, selectedRhythm.name]);
-
-  const handleLoadProject = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const json = e.target?.result as string;
-        const project = JSON.parse(json);
-        const loaded = loadProject(project);
-        const genre = GENRES.find(g => g.id === loaded.genreId) ?? GENRES[0];
-        setSelectedKey(loaded.selectedKey ?? 'C');
-        setSelectedScale(loaded.selectedScale ?? 'minor');
-        setSelectedGenre(genre);
-        setSelectedProgressionIdx(loaded.selectedProgressionIdx ?? 0);
-        setSelectedSynth(loaded.selectedSynth ?? 'pad');
-        setBpm(loaded.bpm ?? genre.defaultBpm);
-        setVolumeState(loaded.volume ?? -6);
-        setLoop(loaded.loop ?? true);
-        setDoubleTime(loaded.doubleTime ?? false);
-        setChordComplexity(loaded.chordComplexity ?? 'basic');
-        setActiveTab(loaded.activeTab ?? 'chords');
-        setCustomProgression(loaded.customProgression);
-        setSelectedRhythm(genre.rhythmPatterns.find(r => r.name === loaded.selectedRhythmName) ?? genre.rhythmPatterns[0]);
-      } catch (err) {
-        console.error('Failed to load project:', err);
-        alert('Failed to load project file. Please check the file format.');
-      }
-    };
-    reader.readAsText(file);
-    // Reset input
-    event.target.value = '';
-  }, []);
-
-  const handleSharePreset = useCallback(() => {
-    const preset: ShareablePreset = {
-      k: selectedKey,
-      s: selectedScale,
-      g: selectedGenre.id,
-      p: selectedProgressionIdx,
-      y: selectedSynth,
-      b: bpm,
-      c: chordComplexity,
-      r: selectedRhythm.name,
-      // Melody Studio state
-      bs: melodyStudioState.bassStyleId,
-      ls: melodyStudioState.leadStyleId,
-      bsd: melodyStudioState.bassSeed,
-      lsd: melodyStudioState.leadSeed,
-      ae: melodyStudioState.arpEnabled,
-      as: melodyStudioState.arpSettings,
-      asd: melodyStudioState.arpSeed,
-      dk: melodyStudioState.drumKitId,
-      dsd: melodyStudioState.drumSeed,
-      si: melodyStudioState.synthIds,
-    };
-    const encoded = encodeShareablePreset(preset);
-    const url = `${window.location.origin}${window.location.pathname}?preset=${encoded}`;
-    navigator.clipboard.writeText(url).then(() => {
-      alert('Preset link copied to clipboard!');
-    }).catch(err => {
-      console.error('Failed to copy:', err);
-      alert('Failed to copy link. Please try again.');
-    });
-  }, [selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth, bpm, chordComplexity, selectedRhythm.name, melodyStudioState]);
-
-  const availableChords = getChordsInKey(selectedKey, selectedScale, chordComplexity);
-  const templateProgression = buildProgression(selectedGenre, selectedProgressionIdx, selectedKey, selectedScale, chordComplexity);
-
-  // Reset custom edits when the underlying configuration changes (render-time
-  // state adjustment — see https://react.dev/learn/you-might-not-need-an-effect).
-  const configKey = `${selectedKey}|${selectedScale}|${selectedGenre.id}|${selectedProgressionIdx}|${chordComplexity}`;
-  const [prevConfigKey, setPrevConfigKey] = useState(configKey);
-  if (configKey !== prevConfigKey) {
-    setPrevConfigKey(configKey);
-    setCustomProgression(null);
-    setSelectedChordForView(null);
-  }
-
-  const progression = customProgression || templateProgression;
-
-  const handleReorderChord = useCallback((fromIndex: number, toIndex: number) => {
-    const current = customProgression || [...templateProgression];
-    const newProgression = [...current];
-    const [movedChord] = newProgression.splice(fromIndex, 1);
-    newProgression.splice(toIndex, 0, movedChord);
-    setCustomProgression(newProgression);
-    // Save to history
-    setProgressionHistory(prev => {
-      const newHistory = prev.slice(0, progressionHistoryIndex + 1);
-      newHistory.push(newProgression);
-      return newHistory.slice(-50);
-    });
-    setProgressionHistoryIndex(prev => Math.min(prev + 1, 49));
-  }, [customProgression, templateProgression, progressionHistoryIndex]);
-
-  useEffect(() => {
-    savePersistedState({
-      selectedKey, selectedScale, genreId: selectedGenre.id, selectedProgressionIdx,
-      selectedSynth, bpm, volume, loop, doubleTime, chordComplexity, activeTab,
-      ...melodyStudioState,
-    });
-  }, [selectedKey, selectedScale, selectedGenre, selectedProgressionIdx, selectedSynth, bpm, volume, loop, doubleTime, chordComplexity, activeTab, melodyStudioState]);
-
-  const handleInitAudio = useCallback(async () => {
-    await initAudio();
-    setAudioReady(true);
-  }, []);
-
-  const handleGenreChange = useCallback((genre: Genre) => {
-    if (isPlaying) { stopPlayback(); setIsPlaying(false); }
+  const applyProject = useCallback((project: ProjectSnapshot) => {
+    stopAll();
+    const genre = GENRES.find(item => item.id === project.genreId) ?? GENRES[0];
+    setSelectedKey(project.key);
+    setSelectedScale(project.scale);
     setSelectedGenre(genre);
-    setSelectedProgressionIdx(0);
-    setSelectedRhythm(genre.rhythmPatterns[0]);
-    setBpm(genre.defaultBpm);
-    setSelectedScale(genre.preferredScale);
-    setSelectedKey(k => getPreferredKeyName(noteNameToPc(k), genre.preferredScale));
-    setSelectedSynth(genre.synthPreset as SynthPresetId);
-  }, [isPlaying]);
+    setSelectedProgressionIdx(project.progressionIdx);
+    setSelectedSynth(project.synth);
+    setBpm(project.bpm);
+    setVolumeState(project.volume);
+    setVolume(project.volume);
+    setLoop(project.loop);
+    setDoubleTime(project.doubleTime);
+    setChordComplexity(project.chordComplexity);
+    setSelectedRhythm(genre.rhythmPatterns.find(rhythm => rhythm.name === project.rhythmName) ?? genre.rhythmPatterns[0]);
+    setCustomProgression(project.customProgression ?? null);
+    setHistory(project.customProgression ? { list: [project.customProgression], index: 0 } : { list: [], index: -1 });
+    setMelody(project.melody);
+    setSelectedChordForView(null);
+    setActiveChordIndex(0);
+  }, [stopAll]);
 
-  const handlePlay = useCallback(() => {
+  const commitProgression = useCallback((next: ChordInfo[]) => {
+    const base = customProgression ?? templateProgression;
+    setHistory(prev => {
+      const list = prev.list.length > 0 ? prev.list.slice(0, prev.index + 1) : [cloneChords(base)];
+      const nextList = [...list, cloneChords(next)].slice(-50);
+      return { list: nextList, index: nextList.length - 1 };
+    });
+    setCustomProgression(cloneChords(next));
+  }, [customProgression, templateProgression]);
+
+  const undoChords = useCallback(() => {
+    if (history.index <= 0) return;
+    const index = history.index - 1;
+    setCustomProgression(cloneChords(history.list[index]));
+    setHistory({ list: history.list, index });
+  }, [history]);
+
+  const redoChords = useCallback(() => {
+    if (history.index >= history.list.length - 1) return;
+    const index = history.index + 1;
+    setCustomProgression(cloneChords(history.list[index]));
+    setHistory({ list: history.list, index });
+  }, [history]);
+
+  const handlePlayChords = useCallback(() => {
     if (progression.length === 0) return;
-    stopArrangement(); // ensure the full-mix engine isn't also driving the transport
-    setIsPlaying(true);
+    stopArrangement();
+    setArrangementPlaying(false);
+    setArrangementStep(null);
+    setChordsPlaying(true);
     setActiveChordIndex(0);
     playProgression(
       progression,
       selectedSynth,
       bpm,
       selectedRhythm,
-      (idx) => setActiveChordIndex(idx),
-      () => setIsPlaying(false),
+      index => setActiveChordIndex(index),
+      () => setChordsPlaying(false),
       loop,
       doubleTime,
     );
   }, [progression, selectedSynth, bpm, selectedRhythm, loop, doubleTime]);
 
-  const handleStop = useCallback(() => {
+  const handleStopChords = useCallback(() => {
     stopPlayback();
-    setIsPlaying(false);
+    setChordsPlaying(false);
     setActiveChordIndex(0);
   }, []);
 
-  const handleTabChange = useCallback((tab: 'chords' | 'melodies') => {
+  const togglePlayback = useCallback(() => {
+    // One transport for both screens: it always controls whatever is sounding,
+    // so switching tabs never leaves an invisible engine running.
+    if (chordsPlaying) {
+      handleStopChords();
+      return;
+    }
+    if (arrangementPlaying) {
+      setArrangementPlaying(false);
+      return;
+    }
+    if (activeTab === 'chords') {
+      handlePlayChords();
+    } else {
+      setArrangementPlaying(true);
+    }
+  }, [activeTab, chordsPlaying, arrangementPlaying, handlePlayChords, handleStopChords]);
+
+  const handleInitAudio = useCallback(async () => {
+    try {
+      await initAudio();
+      setAudioReady(true);
+    } catch {
+      toast.show('Audio could not start. Check your browser sound permissions.', 'error');
+    }
+  }, [toast]);
+
+  useEffect(() => { setVolume(volume); }, [volume]);
+  useEffect(() => { setPlaybackBpm(bpm); setArrangementBpm(bpm); }, [bpm]);
+  useEffect(() => { setArrangementLoop(loop); }, [loop]);
+
+  useEffect(() => {
+    savePersistedState({
+      selectedKey,
+      selectedScale,
+      genreId: selectedGenre.id,
+      selectedProgressionIdx,
+      selectedSynth,
+      bpm,
+      volume,
+      loop,
+      doubleTime,
+      chordComplexity,
+      activeTab,
+      melody,
+    });
+  }, [
+    selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth,
+    bpm, volume, loop, doubleTime, chordComplexity, activeTab, melody,
+  ]);
+
+  const chordsPlayingRef = useRef(chordsPlaying);
+  useEffect(() => {
+    chordsPlayingRef.current = chordsPlaying;
+  }, [chordsPlaying]);
+
+  const handleArrangementPlayingChange = useCallback((playing: boolean) => {
+    setArrangementPlaying(playing);
+    if (playing) setChordsPlaying(false);
+  }, []);
+
+  useEffect(() => {
+    if (!chordsPlayingRef.current) return;
     stopPlayback();
-    stopArrangement();
-    setIsPlaying(false);
-    setActiveChordIndex(0);
+    playProgression(
+      progression,
+      selectedSynth,
+      bpm,
+      selectedRhythm,
+      index => setActiveChordIndex(index),
+      () => setChordsPlaying(false),
+      loop,
+      doubleTime,
+    );
+    // The transport is restarted only when the sound of the chord track changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loop, doubleTime, selectedSynth, selectedRhythm, progression]);
+
+  useEffect(() => {
+    if (!sharedProject) return;
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
+
+  const handleKeyChange = useCallback((nextKey: string) => {
+    if (nextKey === selectedKey) return;
+    if (chordsPlaying) handleStopChords();
+    const delta = ((noteNameToPc(nextKey) - noteNameToPc(selectedKey)) % 12 + 12) % 12;
+    setSelectedKey(nextKey);
+    if (customProgression) {
+      const useFlats = keyPrefersFlats(noteNameToPc(nextKey), selectedScale);
+      commitProgression(customProgression.map(chord => transposeChord(chord, delta, useFlats)));
+    }
+  }, [selectedKey, selectedScale, customProgression, chordsPlaying, handleStopChords, commitProgression]);
+
+  const handleScaleChange = useCallback((scale: string) => {
+    if (chordsPlaying) handleStopChords();
+    setSelectedScale(scale);
+    setSelectedKey(current => getPreferredKeyName(noteNameToPc(current), scale));
+  }, [chordsPlaying, handleStopChords]);
+
+  const handleGenreChange = useCallback((genre: Genre) => {
+    if (chordsPlaying) handleStopChords();
+    if (arrangementPlaying) setArrangementPlaying(false);
+    setSelectedGenre(genre);
+    setSelectedProgressionIdx(0);
+    setSelectedRhythm(genre.rhythmPatterns[0]);
+    setBpm(genre.defaultBpm);
+    setSelectedScale(genre.preferredScale);
+    setSelectedKey(current => getPreferredKeyName(noteNameToPc(current), genre.preferredScale));
+    setSelectedSynth(genre.synthPreset as typeof selectedSynth);
+    setSelectedChordForView(null);
+  }, [chordsPlaying, arrangementPlaying, handleStopChords]);
+
+  const handleComplexityChange = useCallback((level: ChordComplexity) => {
+    if (chordsPlaying) handleStopChords();
+    setChordComplexity(level);
+  }, [chordsPlaying, handleStopChords]);
+
+  const handleLoopChange = useCallback((next: boolean) => {
+    setLoop(next);
+    setArrangementLoop(next);
+  }, []);
+
+  const handleShare = useCallback(async () => {
+    const url = `${window.location.origin}${window.location.pathname}?preset=${encodeShare(snapshot)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.show('Link copied — chords, mixer and drum edits included', 'success');
+    } catch {
+      toast.show('Could not copy the link. Your browser blocked clipboard access.', 'error');
+    }
+  }, [snapshot, toast]);
+
+  const handleSaveProjectFile = useCallback(() => {
+    const name = `${selectedKey}-${selectedGenre.name}-${bpm}bpm`.replace(/\s+/g, '-').toLowerCase();
+    downloadText(`${name}.json`, serializeProject(name, snapshot));
+    toast.show('Project file saved', 'success');
+  }, [selectedKey, selectedGenre.name, bpm, snapshot, toast]);
+
+  const handleFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = parseProjectFile(String(reader.result ?? ''));
+      if (!result) {
+        toast.show('Could not read this project file', 'error');
+        return;
+      }
+      applyProject(result.project);
+      toast.show(`Loaded “${result.name}”`, 'success');
+    };
+    reader.onerror = () => toast.show('Could not read this file', 'error');
+    reader.readAsText(file);
+  }, [applyProject, toast]);
+
+  const handleExportChordMidi = useCallback(() => {
+    exportProgressionToMidi(progression, bpm, selectedRhythm, selectedKey, selectedScale, doubleTime);
+    toast.show('Chord MIDI exported', 'success');
+  }, [progression, bpm, selectedRhythm, selectedKey, selectedScale, doubleTime, toast]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+
+      const mod = event.metaKey || event.ctrlKey;
+      if (event.code === 'Space') {
+        event.preventDefault();
+        togglePlayback();
+        return;
+      }
+      if (mod && event.code === 'KeyZ' && !event.shiftKey) {
+        event.preventDefault();
+        if (activeTab === 'chords') undoChords();
+        else studioRef.current?.undo();
+        return;
+      }
+      if (mod && ((event.code === 'KeyZ' && event.shiftKey) || event.code === 'KeyY')) {
+        event.preventDefault();
+        if (activeTab === 'chords') redoChords();
+        else studioRef.current?.redo();
+        return;
+      }
+      if (mod && event.code === 'KeyS') {
+        event.preventDefault();
+        handleSaveProjectFile();
+        return;
+      }
+      if (mod && event.code === 'KeyO') {
+        event.preventDefault();
+        fileInputRef.current?.click();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeTab, togglePlayback, undoChords, redoChords, handleSaveProjectFile]);
+
+  const handleTabChange = useCallback((tab: 'chords' | 'melodies') => {
     setActiveTab(tab);
   }, []);
 
-  const handleScaleChange = useCallback((scale: string) => {
-    if (isPlaying) handleStop();
-    setSelectedScale(scale);
-    setSelectedKey(k => getPreferredKeyName(noteNameToPc(k), scale));
-  }, [isPlaying, handleStop]);
-
-  const handleVolumeChange = useCallback((vol: number) => {
-    setVolumeState(vol);
-    setVolume(vol);
-  }, []);
-
-  const handlePreviewChord = useCallback((chord: ChordInfo) => {
+  const previewChord = useCallback((chord: ChordInfo) => {
     if (!audioReady) return;
     playChord(chord, selectedSynth, '4n');
   }, [audioReady, selectedSynth]);
 
-  const handleExportMidi = useCallback(() => {
-    exportProgressionToMidi(progression, bpm, selectedRhythm, selectedKey, selectedScale, doubleTime);
-  }, [progression, bpm, selectedRhythm, selectedKey, selectedScale, doubleTime]);
-
-  const handleAddChord = useCallback((chord: ChordInfo) => {
-    const current = customProgression || [...templateProgression];
-    const newProgression = [...current, chord];
-    setCustomProgression(newProgression);
-    // Save to history
-    setProgressionHistory(prev => {
-      const newHistory = prev.slice(0, progressionHistoryIndex + 1);
-      newHistory.push(newProgression);
-      return newHistory.slice(-50);
-    });
-    setProgressionHistoryIndex(prev => Math.min(prev + 1, 49));
-  }, [customProgression, templateProgression, progressionHistoryIndex]);
-
-  const handleRemoveChord = useCallback((index: number) => {
-    const current = customProgression || [...templateProgression];
-    const newProgression = current.filter((_, i) => i !== index);
-    setCustomProgression(newProgression);
-    // Save to history
-    setProgressionHistory(prev => {
-      const newHistory = prev.slice(0, progressionHistoryIndex + 1);
-      newHistory.push(newProgression);
-      return newHistory.slice(-50);
-    });
-    setProgressionHistoryIndex(prev => Math.min(prev + 1, 49));
-  }, [customProgression, templateProgression, progressionHistoryIndex]);
-
-  const handleResetProgression = useCallback(() => {
-    setCustomProgression(null);
-    setSelectedChordForView(null);
-  }, []);
-
-  const handleInversionChange = useCallback((index: number, inversion: number) => {
-    const current = customProgression || [...templateProgression];
-    const updated = [...current];
-    updated[index] = invertChord(updated[index], inversion);
-    setCustomProgression(updated);
-  }, [customProgression, templateProgression]);
-
-  const handleAutoVoiceLead = useCallback(() => {
-    const current = customProgression || [...templateProgression];
-    const voiced = voiceLeading(current);
-    setCustomProgression(voiced);
-    // Save to history
-    setProgressionHistory(prev => {
-      const newHistory = prev.slice(0, progressionHistoryIndex + 1);
-      newHistory.push(voiced);
-      return newHistory.slice(-50);
-    });
-    setProgressionHistoryIndex(prev => Math.min(prev + 1, 49));
-  }, [customProgression, templateProgression, progressionHistoryIndex]);
-
-  const handleUndo = useCallback(() => {
-    if (progressionHistoryIndex > 0) {
-      setProgressionHistoryIndex(prev => prev - 1);
-      setCustomProgression([...progressionHistory[progressionHistoryIndex - 1]]);
-    }
-  }, [progressionHistoryIndex, progressionHistory]);
-
-  const handleRedo = useCallback(() => {
-    if (progressionHistoryIndex < progressionHistory.length - 1) {
-      setProgressionHistoryIndex(prev => prev + 1);
-      setCustomProgression([...progressionHistory[progressionHistoryIndex + 1]]);
-    }
-  }, [progressionHistoryIndex, progressionHistory]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-      const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
-
-      // Undo: Cmd/Ctrl + Z
-      if (cmdOrCtrl && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        handleUndo();
-      }
-      // Redo: Cmd/Ctrl + Shift + Z or Cmd/Ctrl + Y
-      else if ((cmdOrCtrl && e.key === 'z' && e.shiftKey) || (cmdOrCtrl && e.key === 'y')) {
-        e.preventDefault();
-        handleRedo();
-      }
-      // Play/Stop: Space
-      else if (e.key === ' ') {
-        e.preventDefault();
-        if (isPlaying) {
-          handleStop();
-        } else {
-          handlePlay();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, handleUndo, handleRedo, handlePlay, handleStop]);
-
-  const viewedChord = selectedChordForView !== null ? progression[selectedChordForView] : null;
-
   if (!audioReady) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-white mb-2">EDM Chord Generator</h1>
-          <p className="text-gray-400 mb-8 text-sm">Generate chord progressions for electronic dance music</p>
+      <div className="flex min-h-screen items-center justify-center bg-gray-950 px-4">
+        <div className="max-w-md text-center">
+          <h1 className="text-3xl font-bold text-white sm:text-4xl">EDM Studio</h1>
+          <p className="mt-2 text-sm text-gray-300">
+            Chord progressions, bass, lead and drums — generated, arranged and exported to your DAW.
+          </p>
           <button
+            type="button"
             onClick={handleInitAudio}
-            className="px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 text-lg"
+            className="mt-8 min-h-12 rounded-xl bg-purple-600 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-purple-500/30 transition-colors hover:bg-purple-500"
           >
-            Start Making Music
+            Start making music
           </button>
-          <p className="text-gray-600 text-xs mt-4">Click to enable audio engine</p>
+          <p className="mt-4 text-xs text-gray-400">Click once to enable the audio engine · works offline</p>
         </div>
       </div>
     );
   }
 
+  const playing = chordsPlaying || arrangementPlaying;
+  const totalBars = Math.max(progression.length, 1);
+  const position = chordsPlaying
+    ? { bar: Math.min(activeChordIndex + 1, totalBars), totalBars }
+    : { bar: Math.floor((arrangementStep ?? 0) / 16) + 1, totalBars };
+
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-gray-950/50 backdrop-blur">
-        <div>
-          <h1 className="text-xl font-bold text-white">EDM Chord Generator</h1>
-          <div className="text-xs text-gray-600">
-            {selectedKey} {selectedScale} · {selectedGenre.name} · {bpm} BPM
+      <header className="sticky top-0 z-40 border-b border-gray-800 bg-gray-950/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-3 py-2 sm:px-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="min-w-0">
+              <h1 className="truncate text-base font-bold text-white sm:text-lg">EDM Studio</h1>
+              <p className="truncate text-[11px] text-gray-400">
+                {selectedKey} {selectedScale} · {selectedGenre.name} · {bpm} BPM
+              </p>
+            </div>
+
+            <div className="ml-auto flex flex-wrap items-center gap-1.5">
+              <Menu
+                label="Save"
+                tone="primary"
+                items={[
+                  { label: 'Save project…', hint: 'Download a .json file', onSelect: handleSaveProjectFile },
+                  { label: 'Open project…', hint: 'Ctrl/Cmd+O', onSelect: () => fileInputRef.current?.click() },
+                  { label: 'Save arrangement…', hint: 'Stored in this browser', onSelect: () => studioRef.current?.openSaveDialog() },
+                  { label: 'Open arrangement…', onSelect: () => studioRef.current?.openLoadDialog() },
+                ]}
+              />
+              <Menu
+                label="Export"
+                items={[
+                  { label: 'Chord progression MIDI', onSelect: handleExportChordMidi },
+                  { label: 'Arrangement MIDI', hint: 'Chords, bass, lead, drums', onSelect: () => studioRef.current?.exportMidi() },
+                  { label: 'WAV mix', onSelect: () => studioRef.current?.exportWav() },
+                  { label: 'Project JSON', onSelect: handleSaveProjectFile },
+                ]}
+              />
+              <button
+                type="button"
+                onClick={handleShare}
+                className="h-11 rounded-lg border border-cyan-600/40 bg-cyan-600/15 px-3 text-xs font-medium text-cyan-200 transition-colors hover:bg-cyan-600/25 sm:h-9"
+              >
+                Share
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleFileChange}
+                className="hidden"
+                aria-hidden="true"
+                tabIndex={-1}
+              />
+            </div>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleSharePreset}
-            className="px-3 py-1.5 rounded text-xs font-medium bg-cyan-600/20 border border-cyan-600/30 text-cyan-300 hover:bg-cyan-600/30 transition-all"
-            title="Copy shareable link"
-          >
-            Share
-          </button>
-          <button
-            onClick={handleSaveProject}
-            className="px-3 py-1.5 rounded text-xs font-medium bg-purple-600/20 border border-purple-600/30 text-purple-300 hover:bg-purple-600/30 transition-all"
-            title="Save current project as JSON file"
-          >
-            Save Project
-          </button>
-          <label className="px-3 py-1.5 rounded text-xs font-medium bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600 transition-all cursor-pointer">
-            Load Project
-            <input
-              type="file"
-              accept=".json"
-              onChange={handleLoadProject}
-              className="hidden"
-            />
-          </label>
+
+          <TransportBar
+            isPlaying={playing}
+            onToggle={togglePlayback}
+            bpm={bpm}
+            bpmRange={selectedGenre.bpmRange}
+            onBpmChange={setBpm}
+            loop={loop}
+            onLoopChange={handleLoopChange}
+            volume={volume}
+            onVolumeChange={setVolumeState}
+            position={position}
+          />
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-4">
-        {/* Tab Navigation */}
-        <div className="flex gap-1 mb-6 bg-gray-900/50 rounded-lg p-1 border border-gray-800 w-fit">
-          <button
-            onClick={() => handleTabChange('chords')}
-            className={`px-5 py-2 rounded-md text-sm font-medium transition-all ${
-              activeTab === 'chords'
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
-                : 'text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            Chord Progression
-          </button>
-          <button
-            onClick={() => handleTabChange('melodies')}
-            className={`px-5 py-2 rounded-md text-sm font-medium transition-all ${
-              activeTab === 'melodies'
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
-                : 'text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            Melody Studio
-          </button>
+      <main className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-6">
+        <div
+          role="tablist"
+          aria-label="Studio sections"
+          className="mb-3 flex w-fit gap-1 rounded-lg border border-gray-800 bg-gray-900/60 p-1"
+        >
+          {([
+            { id: 'chords', label: 'Harmony' },
+            { id: 'melodies', label: 'Arrangement' },
+          ] as const).map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`min-h-11 rounded-md px-4 text-sm font-medium transition-colors sm:min-h-9 ${
+                activeTab === tab.id
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-300 hover:text-white'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {activeTab === 'chords' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" data-tab="chords">
-          {/* Left Panel - Controls */}
-          <div className="lg:col-span-1 flex flex-col gap-6">
-            <div className="p-4 rounded-xl bg-gray-900/50 border border-gray-800 flex flex-col gap-5">
-              <KeySelector
-                selectedKey={selectedKey}
-                selectedScale={selectedScale}
-                onKeyChange={(k) => { if (isPlaying) handleStop(); setSelectedKey(k); }}
-                onScaleChange={handleScaleChange}
-              />
-              <GenreSelector selectedGenre={selectedGenre} onGenreChange={handleGenreChange} />
+        <div className={activeTab === 'chords' ? 'block' : 'hidden'} role="tabpanel" aria-label="Harmony">
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="order-2 flex flex-col gap-4 lg:order-1">
+              <div className="flex flex-col gap-5 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+                <KeySelector
+                  selectedKey={selectedKey}
+                  selectedScale={selectedScale}
+                  onKeyChange={handleKeyChange}
+                  onScaleChange={handleScaleChange}
+                />
+                <GenreSelector selectedGenre={selectedGenre} onGenreChange={handleGenreChange} />
 
-              {/* Chord Complexity */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-gray-400">Chord Complexity</label>
-                <div className="flex gap-1.5 flex-wrap">
-                  {(['basic', '7ths', '9ths', 'jazzy'] as ChordComplexity[]).map((level) => (
-                    <button
-                      key={level}
-                      onClick={() => { if (isPlaying) handleStop(); setChordComplexity(level); }}
-                      className={`px-2.5 py-1 rounded text-xs font-medium transition-all capitalize ${
-                        chordComplexity === level
-                          ? 'bg-purple-500/20 border border-purple-500 text-purple-300'
-                          : 'border border-gray-700/50 text-gray-400 hover:border-gray-600 hover:text-gray-200'
-                      }`}
-                    >
-                      {level}
-                    </button>
-                  ))}
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Chord complexity</span>
+                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Chord complexity">
+                    {COMPLEXITY_OPTIONS.map(option => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => handleComplexityChange(option.id)}
+                        aria-pressed={chordComplexity === option.id}
+                        title={option.hint}
+                        className={`min-h-11 rounded-md px-2.5 text-xs font-medium transition-colors sm:min-h-9 ${
+                          chordComplexity === option.id
+                            ? 'bg-purple-500/20 text-purple-200 ring-1 ring-purple-500'
+                            : 'border border-gray-700/60 text-gray-300 hover:border-gray-500'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-4 rounded-xl bg-gray-900/50 border border-gray-800 flex flex-col gap-5">
-              <ProgressionSelector
-                genre={selectedGenre}
-                selectedIndex={selectedProgressionIdx}
-                onSelect={(i) => { if (isPlaying) handleStop(); setSelectedProgressionIdx(i); }}
-              />
-            </div>
-
-            <div className="p-4 rounded-xl bg-gray-900/50 border border-gray-800 flex flex-col gap-5">
-              <RhythmSelector
-                genre={selectedGenre}
-                selectedRhythm={selectedRhythm}
-                onRhythmChange={setSelectedRhythm}
-              />
-            </div>
-
-            <div className="p-4 rounded-xl bg-gray-900/50 border border-gray-800">
-              <SynthSelector selectedSynth={selectedSynth} onSynthChange={setSelectedSynth} />
-            </div>
-          </div>
-
-          {/* Right Panel - Display */}
-          <div className="lg:col-span-2 flex flex-col gap-6">
-            <TransportControls
-              isPlaying={isPlaying}
-              bpm={bpm}
-              bpmRange={selectedGenre.bpmRange}
-              volume={volume}
-              loop={loop}
-              doubleTime={doubleTime}
-              onPlay={handlePlay}
-              onStop={handleStop}
-              onBpmChange={setBpm}
-              onVolumeChange={handleVolumeChange}
-              onLoopChange={setLoop}
-              onDoubleTimeChange={setDoubleTime}
-              onExportMidi={handleExportMidi}
-            />
-
-            <div className="p-4 rounded-xl bg-gray-900/50 border border-gray-800">
-              <ChordDisplay
-                progression={progression}
-                activeIndex={activeChordIndex}
-                selectedIndex={selectedChordForView}
-                scaleName={selectedScale}
-                scaleChords={availableChords}
-                onChordClick={setSelectedChordForView}
-                onPreviewChord={handlePreviewChord}
-                isPlaying={isPlaying}
-              />
-            </div>
-
-            <div className="p-4 rounded-xl bg-gray-900/50 border border-gray-800">
-              <PianoKeyboard chord={viewedChord} />
-            </div>
-
-            <div className="p-4 rounded-xl bg-gray-900/50 border border-gray-800">
-              <StaffNotation
-                progression={progression}
-                activeIndex={activeChordIndex}
-                isPlaying={isPlaying}
-              />
-            </div>
-
-            <div className="p-4 rounded-xl bg-gray-900/50 border border-gray-800">
-              <div className="flex items-center justify-between mb-2">
-                <span />
-                {customProgression && (
-                  <button
-                    onClick={handleResetProgression}
-                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-                  >
-                    Reset to template
-                  </button>
-                )}
+              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+                <ProgressionSelector
+                  genre={selectedGenre}
+                  selectedIndex={selectedProgressionIdx}
+                  onSelect={index => {
+                    if (chordsPlaying) handleStopChords();
+                    setSelectedProgressionIdx(index);
+                  }}
+                />
               </div>
-              <ChordPalette
-                availableChords={availableChords}
-                progression={progression}
-                scaleName={selectedScale}
-                onAddChord={handleAddChord}
-                onRemoveChord={handleRemoveChord}
-                onPreviewChord={handlePreviewChord}
-                onInversionChange={handleInversionChange}
-                onAutoVoiceLead={handleAutoVoiceLead}
-                onUndo={handleUndo}
-                onRedo={handleRedo}
-                canUndo={progressionHistoryIndex > 0}
-                canRedo={progressionHistoryIndex < progressionHistory.length - 1}
-                onReorderChord={handleReorderChord}
-              />
+
+              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+                <RhythmSelector
+                  genre={selectedGenre}
+                  selectedRhythm={selectedRhythm}
+                  onRhythmChange={setSelectedRhythm}
+                />
+              </div>
+
+              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+                <SynthSelector selectedSynth={selectedSynth} onSynthChange={setSelectedSynth} />
+              </div>
+            </div>
+
+            <div className="order-1 flex flex-col gap-4 lg:order-2 lg:col-span-2">
+              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+                <ChordDisplay
+                  progression={progression}
+                  activeIndex={activeChordIndex}
+                  selectedIndex={selectedChordForView}
+                  scaleName={selectedScale}
+                  scaleChords={availableChords}
+                  onChordClick={setSelectedChordForView}
+                  onPreviewChord={previewChord}
+                  isPlaying={chordsPlaying}
+                />
+              </div>
+
+              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+                <PianoKeyboard chord={viewedChord} />
+              </div>
+
+              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+                <StaffSection
+                  progression={progression}
+                  activeIndex={activeChordIndex}
+                  isPlaying={chordsPlaying}
+                />
+              </div>
+
+              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <span />
+                  {customProgression && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomProgression(null);
+                        setHistory({ list: [], index: -1 });
+                        setSelectedChordForView(null);
+                        toast.show('Progression reset to template');
+                      }}
+                      className="min-h-8 text-xs text-gray-300 underline-offset-2 hover:text-white hover:underline"
+                    >
+                      Reset to template
+                    </button>
+                  )}
+                </div>
+                <ChordPalette
+                  availableChords={availableChords}
+                  progression={progression}
+                  scaleName={selectedScale}
+                  onAddChord={chord => commitProgression([...(customProgression ?? templateProgression), chord])}
+                  onRemoveChord={index => commitProgression((customProgression ?? templateProgression).filter((_, i) => i !== index))}
+                  onPreviewChord={previewChord}
+                  onInversionChange={(index, inversion) => {
+                    const current = customProgression ?? templateProgression;
+                    commitProgression(current.map((chord, i) => i === index ? invertChord(chord, inversion) : chord));
+                  }}
+                  onAutoVoiceLead={() => commitProgression(voiceLeading(customProgression ?? templateProgression))}
+                  onUndo={undoChords}
+                  onRedo={redoChords}
+                  canUndo={history.index > 0}
+                  canRedo={history.index < history.list.length - 1}
+                  onReorderChord={(from, to) => {
+                    const current = [...(customProgression ?? templateProgression)];
+                    const [moved] = current.splice(from, 1);
+                    current.splice(to, 0, moved);
+                    commitProgression(current);
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
-        ) : (
+
+        <div className={activeTab === 'melodies' ? 'block' : 'hidden'} role="tabpanel" aria-label="Arrangement">
           <MelodyStudio
+            ref={studioRef}
             progression={progression}
             rhythm={selectedRhythm}
             rootKey={selectedKey}
             scaleType={selectedScale}
             bpm={bpm}
             genreId={selectedGenre.id}
-            chordSynthId={selectedSynth}
             loop={loop}
             doubleTime={doubleTime}
-            persistedBassStyleId={melodyStudioState.bassStyleId}
-            persistedLeadStyleId={melodyStudioState.leadStyleId}
-            persistedBassSeed={melodyStudioState.bassSeed}
-            persistedLeadSeed={melodyStudioState.leadSeed}
-            persistedArpEnabled={melodyStudioState.arpEnabled}
-            persistedArpSettings={melodyStudioState.arpSettings}
-            persistedArpSeed={melodyStudioState.arpSeed}
-            persistedDrumKitId={melodyStudioState.drumKitId}
-            persistedDrumSeed={melodyStudioState.drumSeed}
-            persistedSynthIds={melodyStudioState.synthIds}
-            onSaveState={setMelodyStudioState}
+            masterVolume={volume}
+            isPlaying={arrangementPlaying}
+            onPlayingChange={handleArrangementPlayingChange}
+            onStepChange={setArrangementStep}
+            melody={melody}
+            onMelodyChange={setMelody}
+            project={snapshot}
+            onApplyProject={applyProject}
+            onStopOtherPlayback={handleStopChords}
           />
-        )}
+        </div>
       </main>
 
-      <footer className="border-t border-gray-800 mt-8 py-4 text-center text-xs text-gray-600">
-        EDM Chord Generator · Works fully offline · PWA
+      <footer className="mt-8 border-t border-gray-800 py-4 text-center text-xs text-gray-400">
+        EDM Studio · works fully offline · PWA
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <ToastProvider>
+        <Studio />
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }

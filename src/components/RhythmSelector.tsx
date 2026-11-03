@@ -15,10 +15,10 @@ export function RhythmSelector({ genre, selectedRhythm, onRhythmChange }: Rhythm
           <button
             key={`${genre.id}-rhythm-${i}`}
             onClick={() => onRhythmChange(rhythm)}
-            className={`flex flex-col gap-1 px-3 py-2 rounded-lg text-sm transition-all border text-left ${
+            className={`flex min-h-11 flex-col gap-1 px-3 py-2 rounded-lg text-sm transition-all border text-left ${
               selectedRhythm.name === rhythm.name
                 ? 'border-purple-500 bg-purple-500/10 text-white'
-                : 'border-gray-700/50 text-gray-400 hover:border-gray-600 hover:text-gray-200'
+                : 'border-gray-700/50 text-gray-300 hover:border-gray-600 hover:text-white'
             }`}
           >
             <div className="flex gap-0.5">

@@ -75,15 +75,15 @@ function ChordDetail({ chord }: { chord: ChordInfo }) {
     <div className="mt-2 p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
       <div className="flex items-center gap-4 flex-wrap">
         <div>
-          <span className="text-xs text-gray-500 uppercase">Chord</span>
+          <span className="text-xs text-gray-400 uppercase">Chord</span>
           <p className="text-lg font-bold text-white">{chord.display}</p>
         </div>
         <div>
-          <span className="text-xs text-gray-500 uppercase">Type</span>
+          <span className="text-xs text-gray-400 uppercase">Type</span>
           <p className="text-sm text-gray-300">{chord.type.name}</p>
         </div>
         <div>
-          <span className="text-xs text-gray-500 uppercase">Notes</span>
+          <span className="text-xs text-gray-400 uppercase">Notes</span>
           <div className="flex gap-1.5 mt-0.5">
             {chord.notes.map((note, i) => (
               <span key={i} className="px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded text-sm font-mono">
@@ -93,7 +93,7 @@ function ChordDetail({ chord }: { chord: ChordInfo }) {
           </div>
         </div>
         <div>
-          <span className="text-xs text-gray-500 uppercase">Intervals</span>
+          <span className="text-xs text-gray-400 uppercase">Intervals</span>
           <p className="text-sm text-gray-400 font-mono">{chord.type.intervals.join(' - ')}</p>
         </div>
       </div>

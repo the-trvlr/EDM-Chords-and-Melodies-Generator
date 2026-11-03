@@ -1,35 +1,34 @@
-import type { ChordComplexity, ChordInfo } from './musicTheory';
-import type { SynthPresetId } from './audioEngine';
-import type { ArpSettings } from './arpeggiator';
-import type { DrumKitId } from '../data/drumKits';
+import type { ChordComplexity } from './musicTheory';
+import { GENRES } from '../data/genres';
+import type { MelodyState, ProjectSnapshot } from '../types';
+import { defaultMelodyState } from '../types';
+import {
+  COMPLEXITIES,
+  SCALES,
+  isRecord,
+  numIn,
+  sanitizeChords,
+  sanitizeMelody,
+  sanitizeSynthId,
+} from './sanitize';
 
 const STORAGE_KEY = 'edm-chordgen-state-v1';
 const ARRANGEMENTS_KEY = 'edm-chordgen-arrangements-v1';
-const PROJECTS_KEY = 'edm-chordgen-projects-v1';
 
 export interface PersistedState {
   selectedKey: string;
   selectedScale: string;
   genreId: string;
   selectedProgressionIdx: number;
-  selectedSynth: SynthPresetId;
+  selectedSynth: ProjectSnapshot['synth'];
   bpm: number;
   volume: number;
   loop: boolean;
   doubleTime: boolean;
   chordComplexity: ChordComplexity;
   activeTab: 'chords' | 'melodies';
-  // Melody Studio state (optional for backward compatibility)
-  bassStyleId?: string;
-  leadStyleId?: string;
-  bassSeed?: number;
-  leadSeed?: number;
-  arpEnabled?: boolean;
-  arpSettings?: ArpSettings;
-  arpSeed?: number;
-  drumKitId?: DrumKitId;
-  drumSeed?: number;
-  synthIds?: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId; drums: SynthPresetId };
+  /** Full arranger state (styles, seeds, mixer, drum edits). */
+  melody: MelodyState;
 }
 
 export interface SavedArrangement {
@@ -37,48 +36,56 @@ export interface SavedArrangement {
   name: string;
   createdAt: number;
   updatedAt: number;
-  data: {
-    rootKey: string;
-    scaleType: string;
-    genreId: string;
-    bpm: number;
-    progressionIndex: number;
-    bassStyleId: string;
-    leadStyleId: string;
-    bassSeed: number;
-    leadSeed: number;
-    arpEnabled: boolean;
-    arpSettings: ArpSettings;
-    arpSeed: number;
-    drumKitId: DrumKitId;
-    drumSeed: number;
-    synthIds: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId; drums: SynthPresetId };
-    // Chord inversions (optional for backward compatibility)
-    chordInversions?: number[];
-    // Per-track mixer settings (optional for backward compatibility)
-    mixerSettings?: Record<string, { volume: number; mute: boolean; solo: boolean }>;
+  data: { project: ProjectSnapshot };
+}
+
+/** Validates and fills defaults for a project snapshot coming from disk/URL/storage. */
+export function sanitizeProject(value: unknown): ProjectSnapshot | null {
+  if (!isRecord(value)) return null;
+
+  const key = typeof value.key === 'string' && value.key.length <= 8 ? value.key : 'A';
+  const scale = typeof value.scale === 'string' && SCALES.includes(value.scale) ? value.scale : 'minor';
+  const genreId = typeof value.genreId === 'string' && GENRES.some(genre => genre.id === value.genreId)
+    ? value.genreId
+    : GENRES[0].id;
+
+  return {
+    key,
+    scale,
+    genreId,
+    progressionIdx: Math.round(numIn(value.progressionIdx, 0, 4, 0)),
+    rhythmName: typeof value.rhythmName === 'string' ? value.rhythmName.slice(0, 64) : '',
+    synth: sanitizeSynthId(value.synth, 'pad'),
+    bpm: Math.round(numIn(value.bpm, 40, 300, 124)),
+    volume: numIn(value.volume, -60, 6, -6),
+    loop: value.loop !== false,
+    doubleTime: value.doubleTime === true,
+    chordComplexity: (COMPLEXITIES as string[]).includes(String(value.chordComplexity))
+      ? (value.chordComplexity as ChordComplexity)
+      : 'basic',
+    customProgression: sanitizeChords(value.customProgression),
+    melody: sanitizeMelody(isRecord(value.melody) ? value.melody : value),
   };
 }
 
-export interface SavedProject {
-  id: string;
-  name: string;
-  createdAt: number;
-  updatedAt: number;
-  data: {
-    selectedKey: string;
-    selectedScale: string;
-    genreId: string;
-    selectedProgressionIdx: number;
-    selectedSynth: SynthPresetId;
-    bpm: number;
-    volume: number;
-    loop: boolean;
-    doubleTime: boolean;
-    chordComplexity: ChordComplexity;
-    activeTab: 'chords' | 'melodies';
-    customProgression: ChordInfo[] | null;
-    selectedRhythmName: string;
+/** Maps the legacy project file shape (selectedKey, selectedRhythmName, ...). */
+function projectFromLegacyData(data: Record<string, unknown>): ProjectSnapshot {
+  return {
+    key: typeof data.selectedKey === 'string' ? data.selectedKey : 'A',
+    scale: typeof data.selectedScale === 'string' ? data.selectedScale : 'minor',
+    genreId: typeof data.genreId === 'string' ? data.genreId : GENRES[0].id,
+    progressionIdx: Math.round(numIn(data.selectedProgressionIdx, 0, 4, 0)),
+    rhythmName: typeof data.selectedRhythmName === 'string' ? data.selectedRhythmName : '',
+    synth: sanitizeSynthId(data.selectedSynth, 'pad'),
+    bpm: Math.round(numIn(data.bpm, 40, 300, 124)),
+    volume: numIn(data.volume, -60, 6, -6),
+    loop: data.loop !== false,
+    doubleTime: data.doubleTime === true,
+    chordComplexity: (COMPLEXITIES as string[]).includes(String(data.chordComplexity))
+      ? (data.chordComplexity as ChordComplexity)
+      : 'basic',
+    customProgression: sanitizeChords(data.customProgression),
+    melody: sanitizeMelody(isRecord(data.melody) ? data.melody : data),
   };
 }
 
@@ -88,20 +95,22 @@ export function loadPersistedState(): Partial<PersistedState> {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    const state = typeof parsed === 'object' && parsed !== null ? parsed : {};
-    // Provide defaults for new Melody Studio fields for backward compatibility
+    if (!isRecord(parsed)) return {};
     return {
-      bassStyleId: state.bassStyleId || '',
-      leadStyleId: state.leadStyleId || '',
-      bassSeed: state.bassSeed || 1,
-      leadSeed: state.leadSeed || 1,
-      arpEnabled: state.arpEnabled || false,
-      arpSettings: state.arpSettings || { pattern: 'up', rate: 'eighth', octaveRange: 1, gate: 0.8 },
-      arpSeed: state.arpSeed || 1,
-      drumKitId: state.drumKitId || 'acoustic',
-      drumSeed: state.drumSeed || 1,
-      synthIds: state.synthIds || { chord: 'pad', bass: 'pluck', lead: 'supersaw', drums: 'piano' },
-      ...state,
+      selectedKey: typeof parsed.selectedKey === 'string' ? parsed.selectedKey : undefined,
+      selectedScale: typeof parsed.selectedScale === 'string' ? parsed.selectedScale : undefined,
+      genreId: typeof parsed.genreId === 'string' ? parsed.genreId : undefined,
+      selectedProgressionIdx: Math.round(numIn(parsed.selectedProgressionIdx, 0, 4, 0)),
+      selectedSynth: sanitizeSynthId(parsed.selectedSynth, 'pad'),
+      bpm: Math.round(numIn(parsed.bpm, 40, 300, 124)),
+      volume: numIn(parsed.volume, -60, 6, -6),
+      loop: parsed.loop !== false,
+      doubleTime: parsed.doubleTime === true,
+      chordComplexity: (COMPLEXITIES as string[]).includes(String(parsed.chordComplexity))
+        ? (parsed.chordComplexity as ChordComplexity)
+        : 'basic',
+      activeTab: parsed.activeTab === 'melodies' ? 'melodies' : 'chords',
+      melody: sanitizeMelody(parsed),
     };
   } catch {
     return {};
@@ -117,157 +126,101 @@ export function savePersistedState(state: PersistedState): void {
   }
 }
 
+function normalizeArrangement(raw: unknown): SavedArrangement | null {
+  if (!isRecord(raw) || typeof raw.id !== 'string' || !isRecord(raw.data)) return null;
+  const data = raw.data;
+  const project = isRecord(data.project)
+    ? sanitizeProject(data.project)
+    : projectFromLegacyData(data);
+  if (!project) return null;
+  return {
+    id: raw.id,
+    name: typeof raw.name === 'string' ? raw.name : 'Untitled',
+    createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : Date.now(),
+    updatedAt: typeof raw.updatedAt === 'number' ? raw.updatedAt : Date.now(),
+    data: { project },
+  };
+}
+
 export function getSavedArrangements(): SavedArrangement[] {
   if (typeof localStorage === 'undefined') return [];
   try {
     const raw = localStorage.getItem(ARRANGEMENTS_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(normalizeArrangement).filter((item): item is SavedArrangement => item !== null);
   } catch {
     return [];
   }
 }
 
-export function saveArrangement(arrangement: Omit<SavedArrangement, 'id' | 'createdAt' | 'updatedAt'>): SavedArrangement {
-  const arrangements = getSavedArrangements();
-  const now = Date.now();
-  const newArrangement: SavedArrangement = {
-    ...arrangement,
-    id: crypto.randomUUID(),
-    createdAt: now,
-    updatedAt: now,
-  };
-  arrangements.push(newArrangement);
+function writeArrangements(arrangements: SavedArrangement[]): void {
+  if (typeof localStorage === 'undefined') return;
   localStorage.setItem(ARRANGEMENTS_KEY, JSON.stringify(arrangements));
-  return newArrangement;
 }
 
-export function updateArrangement(id: string, updates: Partial<Omit<SavedArrangement, 'id' | 'createdAt' | 'updatedAt'>>): SavedArrangement | null {
+export function saveArrangement(name: string, project: ProjectSnapshot): SavedArrangement {
   const arrangements = getSavedArrangements();
-  const index = arrangements.findIndex(a => a.id === id);
-  if (index === -1) return null;
-  const updated: SavedArrangement = {
-    ...arrangements[index],
-    ...updates,
-    updatedAt: Date.now(),
+  const now = Date.now();
+  const arrangement: SavedArrangement = {
+    id: crypto.randomUUID(),
+    name: name.trim() || 'Untitled arrangement',
+    createdAt: now,
+    updatedAt: now,
+    data: { project },
   };
-  arrangements[index] = updated;
-  localStorage.setItem(ARRANGEMENTS_KEY, JSON.stringify(arrangements));
-  return updated;
+  arrangements.push(arrangement);
+  writeArrangements(arrangements);
+  return arrangement;
 }
 
 export function deleteArrangement(id: string): boolean {
   const arrangements = getSavedArrangements();
-  const filtered = arrangements.filter(a => a.id !== id);
+  const filtered = arrangements.filter(arrangement => arrangement.id !== id);
   if (filtered.length === arrangements.length) return false;
-  localStorage.setItem(ARRANGEMENTS_KEY, JSON.stringify(filtered));
+  writeArrangements(filtered);
   return true;
 }
 
-export function getSavedProjects(): SavedProject[] {
-  if (typeof localStorage === 'undefined') return [];
+export interface ProjectFile {
+  schemaVersion: 2;
+  name: string;
+  savedAt: string;
+  project: ProjectSnapshot;
+}
+
+export function serializeProject(name: string, project: ProjectSnapshot): string {
+  const file: ProjectFile = {
+    schemaVersion: 2,
+    name: name.trim() || 'Untitled project',
+    savedAt: new Date().toISOString(),
+    project,
+  };
+  return JSON.stringify(file, null, 2);
+}
+
+export function parseProjectFile(text: string): { name: string; project: ProjectSnapshot } | null {
   try {
-    const raw = localStorage.getItem(PROJECTS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveProject(project: Omit<SavedProject, 'id' | 'createdAt' | 'updatedAt'>): SavedProject {
-  const projects = getSavedProjects();
-  const now = Date.now();
-  const newProject: SavedProject = {
-    ...project,
-    id: crypto.randomUUID(),
-    createdAt: now,
-    updatedAt: now,
-  };
-  projects.push(newProject);
-  localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-  return newProject;
-}
-
-export function updateProject(id: string, updates: Partial<Omit<SavedProject, 'id' | 'createdAt' | 'updatedAt'>>): SavedProject | null {
-  const projects = getSavedProjects();
-  const index = projects.findIndex(p => p.id === id);
-  if (index === -1) return null;
-  const updated: SavedProject = {
-    ...projects[index],
-    ...updates,
-    updatedAt: Date.now(),
-  };
-  projects[index] = updated;
-  localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-  return updated;
-}
-
-export function deleteProject(id: string): boolean {
-  const projects = getSavedProjects();
-  const filtered = projects.filter(p => p.id !== id);
-  if (filtered.length === projects.length) return false;
-  localStorage.setItem(PROJECTS_KEY, JSON.stringify(filtered));
-  return true;
-}
-
-export function loadProject(project: SavedProject): Partial<PersistedState> & {
-  customProgression: ChordInfo[] | null;
-  selectedRhythmName: string;
-} {
-  return {
-    selectedKey: project.data.selectedKey,
-    selectedScale: project.data.selectedScale,
-    genreId: project.data.genreId,
-    selectedProgressionIdx: project.data.selectedProgressionIdx,
-    selectedSynth: project.data.selectedSynth,
-    bpm: project.data.bpm,
-    volume: project.data.volume,
-    loop: project.data.loop,
-    doubleTime: project.data.doubleTime,
-    chordComplexity: project.data.chordComplexity,
-    activeTab: project.data.activeTab,
-    customProgression: project.data.customProgression,
-    selectedRhythmName: project.data.selectedRhythmName,
-  };
-}
-
-export interface ShareablePreset {
-  k: string; // key
-  s: string; // scale
-  g: string; // genre
-  p: number; // progression index
-  y: string; // synth
-  b: number; // bpm
-  c: string; // complexity
-  r: string; // rhythm name
-  // Melody Studio state
-  bs?: string; // bass style id
-  ls?: string; // lead style id
-  bsd?: number; // bass seed
-  lsd?: number; // lead seed
-  ae?: boolean; // arp enabled
-  as?: { pattern: string; rate: string; octaveRange: number; gate: number }; // arp settings
-  asd?: number; // arp seed
-  dk?: string; // drum kit id
-  dsd?: number; // drum seed
-  si?: { chord: string; bass: string; lead: string; drums: string }; // synth ids
-}
-
-export function encodeShareablePreset(data: ShareablePreset): string {
-  const json = JSON.stringify(data);
-  const base64 = btoa(json);
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-export function decodeShareablePreset(encoded: string): ShareablePreset | null {
-  try {
-    const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
-    const json = atob(base64);
-    return JSON.parse(json) as ShareablePreset;
+    const parsed = JSON.parse(text);
+    if (!isRecord(parsed)) return null;
+    if (parsed.project !== undefined && !isRecord(parsed.project)) return null;
+    if (parsed.data !== undefined && !isRecord(parsed.data)) return null;
+    const project = isRecord(parsed.project)
+      ? sanitizeProject(parsed.project)
+      : isRecord(parsed.data)
+        ? projectFromLegacyData(parsed.data)
+        : sanitizeProject(parsed);
+    if (!project) return null;
+    return {
+      name: typeof parsed.name === 'string' ? parsed.name : 'Imported project',
+      project,
+    };
   } catch {
     return null;
   }
+}
+
+export function getDefaultMelodyState(): MelodyState {
+  return defaultMelodyState();
 }

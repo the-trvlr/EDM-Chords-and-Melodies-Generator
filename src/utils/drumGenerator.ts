@@ -2,11 +2,12 @@
 class SeededRandom {
   private state: number;
   constructor(seed: number) {
-    this.state = seed;
+    this.state = seed % 2147483647;
+    if (this.state <= 0) this.state += 2147483646;
   }
   next(): number {
-    this.state = (this.state * 1664525 + 1013904223) & 0x7fffffff;
-    return this.state / 0x7fffffff;
+    this.state = (this.state * 16807) % 2147483647;
+    return (this.state - 1) / 2147483646;
   }
   pick<T>(arr: T[]): T {
     return arr[Math.floor(this.next() * arr.length)];
@@ -14,13 +15,10 @@ class SeededRandom {
   chance(p: number): boolean {
     return this.next() < p;
   }
-  intRange(min: number, max: number): number {
-    return min + Math.floor(this.next() * (max - min + 1));
-  }
 }
 
 export interface DrumPattern {
-  kick: number[]; // 16-step grid (0 = off, 1 = on)
+  kick: number[]; // 16-step bar (0 = off, 1 = on)
   snare: number[];
   clap: number[];
   hat: number[];
@@ -33,268 +31,187 @@ export interface DrumPatternPreset {
   pattern: DrumPattern;
 }
 
-// Genre-specific drum pattern presets
+export const DRUM_STEPS = 16;
+
+const p = (
+  kick: number[],
+  snare: number[],
+  clap: number[],
+  hat: number[],
+): DrumPattern => ({ kick, snare, clap, hat });
+
+const FOUR_ON_FLOOR = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0];
+const OFFBEAT_HATS = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1];
+const BACKBEAT = [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0];
+const EMPTY = new Array(16).fill(0);
+
 const DRUM_PRESETS: DrumPatternPreset[] = [
-  // House patterns
+  // House
   {
     id: 'house-classic',
     name: 'Classic House',
     genreId: 'house',
-    pattern: {
-      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    },
+    pattern: p(FOUR_ON_FLOOR, EMPTY, BACKBEAT, OFFBEAT_HATS),
   },
   {
-    id: 'house-offbeat',
-    name: 'Off-beat Hat',
+    id: 'house-shuffle',
+    name: 'Shuffle House',
     genreId: 'house',
-    pattern: {
-      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
-    },
+    pattern: p(FOUR_ON_FLOOR, EMPTY, BACKBEAT, [0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1]),
   },
-  // Techno patterns
+  // Techno
   {
     id: 'techno-driving',
     name: 'Driving Techno',
     genreId: 'techno',
-    pattern: {
-      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      snare: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      clap: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    },
+    pattern: p(FOUR_ON_FLOOR, EMPTY, BACKBEAT, OFFBEAT_HATS),
   },
   {
     id: 'techno-minimal',
     name: 'Minimal Techno',
     genreId: 'techno',
-    pattern: {
-      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      snare: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      hat: [0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
-    },
+    pattern: p(FOUR_ON_FLOOR, EMPTY, EMPTY, [0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0]),
   },
-  // Trance patterns
+  // Trance
   {
     id: 'trance-uplifting',
     name: 'Uplifting Trance',
     genreId: 'trance',
-    pattern: {
-      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    },
+    pattern: p(FOUR_ON_FLOOR, BACKBEAT, EMPTY, OFFBEAT_HATS),
   },
   {
     id: 'trance-gated',
     name: 'Gated Trance',
     genreId: 'trance',
-    pattern: {
-      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      hat: [1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0],
-    },
+    pattern: p(FOUR_ON_FLOOR, BACKBEAT, EMPTY, [1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0]),
   },
-  // DnB patterns
+  // Drum & Bass — two-step / breakbeat feel, not four-on-the-floor
   {
     id: 'dnb-liquid',
     name: 'Liquid DnB',
     genreId: 'dnb',
-    pattern: {
-      kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    },
+    pattern: p(
+      [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+      BACKBEAT,
+      EMPTY,
+      OFFBEAT_HATS,
+    ),
   },
   {
-    id: 'dnb-breakbeat',
-    name: 'Breakbeat',
+    id: 'dnb-neuro',
+    name: 'Neurofunk',
     genreId: 'dnb',
-    pattern: {
-      kick: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      hat: [0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1],
-    },
+    pattern: p(
+      [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0],
+      BACKBEAT,
+      EMPTY,
+      [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1],
+    ),
   },
-  // Dubstep patterns
+  // Dubstep — half-time backbone
   {
     id: 'dubstep-half',
-    name: 'Dubstep Half-time',
+    name: 'Half-time Dubstep',
     genreId: 'dubstep',
-    pattern: {
-      kick: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      snare: [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    },
+    pattern: p(
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
+    ),
   },
   {
     id: 'dubstep-wobble',
-    name: 'Wobble',
+    name: 'Wobble Dubstep',
     genreId: 'dubstep',
-    pattern: {
-      kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-      snare: [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    },
+    pattern: p(
+      [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      EMPTY,
+      [0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0],
+    ),
   },
-  // Future Bass patterns
+  // Future Bass
   {
-    id: 'futurebass-kawaii',
-    name: 'Kawaii Future Bass',
+    id: 'future-bass-bounce',
+    name: 'Future Bass Bounce',
     genreId: 'futureBass',
-    pattern: {
-      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    },
+    pattern: p(
+      [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      OFFBEAT_HATS,
+    ),
   },
   {
-    id: 'futurebass-chill',
-    name: 'Chill Future Bass',
+    id: 'future-bass-trap',
+    name: 'Future Bass Trap',
     genreId: 'futureBass',
-    pattern: {
-      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
-    },
+    pattern: p(
+      [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1],
+    ),
   },
-  // Progressive House patterns
+  // Progressive House
   {
-    id: 'prog-house-building',
-    name: 'Building Prog',
+    id: 'progressive-house',
+    name: 'Progressive House',
     genreId: 'progressiveHouse',
-    pattern: {
-      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    },
+    pattern: p(FOUR_ON_FLOOR, EMPTY, BACKBEAT, OFFBEAT_HATS),
   },
-  {
-    id: 'prog-house-pluck',
-    name: 'Pluck Prog',
-    genreId: 'progressiveHouse',
-    pattern: {
-      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
-    },
-  },
-  // Hardstyle patterns
+  // Hardstyle
   {
     id: 'hardstyle-euphoric',
     name: 'Euphoric Hardstyle',
     genreId: 'hardstyle',
-    pattern: {
-      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    },
+    pattern: p(FOUR_ON_FLOOR, EMPTY, BACKBEAT, OFFBEAT_HATS),
   },
   {
     id: 'hardstyle-raw',
     name: 'Raw Hardstyle',
     genreId: 'hardstyle',
-    pattern: {
-      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      clap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      hat: [0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1],
-    },
+    pattern: p(FOUR_ON_FLOOR, EMPTY, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1]),
   },
 ];
 
+const FALLBACK_PATTERN: DrumPattern = p(FOUR_ON_FLOOR, BACKBEAT, EMPTY, OFFBEAT_HATS);
+
 export function getDrumPatternsForGenre(genreId: string): DrumPatternPreset[] {
-  return DRUM_PRESETS.filter(p => p.genreId === genreId);
+  return DRUM_PRESETS.filter(preset => preset.genreId === genreId);
 }
 
-export function generateDrums(
-  genreId: string,
-  bars: number,
-  seed: number,
-): DrumPattern {
+/**
+ * Generates one bar (16 steps) for the genre. The pattern repeats every bar,
+ * which keeps the editor, playback and export on the same, predictable grid.
+ */
+export function generateDrums(genreId: string, seed: number): DrumPattern {
   const rng = new SeededRandom(seed);
   const presets = getDrumPatternsForGenre(genreId);
+  const base = presets.length > 0 ? rng.pick(presets).pattern : FALLBACK_PATTERN;
 
-  if (presets.length === 0) {
-    // Fallback to a basic pattern with variation based on seed
-    const kick: number[] = [];
-    const snare: number[] = [];
-    const clap: number[] = [];
-    const hat: number[] = [];
+  const mutate = (line: number[], offChance: number, onChance: number) =>
+    line.map(v => (v ? (rng.chance(offChance) ? 0 : 1) : rng.chance(onChance) ? 1 : 0));
 
-    for (let bar = 0; bar < bars; bar++) {
-      kick.push(...[1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0].map((v) => {
-        if (rng.chance(0.1)) return 0;
-        return v;
-      }));
-      snare.push(...[0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0].map((v) => {
-        if (rng.chance(0.2)) return 1;
-        return v;
-      }));
-      clap.push(...[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].map((v) => {
-        if (rng.chance(0.1)) return 1;
-        return v;
-      }));
-      hat.push(...[0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1].map((v) => {
-        if (rng.chance(0.3)) return 1;
-        return v;
-      }));
-    }
+  return {
+    // Keep the kick backbone intact — it defines the genre.
+    kick: [...base.kick],
+    snare: mutate(base.snare, 0.04, 0),
+    clap: mutate(base.clap, 0.06, 0.04),
+    hat: mutate(base.hat, 0.12, 0.08),
+  };
+}
 
-    return { kick, snare, clap, hat };
-  }
+export function emptyDrumPattern(): DrumPattern {
+  return { kick: [...EMPTY], snare: [...EMPTY], clap: [...EMPTY], hat: [...EMPTY] };
+}
 
-  const preset = rng.pick(presets);
-  const basePattern = preset.pattern;
-
-  // Extend pattern for multiple bars
-  const kick: number[] = [];
-  const snare: number[] = [];
-  const clap: number[] = [];
-  const hat: number[] = [];
-
-  for (let bar = 0; bar < bars; bar++) {
-    // Add some variation based on seed
-    const variation = rng.chance(0.3);
-
-    kick.push(...basePattern.kick.map((v) => {
-      if (variation && rng.chance(0.2)) return 0;
-      return v;
-    }));
-
-    snare.push(...basePattern.snare.map((v) => {
-      if (variation && rng.chance(0.3)) return 1;
-      return v;
-    }));
-
-    clap.push(...basePattern.clap.map((v) => {
-      if (variation && rng.chance(0.2)) return 1;
-      return v;
-    }));
-
-    hat.push(...basePattern.hat.map((v) => {
-      if (variation && rng.chance(0.4)) return 1;
-      return v;
-    }));
-  }
-
-  return { kick, snare, clap, hat };
+export function isDrumPattern(value: unknown): value is DrumPattern {
+  if (!value || typeof value !== 'object') return false;
+  const pattern = value as Record<string, unknown>;
+  return (['kick', 'snare', 'clap', 'hat'] as const).every(key => {
+    const line = pattern[key];
+    return Array.isArray(line) && line.length === DRUM_STEPS && line.every(step => step === 0 || step === 1);
+  });
 }

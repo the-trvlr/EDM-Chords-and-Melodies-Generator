@@ -77,6 +77,40 @@ export function exportProgressionToMidi(
   document.body.removeChild(link);
 }
 
+function downloadTrack(track: MidiWriter.Track, filename: string): void {
+  const write = new MidiWriter.Writer([track]);
+  const link = document.createElement('a');
+  link.href = write.dataUri();
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/** Exports a single melody (bass/lead/arp) as its own MIDI file. */
+export function exportMelodyToMidi(
+  melody: GeneratedMelody,
+  bpm: number,
+  label: string,
+  keyName: string,
+  scaleName: string,
+): void {
+  const track = buildMelodyTrack(melody, bpm, label);
+  downloadTrack(track, `edm-${label.toLowerCase()}-${keyName}-${scaleName}-${bpm}bpm.mid`);
+}
+
+/** Exports the drum bar, repeated for the whole progression, with GM drum notes. */
+export function exportDrumsToMidi(
+  drums: DrumPattern,
+  bpm: number,
+  bars: number,
+  keyName: string,
+  scaleName: string,
+): void {
+  const track = buildDrumTrack(drums, bpm, bars);
+  downloadTrack(track, `edm-drums-${keyName}-${scaleName}-${bpm}bpm.mid`);
+}
+
 function getNoteLetter(noteIndex: number): string {
   const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   return notes[noteIndex] || 'C';
@@ -169,14 +203,14 @@ function buildMelodyTrack(melody: GeneratedMelody, bpm: number, label: string): 
   return track;
 }
 
-function buildDrumTrack(drums: DrumPattern, bpm: number): MidiWriter.Track {
+function buildDrumTrack(drums: DrumPattern, bpm: number, bars: number): MidiWriter.Track {
   const track = new MidiWriter.Track();
   track.setTempo(bpm);
   track.addTrackName('Drums');
   track.setTimeSignature(4, 4);
 
   const ticksPer16th = 32;
-  const totalSteps = drums.kick.length;
+  const totalSteps = Math.max(1, bars) * 16;
 
   for (let step = 0; step < totalSteps; step++) {
     const stepInPattern = step % 16;
@@ -221,7 +255,7 @@ export function exportArrangementToMidi(
   const chordTrack = arpMelody ? buildMelodyTrack(arpMelody, bpm, 'Arp Chords') : buildChordTrack(chords, bpm, rhythm, doubleTime);
   const bassTrack = buildMelodyTrack(bass, bpm, 'Bass');
   const leadTrack = buildMelodyTrack(lead, bpm, 'Lead');
-  const drumTrack = drums ? buildDrumTrack(drums, bpm) : null;
+  const drumTrack = drums ? buildDrumTrack(drums, bpm, chords.length) : null;
 
   const tracks = drumTrack ? [chordTrack, bassTrack, leadTrack, drumTrack] : [chordTrack, bassTrack, leadTrack];
   const write = new MidiWriter.Writer(tracks);

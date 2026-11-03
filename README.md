@@ -1,194 +1,160 @@
-# EDM Chord Progression Generator
+# EDM Studio — chord, bass, lead & drum generator
 
-A fully offline Progressive Web App (PWA) for generating, previewing, and exporting chord progressions tailored to different EDM genres.
+A fully offline Progressive Web App (PWA) for turning an EDM idea into a playable sketch: pick a genre and a key, audition genre-specific progressions, arrange bass/lead/drums, then export MIDI or WAV to your DAW.
 
-**Live App:** [https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/](https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/)
+**Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
+**Roadmap:** [`docs/PLAN-UIUX-2026.md`](docs/PLAN-UIUX-2026.md) · **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
+
+![Arrangement on desktop](docs/release-0.4/desktop-arrangement.jpg)
 
 ---
+
+## What's new in 0.4
+
+- **Mobile-ready Arrangement**: tracks are compact, lanes span the full width, no horizontal page scroll.
+- **One transport** in the sticky header (play, bar counter, BPM, loop, master volume) that keeps playing when you switch sections.
+- **WYSIWYG export**: live playback, WAV and MIDI share one event schedule, so exports include the arpeggiator, the selected drum kit and your mixer settings.
+- **Full-fidelity share links and project files** (chords, inversions, mixer, drum edits, styles).
+- **A11y pass**: 44 px touch targets, focus styles, labelled controls, accessible modals, toasts instead of alerts, reduced-motion support.
+- **~168 KB gzip of initial JS** before the staff is needed (down from ~843 KB); VexFlow loads only when the notation is on screen and uses the single-font Bravura build (387 KB gzip).
+- **27 unit tests** wired into CI.
+
+See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 
 ## Features
 
-### Genre-Specific Progressions
-- **8 EDM genres:** House, Techno, Trance, Drum & Bass, Dubstep, Future Bass, Progressive House, Hardstyle
-- 5 curated chord progression templates per genre with music-theory-accurate chord relationships
-- Genre-appropriate default BPM, scale, synth preset, and rhythm patterns
+### Harmony
 
-### Key & Scale Selection
-- All 12 keys, spelled conventionally per key (flats for flat keys, e.g. Eb/Ab/Bb)
-- 4 scale types: Major, Minor, Harmonic Minor, Melodic Minor
-- Chords transpose automatically when changing key or scale
-- Your selections (key, scale, genre, BPM, etc.) are remembered across reloads
+- **8 genres:** House, Techno, Trance, Drum & Bass, Dubstep, Future Bass, Progressive House, Hardstyle.
+- 5 curated progression templates per genre, with genre defaults for BPM, scale, rhythm and synth.
+- **All 12 keys and 9 scales/modes** (major, minor, Dorian, Phrygian, Lydian, Mixolydian, Locrian, harmonic/melodic minor), spelled conventionally (flats for flat keys).
+- **4 chord complexity levels:** simple triads, 7ths, 9ths, jazzy voicings.
+- **Chord editing:** add/remove, drag to reorder, inversions, auto voice-leading, undo/redo.
+- **Visual feedback:** active chord highlighting, piano keyboard, VexFlow staff notation.
+- Chord edits **transpose with the key** and are kept when you change genre.
 
-### Rhythm Patterns
-- **Whole Note** — one chord sustained per full bar (available in every genre)
-- Genre-specific patterns: Straight, Off-beat, Pumping, Gated, Syncopated, Rolling, Wobble, and more
-- Visual 16-step sequencer display showing the active rhythm pattern
+### Arrangement
 
-### Synth Presets
-- **7 presets:** Piano, Warm Pad, Organ, Supersaw, Pluck, Dark Lead, Bell
-- Powered by Tone.js (Web Audio API) — no audio files needed
+- **Four tracks:** Chords (block or arpeggiated), Bass, Lead, Drums.
+- Per-track instrument, volume, mute and solo; solo preview per track.
+- **Arpeggiator:** up/down/up-down/random, 1/8 or 1/16, 1–3 octaves, gate.
+- **Bass and lead generators** with genre-specific styles, seeded and regenerable.
+- **Drum machine:** genre-accurate one-bar patterns (two-step DnB, half-time dubstep, trap hats, four-on-the-floor house), 5 kits, click-to-edit steps.
+- Piano-roll lanes with bar ruler, grid and synced playhead.
 
-### Playback Controls
-- **Play/Stop** with real-time chord highlighting across all visualizations
-- **Loop** toggle (enabled by default) — progression repeats continuously
-- **Double Time** toggle — each chord occupies 2 bars instead of 1, rhythm pattern repeats per chord
-- Adjustable **BPM** (slider + number input) and **Volume** controls
+### Transport & export
 
-### Visualization
-- **Piano keyboard** — click any chord to see its notes highlighted on a visual keyboard
-- **Staff notation** — real-time rendering via VexFlow with proper accidentals and active chord highlighting
-
-### Chord Editing
-- Add/remove chords from the key's available chord palette
-- Reset to the original genre template at any time
-- Preview individual chords by clicking them
-
-### MIDI Export
-- Download progressions as standard `.mid` files for use in any DAW
-- Exports respect the selected rhythm pattern, BPM, and Double Time setting
-- Filename includes key, scale, and BPM for easy organization
-
-### Melody Studio (Arranger)
-- **Multi-track arranger** with Chords, Bass, and Lead tracks
-- **Per-track instrument selection** — each track can use a different synth preset
-- **Per-track mixer controls** — volume, mute, and solo for each track
-- **Seeded melody generation** — bass and lead melodies synced to your chord progression
-- **Genre-specific melody styles** — different patterns for bass (Rolling, Driving, Gated) and lead (Arpeggio, Euphoric, Pluck)
-- **Synced playback** — "Play All Together" plays all tracks with a unified transport
-- **Multitrack MIDI export** — download all three tracks as a single MIDI file with separate tracks
-- **WAV export** — render the full arrangement to audio for quick demos
+- Sticky transport: play/stop, bar counter, BPM (slider + input), loop, master volume.
+- `Cmd/Ctrl+Space`/`Space` play-stop, `Cmd/Ctrl+Z`/`Shift+Z` undo-redo, `Cmd/Ctrl+S` save, `Cmd/Ctrl+O` open.
+- **MIDI:** chord progression, full arrangement, and per-track files (bass, lead, drums on GM channel 10).
+- **WAV mix** rendered offline with the same instruments, kit and effects as playback.
+- **Project files** (`.json`) with harmony + arrangement; browser-stored arrangement snapshots.
+- **Share links** that restore the whole project, including custom chords and mixer.
 
 ### Offline PWA
-- Installable on desktop and mobile (Chrome, Edge, Safari, Firefox)
-- Works fully offline after first load — no server required
-- Service worker caches all assets for instant subsequent loads
 
----
+- Installable on desktop, Android and iOS.
+- Works fully offline after the first load; service worker precaches the app.
+- No accounts, no network calls, no audio files.
 
-## Using the App Offline
+## Screenshots
 
-### Option 1: Visit the Hosted Version (Recommended)
-1. Open [https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/](https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/) in Chrome, Edge, or Safari
-2. The app loads and caches itself automatically via the service worker
-3. **Install as PWA** (optional but recommended for offline use):
-   - **Chrome/Edge (Desktop):** Click the install icon in the address bar, or go to Menu (⋮) → "Install EDM Chord Generator"
-   - **Chrome (Android):** Tap Menu (⋮) → "Add to Home screen" or "Install app"
-   - **Safari (iOS):** Tap the Share button → "Add to Home Screen"
-4. Once installed, the app works completely offline — open it anytime without an internet connection
+| Desktop | Mobile |
+|---|---|
+| ![Desktop arrangement](docs/release-0.4/desktop-arrangement.jpg) | ![Mobile arrangement](docs/release-0.4/mobile-arrangement.jpg) |
 
-### Option 2: Self-Host from Source
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/the-trvlr/EDM-Chords-and-Melodies-Generator.git
-   cd EDM-Chords-and-Melodies-Generator
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. **Development mode** (with hot reload):
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:5173](http://localhost:5173) in your browser.
+## Using the app offline
 
-4. **Production build** (optimized, with PWA service worker):
-   ```bash
-   npm run build
-   ```
-5. **Preview the production build locally:**
-   ```bash
-   npm run preview
-   ```
-   Open [http://localhost:4173](http://localhost:4173) in your browser. The PWA service worker is active in this mode, so the app will work offline after the first load.
+### Option 1 — hosted version (recommended)
 
-6. **Deploy anywhere:** The `dist/` folder contains a fully static site. Upload it to any static hosting service (GitHub Pages, Netlify, Vercel, S3, Nginx, Apache, etc.) — no server-side runtime needed.
+1. Open <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>.
+2. Install it as a PWA: Chrome/Edge — install icon in the address bar; Android — “Add to Home screen”; iOS Safari — Share → “Add to Home Screen”.
+3. The app then opens offline at any time.
 
-### Option 3: Run Locally Without a Server
-After building (`npm run build`), you can serve the `dist/` folder with any static file server:
+### Option 2 — run from source
+
 ```bash
-# Using Python
-python3 -m http.server 8000 -d dist
-
-# Using npx serve
-npx serve dist
-
-# Using Node's http-server
-npx http-server dist
+git clone https://github.com/the-trvlr/EDM-Chords-and-Melodies-Generator.git
+cd EDM-Chords-and-Melodies-Generator
+npm install
+npm run dev        # http://localhost:5173
+npm run build      # production build with service worker
+npm run preview    # http://localhost:4173
 ```
-Note: The PWA service worker requires HTTPS or `localhost` to register. For fully offline PWA functionality, use `npm run preview` or deploy to an HTTPS-enabled host.
 
----
+The `dist/` folder is a fully static site and can be hosted anywhere.
 
-## Tech Stack
+## Tech stack
 
 | Layer | Technology |
-|-------|-----------|
-| UI Framework | React 19 + TypeScript |
-| Build Tool | Vite 8 |
+|---|---|
+| UI | React 19 + TypeScript |
+| Build | Vite 8 |
 | Styling | Tailwind CSS 4 |
-| Audio Engine | Tone.js 15 (Web Audio API) |
-| Staff Notation | VexFlow 5 |
-| MIDI Export | midi-writer-js 3 |
+| Audio | Tone.js 15 (Web Audio API) |
+| Notation | VexFlow 5 (lazy-loaded) |
+| MIDI | midi-writer-js 3 |
 | PWA | vite-plugin-pwa + Workbox |
+| Tests | Vitest |
 
----
-
-## Project Structure
+## Project structure
 
 ```
 src/
-├── App.tsx                          # Main app component & state management
-├── main.tsx                         # Entry point
-├── index.css                        # Global styles (Tailwind)
-├── types.ts                         # Shared TypeScript types
-├── data/
-│   └── genres.ts                    # Genre definitions, progressions, rhythm patterns
+├── App.tsx                    # studio shell: state, transport, project/share, shortcuts
+├── types.ts                   # project, melody and mixer types
+├── hooks/
+│   └── useToast.ts            # toast context + hook
 ├── components/
-│   ├── KeySelector.tsx              # Key & scale selection
-│   ├── GenreSelector.tsx            # Genre picker
-│   ├── ProgressionSelector.tsx      # Progression template picker
-│   ├── RhythmSelector.tsx           # Rhythm pattern selector with step display
-│   ├── SynthSelector.tsx            # Synth preset picker
-│   ├── TransportControls.tsx        # Play/Stop, Loop, Double Time, BPM, Volume, MIDI export
-│   ├── ChordDisplay.tsx             # Chord cards with active highlighting
-│   ├── ChordPalette.tsx             # Add/remove chords from progression
-│   ├── PianoKeyboard.tsx            # SVG piano keyboard visualization
-│   ├── StaffNotation.tsx            # VexFlow staff notation rendering
-│   └── MelodyStudio.tsx             # Multi-track arranger with chords, bass, lead
+│   ├── TransportBar.tsx       # unified transport
+│   ├── MelodyStudio.tsx       # arranger (tracks, mixer, export, dialogs)
+│   ├── lanes.tsx              # chord lane, piano-roll lane, drum grid
+│   ├── Menu.tsx, Modal.tsx, Toast.tsx, Skeleton.tsx, ErrorBoundary.tsx
+│   ├── ChordDisplay.tsx, ChordPalette.tsx, PianoKeyboard.tsx, StaffNotation.tsx
+│   ├── KeySelector.tsx, GenreSelector.tsx, ProgressionSelector.tsx,
+│   │   RhythmSelector.tsx, SynthSelector.tsx
+├── data/
+│   ├── genres.ts              # genres, progressions, rhythms
+│   └── drumKits.ts
 └── utils/
-    ├── audioEngine.ts               # Tone.js synth creation, playback, looping
-    ├── musicTheory.ts               # Scales, chords, intervals, transposition
-    ├── midiExport.ts                # MIDI file generation & download (chord + multitrack)
-    ├── melodyGenerator.ts           # Seeded bass/lead melody generation
-    ├── mixer.ts                     # Unified audio engine for multi-track playback
-    └── persistence.ts               # State persistence across reloads
+    ├── schedule.ts            # single event schedule for live/WAV/MIDI (WYSIWYG)
+    ├── audioEngine.ts         # chord playback
+    ├── mixer.ts               # multi-track playback + offline WAV render
+    ├── musicTheory.ts         # scales, chords, inversions, voice leading
+    ├── melodyGenerator.ts     # seeded bass/lead generation
+    ├── arpeggiator.ts         # deterministic arpeggios
+    ├── drumGenerator.ts       # genre drum patterns
+    ├── midiExport.ts          # MIDI writers
+    ├── share.ts               # share-link codec + validation
+    ├── sanitize.ts            # validation for files, links and storage
+    ├── persistence.ts         # localStorage, project files, arrangements
+    └── __tests__/             # Vitest unit tests
 ```
 
----
-
-## Available Scripts
+## Scripts
 
 | Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server with hot reload |
+|---|---|
+| `npm run dev` | Development server with HMR |
 | `npm run build` | Type-check and build for production |
-| `npm run preview` | Preview the production build locally |
-| `npm run lint` | Run ESLint |
+| `npm run preview` | Preview the production build |
+| `npm run lint` | ESLint |
+| `npm test` | Unit tests (Vitest) |
+| `npm run test:watch` | Unit tests in watch mode |
 
----
+## Testing
 
-## Browser Compatibility
+- Unit tests cover the event schedule (chord holds, arp replacement, drum repetition), drum generation, the share codec (including legacy links), project files and music-theory helpers.
+- CI runs lint → type-check → tests → build → deploy to GitHub Pages.
 
-The app uses the Web Audio API and modern JavaScript features. Supported browsers:
-- Chrome / Edge 80+
-- Firefox 76+
-- Safari 14.1+
-- Chrome for Android
-- Safari on iOS 14.5+
+## Browser support
 
----
+Chrome/Edge 80+, Firefox 76+, Safari 14.1+, Chrome for Android, Safari iOS 14.5+. Web Audio requires one user gesture, hence the “Start making music” screen.
+
+## Roadmap
+
+The next milestones are described in [`docs/PLAN-UIUX-2026.md`](docs/PLAN-UIUX-2026.md): section timeline (intro/build/drop), piano-roll editing with swing/humanize, stems export, project library + share 2.0, i18n.
 
 ## License
 
-MIT
+MIT — see [`LICENSE`](LICENSE).
