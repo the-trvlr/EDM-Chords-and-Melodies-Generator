@@ -130,7 +130,7 @@ function StaffSection({
   }, [visible]);
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} className="min-w-0">
       {visible ? (
         <Suspense fallback={<StaffSkeleton />}>
           <StaffNotation progression={progression} activeIndex={activeIndex} isPlaying={isPlaying} />
@@ -621,8 +621,8 @@ function Studio() {
         </div>
 
         <div className={activeTab === 'chords' ? 'block' : 'hidden'} role="tabpanel" aria-label="Harmony">
-          <div className="grid gap-4 lg:grid-cols-3">
-            <div className="order-2 flex flex-col gap-4 lg:order-1">
+          <div className="grid min-w-0 gap-4 lg:grid-cols-3">
+            <div className="order-2 flex min-w-0 flex-col gap-4 lg:order-1">
               <div className="flex flex-col gap-5 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
                 <KeySelector
                   selectedKey={selectedKey}
@@ -679,7 +679,7 @@ function Studio() {
               </div>
             </div>
 
-            <div className="order-1 flex flex-col gap-4 lg:order-2 lg:col-span-2">
+            <div className="order-1 flex min-w-0 flex-col gap-4 lg:order-2 lg:col-span-2">
               <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
                 <ChordDisplay
                   progression={progression}
@@ -697,7 +697,7 @@ function Studio() {
                 <PianoKeyboard chord={viewedChord} />
               </div>
 
-              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+              <div className="min-w-0 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
                 <StaffSection
                   progression={progression}
                   activeIndex={activeChordIndex}
