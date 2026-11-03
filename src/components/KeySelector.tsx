@@ -28,7 +28,7 @@ export function KeySelector({ selectedKey, selectedScale, onKeyChange, onScaleCh
         <select
           value={selectedKey}
           onChange={e => onKeyChange(e.target.value)}
-          className="flex-1 rounded-lg bg-gray-800 px-3 py-2 text-sm text-white border border-gray-700 focus:border-purple-500 focus:outline-none transition-colors"
+          className="min-h-11 flex-1 rounded-lg bg-gray-800 px-3 py-2 text-sm text-white border border-gray-700 focus:border-purple-500 focus:outline-none transition-colors"
         >
           {keyNames.map(note => (
             <option key={note} value={note}>{note}</option>
@@ -37,7 +37,7 @@ export function KeySelector({ selectedKey, selectedScale, onKeyChange, onScaleCh
         <select
           value={selectedScale}
           onChange={e => onScaleChange(e.target.value)}
-          className="flex-1 rounded-lg bg-gray-800 px-3 py-2 text-sm text-white border border-gray-700 focus:border-purple-500 focus:outline-none transition-colors"
+          className="min-h-11 flex-1 rounded-lg bg-gray-800 px-3 py-2 text-sm text-white border border-gray-700 focus:border-purple-500 focus:outline-none transition-colors"
         >
           {SCALES.map(scale => (
             <option key={scale.id} value={scale.id}>{scale.name}</option>

@@ -3,8 +3,10 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const base = process.env.GITHUB_ACTIONS ? '/EDM-Chords-and-Melodies-Generator/' : '/'
+
 export default defineConfig({
-  base: process.env.GITHUB_ACTIONS ? '/EDM-Chords-and-Melodies-Generator/' : '/',
+  base,
   plugins: [
     react(),
     tailwindcss(),
@@ -12,12 +14,21 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
-        name: 'EDM Chord Generator',
-        short_name: 'ChordGen',
-        description: 'Generate chord progressions for electronic dance music genres',
+        id: base,
+        scope: base,
+        start_url: base,
+        name: 'EDM Studio — chords, bass, lead & drums',
+        short_name: 'EDM Studio',
+        description: 'Generate chord progressions, bass, lead and drums for EDM genres. Works offline, exports MIDI and WAV.',
         theme_color: '#030712',
         background_color: '#030712',
         display: 'standalone',
+        orientation: 'any',
+        categories: ['music', 'entertainment'],
+        shortcuts: [
+          { name: 'Harmony', short_name: 'Harmony', url: `${base}?tab=harmony` },
+          { name: 'Arrangement', short_name: 'Arrange', url: `${base}?tab=arrangement` },
+        ],
         icons: [
           { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
@@ -27,6 +38,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        cleanupOutdatedCaches: true,
       },
     }),
   ],

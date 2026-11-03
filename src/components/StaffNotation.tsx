@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } from 'vexflow';
+import { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } from 'vexflow/bravura';
 import type { ChordInfo } from '../utils/musicTheory';
 import { midiToNote } from '../utils/musicTheory';
 
@@ -99,9 +99,13 @@ export function StaffNotation({ progression, activeIndex, isPlaying }: StaffNota
       <label className="text-xs font-semibold uppercase tracking-wider text-gray-400">Staff Notation</label>
       <div
         ref={containerRef}
+        role="img"
+        aria-label={`Staff notation of ${progression.length} chords`}
         className="overflow-x-auto rounded-xl border border-gray-700/50 bg-white/5 p-2"
         style={{ minHeight: '160px' }}
       />
     </div>
   );
 }
+
+export default StaffNotation;

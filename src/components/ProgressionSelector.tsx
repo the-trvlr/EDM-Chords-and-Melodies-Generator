@@ -15,14 +15,14 @@ export function ProgressionSelector({ genre, selectedIndex, onSelect }: Progress
           <button
             key={`${genre.id}-${i}`}
             onClick={() => onSelect(i)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all border text-left ${
+            className={`flex min-h-11 items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all border text-left ${
               selectedIndex === i
                 ? 'border-purple-500 bg-purple-500/10 text-white'
-                : 'border-gray-700/50 text-gray-400 hover:border-gray-600 hover:text-gray-200'
+                : 'border-gray-700/50 text-gray-300 hover:border-gray-600 hover:text-white'
             }`}
           >
             <span className="font-semibold min-w-[100px]">{prog.name}</span>
-            <span className="text-xs opacity-60">{prog.description}</span>
+            <span className="text-xs text-gray-400">{prog.description}</span>
           </button>
         ))}
       </div>

@@ -129,9 +129,10 @@ export function playProgression(
   const stepsPerChord = rhythm.subdivisions * barsPerChord;
   let stepInChord = 0;
 
-  const sixteenthDuration = Tone.Time('16n').toSeconds();
-
   loopRef = new Tone.Loop((time) => {
+    // Read the step length from the transport on every tick so tempo changes
+    // are picked up live instead of freezing the duration of the notes.
+    const sixteenthDuration = Tone.Time('16n').toSeconds();
     const patternStep = stepInChord % rhythm.pattern.length;
     if (rhythm.pattern[patternStep]) {
       const chord = chords[chordIndex];
@@ -189,6 +190,11 @@ export function stopPlayback(): void {
 
 export function getIsPlaying(): boolean {
   return isPlaying;
+}
+
+/** Live tempo change without restarting the chord loop. */
+export function setPlaybackBpm(bpm: number): void {
+  Tone.getTransport().bpm.value = bpm;
 }
 
 export function setVolume(db: number): void {

@@ -38,7 +38,7 @@ export function PianoKeyboard({ chord, startOctave = 3, numOctaves = 3 }: PianoK
 
   return (
     <div className="flex flex-col gap-3">
-      <label className="text-xs font-semibold uppercase tracking-wider text-gray-400">Piano Keyboard</label>
+      <label className="text-xs font-semibold uppercase tracking-wider text-gray-300">Piano keyboard</label>
       <div className="overflow-x-auto rounded-xl border border-gray-700/50 bg-gray-900 p-3">
         <svg
           viewBox={`0 0 ${svgWidth} ${whiteKeyHeight + 20}`}

@@ -1,6 +1,7 @@
 # EDM Chord & Melody Generator — Review, Problems & Roadmap
 
 _Originally reviewed @ `main` (60dbe7d). Updated after Phase 1 (PR #7) and Phase 2 (PR #8)._
+_Phase 4 (v0.4, 2026-11-03): Sprint 1–2 из [`docs/PLAN-UIUX-2026.md`](docs/PLAN-UIUX-2026.md) реализованы — мобильный Arrangement, единый транспорт, WYSIWYG-экспорт, share/проекты, a11y, lazy VexFlow, unit-тесты в CI._
 
 ## What the app is today
 A fully-offline PWA (React 19 + TS + Vite 8 + Tailwind 4 + Tone.js + VexFlow + midi-writer-js).
@@ -151,4 +152,4 @@ Phase 1 fixed: broken lint (now in CI), missing PWA icons, sharp-only enharmonic
 Phase 2 fixed: Melody Studio couldn't layer/sync with chords — now a unified transport with master volume + reverb and Play-All.
 Phase 3 fixed: All Phase 3 features implemented plus drum pattern regeneration, share button feedback, synth selection during playback, and genre-specific drum patterns.
 
-Still open: bundle size / no code-splitting (≈1.6 MB / ≈828 KB gzip).
+~~Still open: bundle size / no code-splitting (≈1.6 MB / ≈828 KB gzip).~~ **Fixed in v0.4:** initial JS ≈168 KB gzip, VexFlow (688 KB gzip) lazy-loaded when the staff is on screen.

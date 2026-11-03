@@ -14,16 +14,16 @@ export function SynthSelector({ selectedSynth, onSynthChange }: SynthSelectorPro
     <div className="flex flex-col gap-3">
       <label className="text-xs font-semibold uppercase tracking-wider text-gray-400">Synth Sound</label>
       <div className="flex flex-col gap-2">
-        <span className="text-xs text-gray-500">Simple</span>
+        <span className="text-xs text-gray-400">Simple</span>
         <div className="flex gap-2 flex-wrap">
           {simple.map(preset => (
             <button
               key={preset.id}
               onClick={() => onSynthChange(preset.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+              className={`min-h-11 rounded-lg border px-3 py-1.5 sm:min-h-9 text-xs font-medium transition-colors ${
                 selectedSynth === preset.id
                   ? 'border-cyan-500 bg-cyan-500/15 text-cyan-300'
-                  : 'border-gray-700 text-gray-400 hover:border-gray-500'
+                  : 'border-gray-700 text-gray-300 hover:border-gray-500'
               }`}
               title={preset.description}
             >
@@ -31,16 +31,16 @@ export function SynthSelector({ selectedSynth, onSynthChange }: SynthSelectorPro
             </button>
           ))}
         </div>
-        <span className="text-xs text-gray-500">Genre</span>
+        <span className="text-xs text-gray-400">Genre</span>
         <div className="flex gap-2 flex-wrap">
           {genre.map(preset => (
             <button
               key={preset.id}
               onClick={() => onSynthChange(preset.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+              className={`min-h-11 rounded-lg border px-3 py-1.5 sm:min-h-9 text-xs font-medium transition-colors ${
                 selectedSynth === preset.id
                   ? 'border-cyan-500 bg-cyan-500/15 text-cyan-300'
-                  : 'border-gray-700 text-gray-400 hover:border-gray-500'
+                  : 'border-gray-700 text-gray-300 hover:border-gray-500'
               }`}
               title={preset.description}
             >
