@@ -3,6 +3,22 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [0.9.0] — 2026-11-04
+
+### Changed
+
+- **The range selector now controls the width of the allowed range, not its base register.** It previously picked a one-octave window (C2–B2, C3–B3, …), which duplicated the ± octave stepper. It now offers **1 / 2 / 3 octaves**:
+  - Bass base is C2: 1 octave = C2–B2, 2 = C2–B3, 3 = C2–B4.
+  - Lead base is C5: 1 octave = C5–B5, 2 = C5–B6, 3 = C5–B7.
+  - The octave stepper continues to transpose the finished track, independently of the width.
+- Span changes re-fit manually edited notes into the new width; generated lines use the same seed and span.
+- Spans are stored as `rangeSpans` in projects (share payload field `rs`). Old share links without it fall back to one octave.
+- Leap limits stay: bass ≤7 semitones, lead ≤9, regardless of width.
+
+### Tests
+
+- 50 unit tests; all genres/styles/seeds are checked for 1, 2 and 3 octave spans, including a test that the wider span actually uses the extra octave.
+- Verified in a muted browser: span 1 → bass 36–47 / lead 72–83; span 2 → bass 36–52 / lead 74–93.
 ## [0.8.1] — 2026-11-04
 
 ### Fixed
