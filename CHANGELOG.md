@@ -3,6 +3,24 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [0.8.0] — 2026-11-04
+
+### Fixed
+
+- **Bass and lead melodies no longer jump across the keyboard.** The generators could produce a bass leap of 23 semitones and a lead spanning 33 semitones (C1–A3) because the full C0–B7 scale was used for random walks and `chordTonesAt()` derived its octave from the lowest note of inverted chords.
+  - Generated lines are now folded into a **one-octave base range**.
+  - Adjacent notes are limited to 7 semitones for bass and 9 for lead (scale-aware, includes the octave-folding step).
+  - Chord tones are derived from the chord root and its intervals, so inversions no longer shift a whole phrase by an octave.
+
+### Added
+
+- **Melody range selector** for Bass and Lead in the arranger: `C1–B1 … C4–B4` for bass (default `C2–B2`) and `C3–B3 … C7–B7` for lead (default `C5–B5`). The range is part of the project and share links.
+- Changing the range transposes manually edited notes by whole octaves; `Reset edits` returns to the generated line in the selected range.
+- Regression tests over all genres, styles and seeds: bass stays in C2–B2 with ≤7-semitone steps, lead in C5–B5 with ≤9-semitone steps (50 unit tests).
+
+### Known limitations
+
+- Velocity editing, metronome/count-in and RU/EN localisation are still on the 0.7/0.8 backlog.
 ## [0.7.0] — 2026-11-04
 
 ### Fixed

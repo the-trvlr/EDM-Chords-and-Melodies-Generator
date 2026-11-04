@@ -118,6 +118,7 @@ describe('share codec', () => {
     const melody = {
       ...defaultMelodyState(),
       octaves: { chord: 1, bass: -1, lead: 2 },
+      ranges: { bass: 3, lead: 6 },
       swing: 0.3,
       humanize: true,
       sections: [
@@ -128,6 +129,7 @@ describe('share codec', () => {
     };
     const decoded = decodeShare(encodeShare(snapshot({ melody })));
     expect(decoded?.melody.octaves).toEqual({ chord: 1, bass: -1, lead: 2 });
+    expect(decoded?.melody.ranges).toEqual({ bass: 3, lead: 6 });
     expect(decoded?.melody.swing).toBe(0.3);
     expect(decoded?.melody.humanize).toBe(true);
     expect(decoded?.melody.sections).toHaveLength(2);

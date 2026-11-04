@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { ChordInfo } from '../utils/musicTheory';
 import { SYNTH_PRESETS, type SynthPresetId } from '../utils/audioEngine';
-import { generateMelody, getGenreMelodyStyles, type GeneratedMelody, type MelodyNote, type MelodyStyle } from '../utils/melodyGenerator';
+import { generateMelody, getGenreMelodyStyles, melodyRangeLabel, melodyRangeStart, type GeneratedMelody, type MelodyNote, type MelodyStyle } from '../utils/melodyGenerator';
 import type { RhythmPattern } from '../data/genres';
 import { DRUM_KITS, type DrumKitId } from '../data/drumKits';
 import {
@@ -248,16 +248,16 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     : leadStyles[0]?.id ?? '';
 
   const generatedBass = useMemo(
-    () => generateMelody(progression, 'bass', bassStyleId, rootKey, scaleType, melody.bassSeed),
+    () => generateMelody(progression, 'bass', bassStyleId, rootKey, scaleType, melody.bassSeed, melody.ranges.bass),
     // Melodies are pure functions of these values; memoisation keeps the
     // playhead (16 updates per bar) from regenerating them on every tick.
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
-    [progression, bassStyleId, rootKey, scaleType, melody.bassSeed],
+    [progression, bassStyleId, rootKey, scaleType, melody.bassSeed, melody.ranges.bass],
   );
   const generatedLead = useMemo(
-    () => generateMelody(progression, 'lead', leadStyleId, rootKey, scaleType, melody.leadSeed),
+    () => generateMelody(progression, 'lead', leadStyleId, rootKey, scaleType, melody.leadSeed, melody.ranges.lead),
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
-    [progression, leadStyleId, rootKey, scaleType, melody.leadSeed],
+    [progression, leadStyleId, rootKey, scaleType, melody.leadSeed, melody.ranges.lead],
   );
   const bassMelody: GeneratedMelody = useMemo(() => (
     melody.bassNotes
@@ -431,6 +431,27 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const handleLeadNotes = useCallback((notes: MelodyNote[]) => {
     apply({ leadNotes: notes });
   }, [apply]);
+
+  const handleRangeChange = useCallback((track: 'bass' | 'lead', octave: number) => {
+    const delta = (octave - melody.ranges[track]) * 12;
+    const start = melodyRangeStart(octave);
+    const shiftEdited = (notes: MelodyNote[] | null) => notes?.map(note => ({
+      ...note,
+      midi: Math.max(start, Math.min(start + 11, note.midi + delta)),
+    })) ?? null;
+
+    if (track === 'bass') {
+      apply({ ranges: { ...melody.ranges, bass: octave }, bassNotes: shiftEdited(melody.bassNotes) });
+    } else {
+      apply({ ranges: { ...melody.ranges, lead: octave }, leadNotes: shiftEdited(melody.leadNotes) });
+    }
+  }, [apply, melody.ranges, melody.bassNotes, melody.leadNotes]);
+
+  const rangeOptions = (track: 'bass' | 'lead') => (
+    (track === 'bass' ? [1, 2, 3, 4] : [3, 4, 5, 6, 7]).map(octave => (
+      <option key={octave} value={octave}>{melodyRangeLabel(octave)}</option>
+    ))
+  );
 
   const handleExportStems = useCallback(async () => {
     setRenderingStems(true);
@@ -805,6 +826,18 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           busy={busy}
           extra={(
             <>
+              <label className="flex items-center gap-1">
+                <span className="sr-only">Bass range</span>
+                <select
+                  value={melody.ranges.bass}
+                  onChange={event => handleRangeChange('bass', Number(event.target.value))}
+                  aria-label="Bass melody range"
+                  title="Base one-octave range for the generated bass"
+                  className="h-11 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-200 sm:h-8"
+                >
+                  {rangeOptions('bass')}
+                </select>
+              </label>
               <OctaveStepper
                 label="Bass"
                 value={melody.octaves.bass}
@@ -861,6 +894,18 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           busy={busy}
           extra={(
             <>
+              <label className="flex items-center gap-1">
+                <span className="sr-only">Lead range</span>
+                <select
+                  value={melody.ranges.lead}
+                  onChange={event => handleRangeChange('lead', Number(event.target.value))}
+                  aria-label="Lead melody range"
+                  title="Base one-octave range for the generated lead"
+                  className="h-11 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-200 sm:h-8"
+                >
+                  {rangeOptions('lead')}
+                </select>
+              </label>
               <OctaveStepper
                 label="Lead"
                 value={melody.octaves.lead}

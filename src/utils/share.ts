@@ -51,6 +51,7 @@ interface SharePayloadV2 {
     dp: DrumPattern | null;
     si: { chord: string; bass: string; lead: string; drums: string };
     oc?: [number, number, number];
+    rg?: [number, number];
     sc?: [string, number, string][];
     sw?: number;
     hu?: boolean;
@@ -165,6 +166,7 @@ export function encodeShare(snapshot: ProjectSnapshot): string {
       dp: melody.customDrumPattern,
       si: { ...melody.synthIds },
       oc: [melody.octaves.chord, melody.octaves.bass, melody.octaves.lead],
+      rg: [melody.ranges.bass, melody.ranges.lead],
       sc: melody.sections.map(section => [section.kind, section.bars, section.tracks.join(',')]),
       sw: melody.swing,
       hu: melody.humanize,

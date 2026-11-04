@@ -23,6 +23,12 @@ export interface SongSection {
   tracks: TrackId[];
 }
 
+export interface MelodyRanges {
+  /** Octave number of the C that starts the one-octave range (C2 = MIDI 36). */
+  bass: number;
+  lead: number;
+}
+
 export interface TrackOctaves {
   chord: number;
   bass: number;
@@ -52,6 +58,8 @@ export interface MelodyState {
   mixer: MixerState;
   /** Per-track octave transposition in the arranger. */
   octaves: TrackOctaves;
+  /** One-octave base register for generated bass/lead melodies. */
+  ranges: MelodyRanges;
   /** Song structure; empty means "loop the progression". */
   sections: SongSection[];
   /** 0..0.6, delays odd 16th steps. */
@@ -100,6 +108,7 @@ export const defaultMelodyState = (): MelodyState => ({
   synthIds: { chord: 'pad', bass: 'pluck', lead: 'supersaw', drums: 'piano' },
   mixer: emptyMixer(),
   octaves: { chord: 0, bass: 0, lead: 0 },
+  ranges: { bass: 2, lead: 5 },
   sections: [],
   swing: 0,
   humanize: false,
