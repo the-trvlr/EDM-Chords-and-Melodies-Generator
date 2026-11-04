@@ -1,4 +1,4 @@
-# EDM Studio — chord, bass, lead & drum generator
+# ∞ Melodies — chord, bass, lead & drum generator
 
 A fully offline Progressive Web App (PWA) for turning an EDM idea into a playable sketch: pick a genre and a key, audition genre-specific progressions, arrange bass/lead/drums, then export MIDI or WAV to your DAW.
 
@@ -9,15 +9,17 @@ A fully offline Progressive Web App (PWA) for turning an EDM idea into a playabl
 
 ---
 
-## What's new in 0.10
+## What's new in 0.11
 
-- **Velocity editing**: a velocity strip under the bass/lead piano roll (drag or ↑/↓), applied to playback, WAV, stems, MIDI and share links.
-- **Melody range width selector** for bass and lead: 1, 2 or 3 octaves (bass from C2, lead from C5), independent of the octave stepper.
+- **New name: ∞ Melodies** (the app was “EDM Studio”).
+- **Arpeggiator now fills the whole bar**: eighth-note arps play 8 notes, sixteenth-note arps 16, cycling the chord pattern instead of stopping after one pass.
+- **Playhead is driven by the audio transport clock**, so it starts with the first sound and stays in sync.
+- **Velocity editing**, **range width selector**, song sections, piano roll, stems, WAV/MIDI export.
 - **Drum MIDI per instrument**: Kick/Snare/Clap/Hat as separate tracks in the DAW drum zone (GM notes, channel 10).
 - **Correct chord MIDI** and **reliable track Preview**.
 - **Song sections**, **piano-roll editing**, **swing/humanize**, **per-track octave shift**, **stems export**.
 - **Audio fixes**: master limiter, voice budget, per-rhythm ADSR, genre-accurate drums.
-- **50 unit tests** wired into CI.
+- **56 unit tests** wired into CI.
 
 See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 
@@ -144,7 +146,7 @@ src/
 | `npm run build` | Type-check and build for production |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Unit tests (Vitest, 51) |
+| `npm test` | Unit tests (Vitest, 56) |
 | `npm run test:watch` | Unit tests in watch mode |
 
 ## Testing

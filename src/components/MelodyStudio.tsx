@@ -15,6 +15,7 @@ import {
   setTrackVolume,
   stopArrangement,
   stopTrackPreview,
+  getTransportStep,
   updateDrumKit,
   type TrackId,
 } from '../utils/mixer';
@@ -325,10 +326,6 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       octaves: melody.octaves,
       swing: melody.swing,
       humanize: melody.humanize,
-      onStep: (step) => {
-        setActiveStep(step);
-        onStepChange?.(step);
-      },
       onStop: () => {
         setActiveStep(null);
         onStepChange?.(null);
@@ -351,6 +348,26 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   useEffect(() => {
     if (isPlaying) setArrangementBpm(bpm);
   }, [bpm, isPlaying]);
+
+  // The playhead follows the audio transport clock instead of Tone.Draw
+  // callbacks, so it starts with the first sound and does not drift.
+  const songLengthSteps = Math.max(1, songBars({ chords: progression, sections: melody.sections }) * 16);
+  useEffect(() => {
+    if (!isPlaying && previewingTrack === null) return;
+    let frame = 0;
+    let last = -1;
+    const tick = () => {
+      const step = getTransportStep(bpm) % songLengthSteps;
+      if (step !== last) {
+        last = step;
+        setActiveStep(step);
+        onStepChange?.(step);
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [isPlaying, previewingTrack, bpm, songLengthSteps, onStepChange]);
 
   useEffect(() => {
     setArrangementLoop(loop);
@@ -401,10 +418,6 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       swing: melody.swing,
       humanize: melody.humanize,
       trackId,
-      onStep: (step) => {
-        setActiveStep(step);
-        onStepChange?.(step);
-      },
       onStop: () => {
         setPreviewingTrack(null);
         setActiveStep(null);
