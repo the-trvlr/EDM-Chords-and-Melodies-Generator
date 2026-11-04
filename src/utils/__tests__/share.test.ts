@@ -101,6 +101,7 @@ describe('share codec', () => {
     expect(decoded).toMatchObject({ key: 'C', scale: 'minor', genreId: 'techno', synth: 'pluck', bpm: 130 });
     expect(decoded?.customProgression).toBeNull();
     expect(decoded?.melody.bassStyleId).toBe('tech-groove');
+    expect(decoded?.melody.timeScales).toEqual({ chord: 1, bass: 1, lead: 1, drums: 1 });
     expect(decoded?.melody.arpSettings.pattern).toBe('down');
     expect(decoded?.melody.drumKitId).toBe('909');
   });

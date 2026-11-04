@@ -45,6 +45,8 @@ export interface MelodyStudioHandle {
 interface MelodyStudioProps {
   progression: ChordInfo[];
   rhythm: RhythmPattern;
+  rhythms: RhythmPattern[];
+  onRhythmChange: (rhythm: RhythmPattern) => void;
   rootKey: string;
   scaleType: string;
   bpm: number;
@@ -88,6 +90,8 @@ function TrackHeader({
   onPreview,
   previewing,
   busy,
+  timeScale,
+  onTimeScaleChange,
   extra,
 }: {
   trackId: TrackId;
@@ -99,6 +103,8 @@ function TrackHeader({
   onPreview: () => void;
   previewing: boolean;
   busy: boolean;
+  timeScale: number;
+  onTimeScaleChange: (scale: number) => void;
   extra?: ReactNode;
 }) {
   const colors = TRACK_COLORS[trackId];
@@ -130,6 +136,26 @@ function TrackHeader({
         >
           S
         </button>
+      </div>
+
+      <div className="flex items-center gap-0.5" role="group" aria-label={`${label} time feel`}>
+        {[{ value: 0.5, label: '½', title: 'Half time' }, { value: 1, label: '1×', title: 'Normal time' }, { value: 2, label: '2×', title: 'Double time' }].map(option => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onTimeScaleChange(option.value)}
+            aria-pressed={timeScale === option.value}
+            aria-label={`${label} ${option.title.toLowerCase()}`}
+            title={option.title}
+            className={`h-9 w-6 rounded text-[10px] font-semibold transition-colors sm:h-7 ${
+              timeScale === option.value
+                ? 'bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-500/60'
+                : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
 
       {synthId && onSynthChange && (
@@ -210,6 +236,8 @@ function OctaveStepper({ label, value, onChange }: { label: string; value: numbe
 export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(function MelodyStudio({
   progression,
   rhythm,
+  rhythms,
+  onRhythmChange,
   rootKey,
   scaleType,
   bpm,
@@ -332,6 +360,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       octaves: melody.octaves,
       swing: melody.swing,
       humanize: melody.humanize,
+      timeScales: melody.timeScales,
       onStop: () => {
         setActiveStep(null);
         onStepChange?.(null);
@@ -340,7 +369,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     });
   // Restart when the sounding configuration changes (structure, octaves, groove),
   // but not when unrelated melody state (e.g. preview dialogs) changes.
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, onPlayingChange, onStepChange, onStopOtherPlayback]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, onPlayingChange, onStepChange, onStopOtherPlayback]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -423,6 +452,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       octaves: melody.octaves,
       swing: melody.swing,
       humanize: melody.humanize,
+      timeScales: melody.timeScales,
       trackId,
       onStop: () => {
         setPreviewingTrack(null);
@@ -430,7 +460,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         onStepChange?.(null);
       },
     });
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, bpm, onStepChange, onStopOtherPlayback]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, bpm, onStepChange, onStopOtherPlayback]);
 
   const handleToggleDrumNote = useCallback((instrument: keyof DrumPattern, step: number) => {
     const base = melody.customDrumPattern ?? generateDrums(genreId, melody.drumSeed);
@@ -496,6 +526,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           octaves: melody.octaves,
           swing: melody.swing,
           humanize: melody.humanize,
+          timeScales: melody.timeScales,
         });
         files[`${track}.wav`] = new Uint8Array(await blob.arrayBuffer());
       }
@@ -514,15 +545,15 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, bpm, rootKey, scaleType, masterVolume, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, bpm, rootKey, scaleType, masterVolume, toast]);
 
   const handleExportMidi = useCallback(() => {
     exportArrangementToMidi(
       progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize },
+      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales },
     );
     toast.show('Arrangement MIDI exported', 'success');
-  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, toast]);
 
   const handleExportWav = useCallback(async () => {
     setRendering(true);
@@ -543,6 +574,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         octaves: melody.octaves,
         swing: melody.swing,
         humanize: melody.humanize,
+        timeScales: melody.timeScales,
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -557,7 +589,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRendering(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, bpm, rootKey, scaleType, masterVolume, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, bpm, rootKey, scaleType, masterVolume, toast]);
 
   const handleSaveArrangement = useCallback(() => {
     const saved = saveArrangement(saveName, project);
@@ -646,45 +678,11 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Arrangement</h2>
-          <p className="text-xs text-gray-400">
-            {bars} {bars === 1 ? 'bar' : 'bars'}{melody.sections.length > 0 ? ` · ${laneBars}-bar pattern` : ''} · {bpm} BPM · {genresLabel(genreId)} · edits are saved in the project
-          </p>
-        </div>
-        <div className="ml-auto flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={undo}
-            disabled={history.index <= 0}
-            className="h-11 rounded-md border border-gray-700 px-2 text-xs font-medium text-gray-200 transition-colors hover:border-gray-500 disabled:opacity-40 sm:h-8"
-          >
-            Undo
-          </button>
-          <button
-            type="button"
-            onClick={redo}
-            disabled={history.index >= history.list.length - 1}
-            className="h-11 rounded-md border border-gray-700 px-2 text-xs font-medium text-gray-200 transition-colors hover:border-gray-500 disabled:opacity-40 sm:h-8"
-          >
-            Redo
-          </button>
-          <button
-            type="button"
-            onClick={openSaveDialog}
-            className="h-11 rounded-md border border-gray-700 px-2 text-xs font-medium text-gray-200 transition-colors hover:border-gray-500 sm:h-8"
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            onClick={openLoadDialog}
-            className="h-11 rounded-md border border-gray-700 px-2 text-xs font-medium text-gray-200 transition-colors hover:border-gray-500 sm:h-8"
-          >
-            Load
-          </button>
-        </div>
+      <div>
+        <h2 className="text-lg font-semibold text-white">Tracks</h2>
+        <p className="text-xs text-gray-400">
+          {bars} {bars === 1 ? 'bar' : 'bars'}{melody.sections.length > 0 ? ` · ${laneBars}-bar pattern` : ''} · {bpm} BPM · {genresLabel(genreId)} · edits are saved in the project
+        </p>
       </div>
 
       <SectionsTimeline sections={melody.sections} onChange={handleSectionsChange} />
@@ -731,8 +729,25 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           onPreview={() => handlePreview('chord')}
           previewing={previewingTrack === 'chord'}
           busy={busy}
+          timeScale={melody.timeScales.chord}
+          onTimeScaleChange={scale => apply({ timeScales: { ...melody.timeScales, chord: scale } })}
           extra={(
             <>
+              <label className="flex items-center gap-1">
+                <span className="sr-only">Chord rhythm</span>
+                <select
+                  value={rhythm.name}
+                  onChange={event => {
+                    const next = rhythms.find(item => item.name === event.target.value);
+                    if (next) onRhythmChange(next);
+                  }}
+                  aria-label="Rhythm pattern"
+                  title="Global chord rhythm"
+                  className="h-11 rounded-md border border-gray-700 bg-gray-900 px-1.5 text-[11px] text-gray-200 sm:h-8"
+                >
+                  {rhythms.map(item => <option key={item.name} value={item.name}>{item.name}</option>)}
+                </select>
+              </label>
               <OctaveStepper
                 label="Chords"
                 value={melody.octaves.chord}
@@ -842,6 +857,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           onPreview={() => handlePreview('bass')}
           previewing={previewingTrack === 'bass'}
           busy={busy}
+          timeScale={melody.timeScales.bass}
+          onTimeScaleChange={scale => apply({ timeScales: { ...melody.timeScales, bass: scale } })}
           extra={(
             <>
               <label className="flex items-center gap-1">
@@ -951,6 +968,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           onPreview={() => handlePreview('lead')}
           previewing={previewingTrack === 'lead'}
           busy={busy}
+          timeScale={melody.timeScales.lead}
+          onTimeScaleChange={scale => apply({ timeScales: { ...melody.timeScales, lead: scale } })}
           extra={(
             <>
               <label className="flex items-center gap-1">
@@ -1058,6 +1077,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           onPreview={() => handlePreview('drums')}
           previewing={previewingTrack === 'drums'}
           busy={busy}
+          timeScale={melody.timeScales.drums}
+          onTimeScaleChange={scale => apply({ timeScales: { ...melody.timeScales, drums: scale } })}
           extra={(
             <>
               <select

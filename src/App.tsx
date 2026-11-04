@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { GENRES } from './data/genres';
 import { DEFAULT_DRUM_KIT_BY_GENRE } from './data/drumKits';
 import type { Genre, RhythmPattern } from './data/genres';
@@ -23,23 +23,15 @@ import { chordTypeKey, decodeShare, encodeShare, expandChord } from './utils/sha
 import { exportProgressionToMidi } from './utils/midiExport';
 import { songBars } from './utils/schedule';
 import { defaultMelodyState, type MelodyState, type ProjectSnapshot } from './types';
-import { ChordDisplay } from './components/ChordDisplay';
-import { ChordPalette } from './components/ChordPalette';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { GenreSelector } from './components/GenreSelector';
-import { KeySelector } from './components/KeySelector';
+import { Inspector } from './components/Inspector';
 import { MelodyStudio, type MelodyStudioHandle } from './components/MelodyStudio';
 import { Menu } from './components/Menu';
-import { PianoKeyboard } from './components/PianoKeyboard';
-import { ProgressionSelector } from './components/ProgressionSelector';
-import { RhythmSelector } from './components/RhythmSelector';
-import { StaffSkeleton } from './components/Skeleton';
-import { SynthSelector } from './components/SynthSelector';
+import { ProjectBar } from './components/ProjectBar';
+import { ProgressionStrip } from './components/ProgressionStrip';
 import { ToastProvider } from './components/Toast';
 import { useToast } from './hooks/useToast';
 import { TransportBar } from './components/TransportBar';
-
-const StaffNotation = lazy(() => import('./components/StaffNotation'));
 
 const persisted = loadPersistedState();
 
@@ -106,52 +98,6 @@ function downloadText(filename: string, text: string): void {
   URL.revokeObjectURL(url);
 }
 
-function StaffSection({
-  progression,
-  activeIndex,
-  isPlaying,
-}: {
-  progression: ChordInfo[];
-  activeIndex: number;
-  isPlaying: boolean;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(() => typeof IntersectionObserver === 'undefined');
-
-  useEffect(() => {
-    if (visible) return;
-    const node = containerRef.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(entries => {
-      if (entries.some(entry => entry.isIntersecting)) {
-        setVisible(true);
-        observer.disconnect();
-      }
-    }, { rootMargin: '300px' });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [visible]);
-
-  return (
-    <div ref={containerRef} className="min-w-0">
-      {visible ? (
-        <Suspense fallback={<StaffSkeleton />}>
-          <StaffNotation progression={progression} activeIndex={activeIndex} isPlaying={isPlaying} />
-        </Suspense>
-      ) : (
-        <StaffSkeleton />
-      )}
-    </div>
-  );
-}
-
-const COMPLEXITY_OPTIONS: { id: ChordComplexity; label: string; hint: string }[] = [
-  { id: 'basic', label: 'Simple', hint: 'Triads only' },
-  { id: '7ths', label: '7ths', hint: 'Seventh chords' },
-  { id: '9ths', label: '9ths', hint: 'Ninth chords' },
-  { id: 'jazzy', label: 'Jazzy', hint: 'Sus and extended voicings' },
-];
-
 function Studio() {
   const toast = useToast();
   const [audioReady, setAudioReady] = useState(false);
@@ -173,16 +119,12 @@ function Studio() {
   const [countIn, setCountIn] = useState(persisted.countInBars ?? 0);
   const [doubleTime, setDoubleTime] = useState(sharedProject?.doubleTime ?? persisted.doubleTime ?? false);
   const [chordComplexity, setChordComplexity] = useState<ChordComplexity>(sharedProject?.chordComplexity ?? persisted.chordComplexity ?? 'basic');
-  const [activeTab, setActiveTab] = useState<'chords' | 'melodies'>(() => {
-    const param = new URLSearchParams(window.location.search).get('tab');
-    if (param === 'arrangement' || param === 'melody') return 'melodies';
-    if (param === 'harmony') return 'chords';
-    return persisted.activeTab ?? 'chords';
-  });
   const initialCustomProgression = sharedProject?.customProgression ?? persisted.customProgression ?? null;
   const [customProgression, setCustomProgression] = useState<ChordInfo[] | null>(initialCustomProgression);
   const [history, setHistory] = useState<{ list: ChordInfo[][]; index: number }>(initialCustomProgression ? { list: [initialCustomProgression], index: 0 } : { list: [], index: -1 });
   const [melody, setMelody] = useState<MelodyState>(initialMelodyState);
+  const [lastEdit, setLastEdit] = useState<'chord' | 'melody' | 'reset' | null>(null);
+  const [resetSnapshot, setResetSnapshot] = useState<ProjectSnapshot | null>(null);
 
   const studioRef = useRef<MelodyStudioHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -246,6 +188,8 @@ function Studio() {
     setMelody(project.melody);
     setSelectedChordForView(null);
     setActiveChordIndex(0);
+    setLastEdit(null);
+    setResetSnapshot(null);
   }, [stopAll]);
 
   const commitProgression = useCallback((next: ChordInfo[]) => {
@@ -256,6 +200,8 @@ function Studio() {
       return { list: nextList, index: nextList.length - 1 };
     });
     setCustomProgression(cloneChords(next));
+    setLastEdit('chord');
+    setResetSnapshot(null);
   }, [customProgression, templateProgression]);
 
   const undoChords = useCallback(() => {
@@ -270,7 +216,31 @@ function Studio() {
     const index = history.index + 1;
     setCustomProgression(cloneChords(history.list[index]));
     setHistory({ list: history.list, index });
+    setLastEdit('chord');
   }, [history]);
+
+  const handleMelodyChange = useCallback((next: MelodyState) => {
+    setMelody(next);
+    setLastEdit('melody');
+    setResetSnapshot(null);
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    if (lastEdit === 'reset' && resetSnapshot) {
+      applyProject(resetSnapshot);
+      return;
+    }
+    if (lastEdit === 'melody') {
+      studioRef.current?.undo();
+      return;
+    }
+    undoChords();
+  }, [lastEdit, resetSnapshot, applyProject, undoChords]);
+
+  const handleRedo = useCallback(() => {
+    if (lastEdit === 'melody') studioRef.current?.redo();
+    else redoChords();
+  }, [lastEdit, redoChords]);
 
   const handlePlayChords = useCallback(() => {
     if (progression.length === 0) return;
@@ -281,7 +251,7 @@ function Studio() {
     setActiveChordIndex(0);
     playProgression(
       progression,
-      selectedSynth,
+      melody.synthIds.chord,
       bpm,
       selectedRhythm,
       index => setActiveChordIndex(index),
@@ -291,7 +261,7 @@ function Studio() {
       metronome,
       countIn,
     );
-  }, [progression, selectedSynth, bpm, selectedRhythm, loop, doubleTime, metronome, countIn]);
+  }, [progression, melody.synthIds.chord, bpm, selectedRhythm, loop, doubleTime, metronome, countIn]);
 
   const handleStopChords = useCallback(() => {
     stopPlayback();
@@ -300,8 +270,6 @@ function Studio() {
   }, []);
 
   const togglePlayback = useCallback(() => {
-    // One transport for both screens: it always controls whatever is sounding,
-    // so switching tabs never leaves an invisible engine running.
     if (chordsPlaying) {
       handleStopChords();
       return;
@@ -310,12 +278,8 @@ function Studio() {
       setArrangementPlaying(false);
       return;
     }
-    if (activeTab === 'chords') {
-      handlePlayChords();
-    } else {
-      setArrangementPlaying(true);
-    }
-  }, [activeTab, chordsPlaying, arrangementPlaying, handlePlayChords, handleStopChords]);
+    setArrangementPlaying(true);
+  }, [chordsPlaying, arrangementPlaying, handleStopChords]);
 
   const handleInitAudio = useCallback(async () => {
     try {
@@ -345,7 +309,6 @@ function Studio() {
       loop,
       doubleTime,
       chordComplexity,
-      activeTab,
       melody,
       customProgression,
       metronome,
@@ -353,7 +316,7 @@ function Studio() {
     });
   }, [
     selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth,
-    bpm, volume, loop, doubleTime, chordComplexity, activeTab, melody, customProgression, metronome, countIn,
+    bpm, volume, loop, doubleTime, chordComplexity, melody, customProgression, metronome, countIn,
   ]);
 
   const chordsPlayingRef = useRef(chordsPlaying);
@@ -371,7 +334,7 @@ function Studio() {
     stopPlayback();
     playProgression(
       progression,
-      selectedSynth,
+      melody.synthIds.chord,
       bpm,
       selectedRhythm,
       index => setActiveChordIndex(index),
@@ -381,7 +344,7 @@ function Studio() {
     );
     // The transport is restarted only when the sound of the chord track changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loop, doubleTime, selectedSynth, selectedRhythm, progression]);
+  }, [loop, doubleTime, melody.synthIds.chord, selectedRhythm, progression]);
 
   useEffect(() => {
     if (!sharedProject) return;
@@ -406,8 +369,10 @@ function Studio() {
   }, [chordsPlaying, handleStopChords]);
 
   const handleGenreChange = useCallback((genre: Genre) => {
-    if (chordsPlaying) handleStopChords();
-    if (arrangementPlaying) setArrangementPlaying(false);
+    const before = snapshot;
+    stopAll();
+    setResetSnapshot(before);
+    setLastEdit('reset');
     setSelectedGenre(genre);
     setSelectedProgressionIdx(0);
     setSelectedRhythm(genre.rhythmPatterns[0]);
@@ -415,12 +380,17 @@ function Studio() {
     setSelectedScale(genre.preferredScale);
     setSelectedKey(current => getPreferredKeyName(noteNameToPc(current), genre.preferredScale));
     setSelectedSynth(genre.synthPreset as typeof selectedSynth);
-    setMelody(prev => ({
-      ...prev,
-      drumKitId: DEFAULT_DRUM_KIT_BY_GENRE[genre.id] ?? prev.drumKitId,
-    }));
+    setChordComplexity('basic');
+    setCustomProgression(null);
+    setHistory({ list: [], index: -1 });
+    const fresh = defaultMelodyState();
+    setMelody({ ...fresh, drumKitId: DEFAULT_DRUM_KIT_BY_GENRE[genre.id] ?? fresh.drumKitId });
     setSelectedChordForView(null);
-  }, [chordsPlaying, arrangementPlaying, handleStopChords]);
+    toast.show(`${genre.name} selected — the project was reset.`, 'info', {
+      label: 'Undo',
+      onClick: () => applyProject(before),
+    });
+  }, [snapshot, stopAll, toast, applyProject]);
 
   const handleComplexityChange = useCallback((level: ChordComplexity) => {
     if (chordsPlaying) handleStopChords();
@@ -489,14 +459,12 @@ function Studio() {
       }
       if (mod && event.code === 'KeyZ' && !event.shiftKey) {
         event.preventDefault();
-        if (activeTab === 'chords') undoChords();
-        else studioRef.current?.undo();
+        handleUndo();
         return;
       }
       if (mod && ((event.code === 'KeyZ' && event.shiftKey) || event.code === 'KeyY')) {
         event.preventDefault();
-        if (activeTab === 'chords') redoChords();
-        else studioRef.current?.redo();
+        handleRedo();
         return;
       }
       if (mod && event.code === 'KeyS') {
@@ -512,16 +480,57 @@ function Studio() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeTab, togglePlayback, undoChords, redoChords, handleSaveProjectFile]);
+  }, [togglePlayback, handleUndo, handleRedo, handleSaveProjectFile]);
 
-  const handleTabChange = useCallback((tab: 'chords' | 'melodies') => {
-    setActiveTab(tab);
-  }, []);
+  const handleSelectTemplate = useCallback((index: number) => {
+    if (chordsPlaying) handleStopChords();
+    setSelectedProgressionIdx(index);
+    setCustomProgression(null);
+    setHistory({ list: [], index: -1 });
+    setSelectedChordForView(null);
+    setLastEdit(null);
+  }, [chordsPlaying, handleStopChords]);
+
+  const handleAddChord = useCallback((chord: ChordInfo) => {
+    const next = [...progression, chord];
+    commitProgression(next);
+    setSelectedChordForView(next.length - 1);
+  }, [progression, commitProgression]);
+
+  const handleRemoveChord = useCallback((index: number) => {
+    const next = progression.filter((_, i) => i !== index);
+    commitProgression(next);
+    setSelectedChordForView(next.length === 0 ? null : Math.min(index, next.length - 1));
+  }, [progression, commitProgression]);
+
+  const handleMoveChord = useCallback((index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= progression.length) return;
+    const next = [...progression];
+    [next[index], next[target]] = [next[target], next[index]];
+    commitProgression(next);
+    setSelectedChordForView(target);
+  }, [progression, commitProgression]);
+
+  const handleInversion = useCallback((index: number, inversion: number) => {
+    commitProgression(progression.map((chord, i) => i === index ? invertChord(chord, inversion) : chord));
+  }, [progression, commitProgression]);
+
+  const handleVoiceLead = useCallback(() => {
+    commitProgression(voiceLeading(progression));
+  }, [progression, commitProgression]);
+
+  const handleResetToTemplate = useCallback(() => {
+    setCustomProgression(null);
+    setHistory({ list: [], index: -1 });
+    setSelectedChordForView(null);
+    toast.show('Progression reset to the genre template');
+  }, [toast]);
 
   const previewChord = useCallback((chord: ChordInfo) => {
     if (!audioReady) return;
-    playChord(chord, selectedSynth, '4n', selectedRhythm.name, bpm, selectedRhythm.pattern);
-  }, [audioReady, selectedSynth, selectedRhythm.name, selectedRhythm.pattern, bpm]);
+    playChord(chord, melody.synthIds.chord, '4n', selectedRhythm.name, bpm, selectedRhythm.pattern);
+  }, [audioReady, melody.synthIds.chord, selectedRhythm.name, selectedRhythm.pattern, bpm]);
 
   if (!audioReady) {
     return (
@@ -567,12 +576,26 @@ function Studio() {
                   v{__APP_VERSION__}
                 </span>
               </div>
-              <p className="truncate text-[11px] text-gray-400">
-                {selectedKey} {selectedScale} · {selectedGenre.name} · {bpm} BPM
-              </p>
             </div>
 
             <div className="ml-auto flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleUndo}
+                aria-label="Undo"
+                className="h-11 rounded-lg border border-gray-700 px-2 text-xs font-medium text-gray-200 transition-colors hover:border-gray-500 sm:h-9"
+              >
+                Undo
+              </button>
+              <button
+                type="button"
+                onClick={handleRedo}
+                aria-label="Redo"
+                className="h-11 rounded-lg border border-gray-700 px-2 text-xs font-medium text-gray-200 transition-colors hover:border-gray-500 sm:h-9"
+              >
+                Redo
+              </button>
+
               <Menu
                 label="Save"
                 tone="primary"
@@ -632,185 +655,89 @@ function Studio() {
       </header>
 
       <main className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-6">
-        <div
-          role="tablist"
-          aria-label="Studio sections"
-          className="mb-3 flex w-fit gap-1 rounded-lg border border-gray-800 bg-gray-900/60 p-1"
-        >
-          {([
-            { id: 'chords', label: 'Harmony' },
-            { id: 'melodies', label: 'Arrangement' },
-          ] as const).map(tab => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`min-h-11 rounded-md px-4 text-sm font-medium transition-colors sm:min-h-9 ${
-                activeTab === tab.id
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-300 hover:text-white'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <ProjectBar
+          selectedKey={selectedKey}
+          selectedScale={selectedScale}
+          selectedGenre={selectedGenre}
+          chordComplexity={chordComplexity}
+          onKeyChange={handleKeyChange}
+          onScaleChange={handleScaleChange}
+          onGenreChange={handleGenreChange}
+          onComplexityChange={handleComplexityChange}
+        />
 
-        <div className={activeTab === 'chords' ? 'block' : 'hidden'} role="tabpanel" aria-label="Harmony">
-          <div className="grid min-w-0 gap-4 lg:grid-cols-3">
-            <div className="order-2 flex min-w-0 flex-col gap-4 lg:order-1">
-              <div className="flex flex-col gap-5 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-                <KeySelector
-                  selectedKey={selectedKey}
-                  selectedScale={selectedScale}
-                  onKeyChange={handleKeyChange}
-                  onScaleChange={handleScaleChange}
-                />
-                <GenreSelector selectedGenre={selectedGenre} onGenreChange={handleGenreChange} />
-
-                <div className="flex flex-col gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Chord complexity</span>
-                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Chord complexity">
-                    {COMPLEXITY_OPTIONS.map(option => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => handleComplexityChange(option.id)}
-                        aria-pressed={chordComplexity === option.id}
-                        title={option.hint}
-                        className={`min-h-11 rounded-md px-2.5 text-xs font-medium transition-colors sm:min-h-9 ${
-                          chordComplexity === option.id
-                            ? 'bg-purple-500/20 text-purple-200 ring-1 ring-purple-500'
-                            : 'border border-gray-700/60 text-gray-300 hover:border-gray-500'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-                <ProgressionSelector
-                  genre={selectedGenre}
-                  selectedIndex={selectedProgressionIdx}
-                  onSelect={index => {
-                    if (chordsPlaying) handleStopChords();
-                    setSelectedProgressionIdx(index);
-                  }}
-                />
-              </div>
-
-              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-                <RhythmSelector
-                  genre={selectedGenre}
-                  selectedRhythm={selectedRhythm}
-                  onRhythmChange={setSelectedRhythm}
-                />
-              </div>
-
-              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-                <SynthSelector selectedSynth={selectedSynth} onSynthChange={setSelectedSynth} />
-              </div>
-            </div>
-
-            <div className="order-1 flex min-w-0 flex-col gap-4 lg:order-2 lg:col-span-2">
-              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-                <ChordDisplay
-                  progression={progression}
-                  activeIndex={activeChordIndex}
-                  selectedIndex={selectedChordForView}
-                  scaleName={selectedScale}
-                  scaleChords={availableChords}
-                  onChordClick={setSelectedChordForView}
-                  onPreviewChord={previewChord}
-                  isPlaying={chordsPlaying}
-                />
-              </div>
-
-              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-                <PianoKeyboard chord={viewedChord} />
-              </div>
-
-              <div className="min-w-0 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-                <StaffSection
-                  progression={progression}
-                  activeIndex={activeChordIndex}
-                  isPlaying={chordsPlaying}
-                />
-              </div>
-
-              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <span />
-                  {customProgression && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCustomProgression(null);
-                        setHistory({ list: [], index: -1 });
-                        setSelectedChordForView(null);
-                        toast.show('Progression reset to template');
-                      }}
-                      className="min-h-8 text-xs text-gray-300 underline-offset-2 hover:text-white hover:underline"
-                    >
-                      Reset to template
-                    </button>
-                  )}
-                </div>
-                <ChordPalette
-                  availableChords={availableChords}
-                  progression={progression}
-                  scaleName={selectedScale}
-                  onAddChord={chord => commitProgression([...(customProgression ?? templateProgression), chord])}
-                  onRemoveChord={index => commitProgression((customProgression ?? templateProgression).filter((_, i) => i !== index))}
-                  onPreviewChord={previewChord}
-                  onInversionChange={(index, inversion) => {
-                    const current = customProgression ?? templateProgression;
-                    commitProgression(current.map((chord, i) => i === index ? invertChord(chord, inversion) : chord));
-                  }}
-                  onAutoVoiceLead={() => commitProgression(voiceLeading(customProgression ?? templateProgression))}
-                  onUndo={undoChords}
-                  onRedo={redoChords}
-                  canUndo={history.index > 0}
-                  canRedo={history.index < history.list.length - 1}
-                  onReorderChord={(from, to) => {
-                    const current = [...(customProgression ?? templateProgression)];
-                    const [moved] = current.splice(from, 1);
-                    current.splice(to, 0, moved);
-                    commitProgression(current);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className={activeTab === 'melodies' ? 'block' : 'hidden'} role="tabpanel" aria-label="Arrangement">
-          <MelodyStudio
-            ref={studioRef}
+        <div className="mt-2">
+          <ProgressionStrip
             progression={progression}
-            rhythm={selectedRhythm}
-            rootKey={selectedKey}
-            scaleType={selectedScale}
-            bpm={bpm}
-            genreId={selectedGenre.id}
-            loop={loop}
-            doubleTime={doubleTime}
-            masterVolume={volume}
-            metronome={metronome}
-            countInBars={countIn}
-            isPlaying={arrangementPlaying}
-            onPlayingChange={handleArrangementPlayingChange}
-            onStepChange={setArrangementStep}
-            melody={melody}
-            onMelodyChange={setMelody}
-            project={snapshot}
-            onApplyProject={applyProject}
-            onStopOtherPlayback={handleStopChords}
+            activeIndex={activeChordIndex}
+            selectedIndex={selectedChordForView}
+            scaleName={selectedScale}
+            scaleChords={availableChords}
+            availableChords={availableChords}
+            templates={selectedGenre.progressions.map(template => ({
+              label: template.name,
+              hint: template.description,
+            }))}
+            selectedTemplate={selectedProgressionIdx}
+            isPlaying={chordsPlaying}
+            isPreviewing={chordsPlaying}
+            custom={customProgression !== null}
+            onSelect={setSelectedChordForView}
+            onPreviewChord={previewChord}
+            onAddChord={handleAddChord}
+            onTemplateSelect={handleSelectTemplate}
+            onTogglePreview={() => {
+              if (chordsPlaying) handleStopChords();
+              else handlePlayChords();
+            }}
+            onResetToTemplate={handleResetToTemplate}
+          />
+        </div>
+
+        <div className="mt-3 grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="order-2 min-w-0 xl:order-1">
+            <MelodyStudio
+              ref={studioRef}
+              progression={progression}
+              rhythm={selectedRhythm}
+              rhythms={selectedGenre.rhythmPatterns}
+              onRhythmChange={rhythm => {
+                if (chordsPlaying) handleStopChords();
+                setSelectedRhythm(rhythm);
+              }}
+              rootKey={selectedKey}
+              scaleType={selectedScale}
+              bpm={bpm}
+              genreId={selectedGenre.id}
+              loop={loop}
+              doubleTime={doubleTime}
+              masterVolume={volume}
+              metronome={metronome}
+              countInBars={countIn}
+              isPlaying={arrangementPlaying}
+              onPlayingChange={handleArrangementPlayingChange}
+              onStepChange={setArrangementStep}
+              melody={melody}
+              onMelodyChange={handleMelodyChange}
+              project={snapshot}
+              onApplyProject={applyProject}
+              onStopOtherPlayback={handleStopChords}
+            />
+          </div>
+
+          <Inspector
+            className="order-1 xl:order-2"
+            chord={viewedChord}
+            chordIndex={selectedChordForView}
+            progression={progression}
+            activeIndex={activeChordIndex}
+            scaleName={selectedScale}
+            isPlaying={chordsPlaying}
+            onInversion={handleInversion}
+            onMove={handleMoveChord}
+            onRemove={handleRemoveChord}
+            onVoiceLead={handleVoiceLead}
+            onPreview={previewChord}
           />
         </div>
       </main>

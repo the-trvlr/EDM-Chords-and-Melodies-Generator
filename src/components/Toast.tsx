@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ToastContext, type ToastTone } from '../hooks/useToast';
+import { ToastContext, type ToastAction, type ToastTone } from '../hooks/useToast';
 
 interface ToastItem {
   id: number;
   message: string;
   tone: ToastTone;
+  action?: ToastAction;
 }
 
 const TONE_CLASSES: Record<ToastTone, string> = {
@@ -17,12 +18,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const nextId = useRef(0);
 
-  const show = useCallback((message: string, tone: ToastTone = 'info') => {
+  const show = useCallback((message: string, tone: ToastTone = 'info', action?: ToastAction) => {
     const id = ++nextId.current;
-    setItems(prev => [...prev.slice(-2), { id, message, tone }]);
+    setItems(prev => [...prev.slice(-2), { id, message, tone, action }]);
     window.setTimeout(() => {
       setItems(prev => prev.filter(item => item.id !== id));
-    }, 3200);
+    }, action ? 7000 : 3200);
   }, []);
 
   const api = useMemo(() => ({ show }), [show]);
@@ -40,7 +41,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             key={item.id}
             className={`pointer-events-auto max-w-md rounded-lg border px-3 py-2 text-sm shadow-lg shadow-black/40 ${TONE_CLASSES[item.tone]}`}
           >
-            {item.message}
+            <div className="flex items-center gap-3">
+              <span>{item.message}</span>
+              {item.action && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    item.action?.onClick();
+                    setItems(prev => prev.filter(entry => entry.id !== item.id));
+                  }}
+                  className="shrink-0 rounded border border-white/20 px-2 py-0.5 text-xs font-semibold hover:bg-white/10"
+                >
+                  {item.action.label}
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>

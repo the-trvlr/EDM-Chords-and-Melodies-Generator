@@ -3,22 +3,20 @@
 A fully offline Progressive Web App (PWA) for turning an EDM idea into a playable sketch: pick a genre and a key, audition genre-specific progressions, arrange bass/lead/drums, then export MIDI or WAV to your DAW.
 
 **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-**Roadmap:** [`docs/PLAN-UIUX-2026.md`](docs/PLAN-UIUX-2026.md) · **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
+**Roadmap:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md) · **Plans:** [`docs/PLAN-UIUX-2026.md`](docs/PLAN-UIUX-2026.md) · **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 
-![Arrangement with song sections](docs/release-0.6/desktop-sections.jpg)
+![∞ Melodies 1.0 Studio](docs/release-1.0/desktop.png)
 
 ---
 
-## What's new in 0.13
+## What's new in 1.0
 
-- **Generator 2.0 controls**: density (sparse/medium/busy), three quick ideas and chord-tone snapping on strong beats.
-- **Metronome and count-in**, **velocity editing**, **range width selector**, song sections, piano roll, stems, WAV/MIDI export.
-- **∞ Melodies** name, full-bar arpeggios and a transport-synced playhead.
-- **Drum MIDI per instrument**: Kick/Snare/Clap/Hat as separate tracks in the DAW drum zone (GM notes, channel 10).
-- **Correct chord MIDI** and **reliable track Preview**.
-- **Song sections**, **piano-roll editing**, **swing/humanize**, **per-track octave shift**, **stems export**.
-- **Audio fixes**: master limiter, voice budget, per-rhythm ADSR, genre-accurate drums.
-- **56 unit tests** wired into CI.
+- **One Studio, no tabs**: progression, sections and tracks share a single screen. Project Bar, Progression Strip and an Inspector panel replace the old Harmony/Arrangement split.
+- **Optional staff notation**: off by default in the inspector; VexFlow loads only when you enable it.
+- **Per-track time feel**: `½ / 1× / 2×` on every track, applied to playback, WAV, stems and MIDI.
+- **Full genre reset with Undo**; Undo/Redo moved to the header.
+- **Metronome and count-in**, **velocity editing**, **generator density/ideas**, **range width selector**, song sections, arpeggiator, stems, WAV/MIDI export.
+- **60 unit tests** wired into CI.
 
 See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 
@@ -30,9 +28,9 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 - 5 curated progression templates per genre, with genre defaults for BPM, scale, rhythm and synth.
 - **All 12 keys and 9 scales/modes** (major, minor, Dorian, Phrygian, Lydian, Mixolydian, Locrian, harmonic/melodic minor), spelled conventionally (flats for flat keys).
 - **4 chord complexity levels:** simple triads, 7ths, 9ths, jazzy voicings.
-- **Chord editing:** add/remove, drag to reorder, inversions, auto voice-leading, undo/redo.
-- **Visual feedback:** active chord highlighting, piano keyboard, VexFlow staff notation.
-- Chord edits **transpose with the key** and are kept when you change genre.
+- **Chord editing:** add via the progression strip, reorder/remove in the inspector, inversions and auto voice-leading, undo/redo in the header.
+- **Visual feedback:** active chord highlighting, piano keyboard, optional VexFlow staff notation in the inspector.
+- Chord edits **transpose with the key**. Changing genre performs a full project reset, undoable from the toast or the header.
 
 ### Arrangement
 
@@ -40,7 +38,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 - **Song sections** with per-section track gating and song-length playback; saved arrangements can be renamed, duplicated and deleted.
 - **Piano-roll editing** for bass/lead (draw, move, resize, delete) and per-track octave shift.
 - **Swing and humanize** applied consistently to playback and all exports.
-- Per-track instrument, volume, mute and solo; solo preview per track.
+- Per-track instrument, volume, mute, solo and time feel (`½ / 1× / 2×`); solo preview per track.
 - **Arpeggiator:** up/down/up-down/random, 1/8 or 1/16, 1–3 octaves, gate.
 - **Bass and lead generators** with genre-specific styles, seeded and regenerable; density (sparse/medium/busy), three ideas, chord-tone snapping and a selectable 1/2/3-octave range.
 - **Drum machine:** genre-accurate one-bar patterns (two-step DnB, half-time dubstep, trap hats, four-on-the-floor house), 5 kits, click-to-edit steps.
@@ -65,7 +63,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 
 | Desktop | Mobile |
 |---|---|
-| ![Desktop arrangement](docs/release-0.6/desktop-sections.jpg) | ![Mobile arrangement](docs/release-0.6/mobile-sections.jpg) |
+| ![Desktop Studio](docs/release-1.0/desktop.png) | ![Mobile Studio](docs/release-1.0/mobile.png) |
 
 ## Using the app offline
 
@@ -145,7 +143,7 @@ src/
 | `npm run build` | Type-check and build for production |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Unit tests (Vitest, 59) |
+| `npm test` | Unit tests (Vitest, 60) |
 | `npm run test:watch` | Unit tests in watch mode |
 
 ## Testing

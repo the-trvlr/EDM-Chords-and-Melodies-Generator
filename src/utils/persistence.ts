@@ -26,7 +26,6 @@ export interface PersistedState {
   loop: boolean;
   doubleTime: boolean;
   chordComplexity: ChordComplexity;
-  activeTab: 'chords' | 'melodies';
   /** Full arranger state (styles, seeds, mixer, drum edits, sections). */
   melody: MelodyState;
   /** Manual chord edits; restored on reload like the rest of the session. */
@@ -113,7 +112,6 @@ export function loadPersistedState(): Partial<PersistedState> {
       chordComplexity: (COMPLEXITIES as string[]).includes(String(parsed.chordComplexity))
         ? (parsed.chordComplexity as ChordComplexity)
         : 'basic',
-      activeTab: parsed.activeTab === 'melodies' ? 'melodies' : 'chords',
       melody: sanitizeMelody(isRecord(parsed.melody) ? parsed.melody : parsed),
       customProgression: sanitizeChords(parsed.customProgression),
       metronome: parsed.metronome === true,

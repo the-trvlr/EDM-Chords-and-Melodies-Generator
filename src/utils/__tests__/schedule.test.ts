@@ -56,6 +56,27 @@ describe('buildSchedule', () => {
     expect(snare.map(event => event.step)).toEqual([4, 20]);
   });
 
+  it('applies half and double time per track', () => {
+    const double = buildSchedule({ chords, rhythm, timeScales: { chord: 2, bass: 1, lead: 1, drums: 1 } });
+    const doubleChords = eventsForTrack(double, 'chord').map(event => event.step);
+    expect(doubleChords).toContain(2);
+    expect(Math.max(...doubleChords)).toBeLessThan(32);
+
+    const half = buildSchedule({ chords, rhythm, timeScales: { chord: 0.5, bass: 1, lead: 1, drums: 1 } });
+    const halfChords = eventsForTrack(half, 'chord').map(event => event.step);
+    expect(halfChords).toEqual([0, 8, 16, 24]);
+
+    const bass = {
+      notes: [{ midi: 40, step: 0, duration: 4, velocity: 0.8 }],
+      type: 'bass' as const,
+      styleId: 't',
+      stepsPerChord: 16,
+    };
+    const mixed = buildSchedule({ chords, rhythm, bass, timeScales: { chord: 2, bass: 0.5, lead: 1, drums: 1 } });
+    expect(eventsForTrack(mixed, 'bass').map(event => event.step)).toEqual([0]);
+    expect(eventsForTrack(mixed, 'bass')[0].durationSteps).toBe(8);
+  });
+
   it('carries note velocity into schedule events', () => {
     const bass = {
       notes: [{ midi: 40, step: 0, duration: 2, velocity: 0.35 }],

@@ -65,6 +65,8 @@ export interface MelodyState {
   /** 1..3 quick alternatives for the same seed. */
   bassIdea: number;
   leadIdea: number;
+  /** Per-track time feel: 0.5 = half time, 1 = normal, 2 = double time. */
+  timeScales: Record<TrackId, number>;
   /** Song structure; empty means "loop the progression". */
   sections: SongSection[];
   /** 0..0.6, delays odd 16th steps. */
@@ -118,6 +120,7 @@ export const defaultMelodyState = (): MelodyState => ({
   leadDensity: 'medium',
   bassIdea: 1,
   leadIdea: 1,
+  timeScales: { chord: 1, bass: 1, lead: 1, drums: 1 },
   sections: [],
   swing: 0,
   humanize: false,

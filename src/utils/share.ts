@@ -56,6 +56,7 @@ interface SharePayloadV2 {
     ld?: string;
     bi?: number;
     li?: number;
+    ts?: [number, number, number, number];
     sc?: [string, number, string][];
     sw?: number;
     hu?: boolean;
@@ -175,6 +176,7 @@ export function encodeShare(snapshot: ProjectSnapshot): string {
       ld: melody.leadDensity,
       bi: melody.bassIdea,
       li: melody.leadIdea,
+      ts: [melody.timeScales.chord, melody.timeScales.bass, melody.timeScales.lead, melody.timeScales.drums],
       sc: melody.sections.map(section => [section.kind, section.bars, section.tracks.join(',')]),
       sw: melody.swing,
       hu: melody.humanize,
