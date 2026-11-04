@@ -8,6 +8,10 @@ interface TransportBarProps {
   onLoopChange: (loop: boolean) => void;
   volume: number;
   onVolumeChange: (volume: number) => void;
+  metronome: boolean;
+  onMetronomeChange: (enabled: boolean) => void;
+  countIn: number;
+  onCountInChange: (bars: number) => void;
   position: { bar: number; totalBars: number } | null;
 }
 
@@ -21,6 +25,10 @@ export function TransportBar({
   onLoopChange,
   volume,
   onVolumeChange,
+  metronome,
+  onMetronomeChange,
+  countIn,
+  onCountInChange,
   position,
 }: TransportBarProps) {
   const minBpm = Math.max(60, bpmRange[0] - 20);
@@ -93,6 +101,35 @@ export function TransportBar({
       >
         Loop
       </button>
+
+      <button
+        type="button"
+        onClick={() => onMetronomeChange(!metronome)}
+        aria-pressed={metronome}
+        aria-label="Metronome"
+        className={`h-11 rounded-md px-2 text-[11px] font-medium transition-colors sm:h-8 ${
+          metronome
+            ? 'bg-amber-400/20 text-amber-200 ring-1 ring-amber-400/60'
+            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+        }`}
+      >
+        Click
+      </button>
+
+      <label className="flex items-center gap-1">
+        <span className="sr-only">Count-in bars</span>
+        <select
+          value={countIn}
+          onChange={event => onCountInChange(Number(event.target.value))}
+          aria-label="Count-in bars"
+          title="Count-in before playback"
+          className="h-11 rounded-md border border-gray-700 bg-gray-900 px-1.5 text-[11px] text-gray-200 sm:h-8"
+        >
+          <option value={0}>Count-in: off</option>
+          <option value={1}>Count-in: 1 bar</option>
+          <option value={2}>Count-in: 2 bars</option>
+        </select>
+      </label>
 
       <div className="flex items-center gap-1.5">
         <label htmlFor="master-volume" className="text-[11px] uppercase tracking-wide text-gray-400">

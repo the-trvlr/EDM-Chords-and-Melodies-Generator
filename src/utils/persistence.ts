@@ -31,6 +31,8 @@ export interface PersistedState {
   melody: MelodyState;
   /** Manual chord edits; restored on reload like the rest of the session. */
   customProgression?: ChordInfo[] | null;
+  metronome?: boolean;
+  countInBars?: number;
 }
 
 export interface SavedArrangement {
@@ -114,6 +116,8 @@ export function loadPersistedState(): Partial<PersistedState> {
       activeTab: parsed.activeTab === 'melodies' ? 'melodies' : 'chords',
       melody: sanitizeMelody(isRecord(parsed.melody) ? parsed.melody : parsed),
       customProgression: sanitizeChords(parsed.customProgression),
+      metronome: parsed.metronome === true,
+      countInBars: Math.round(numIn(parsed.countInBars, 0, 2, 0)),
     };
   } catch {
     return {};

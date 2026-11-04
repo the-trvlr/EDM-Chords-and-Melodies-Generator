@@ -52,6 +52,8 @@ interface MelodyStudioProps {
   loop: boolean;
   doubleTime: boolean;
   masterVolume: number;
+  metronome: boolean;
+  countInBars: number;
   isPlaying: boolean;
   onPlayingChange: (playing: boolean) => void;
   melody: MelodyState;
@@ -215,6 +217,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   loop,
   doubleTime,
   masterVolume,
+  metronome,
+  countInBars,
   isPlaying,
   onPlayingChange,
   melody,
@@ -236,10 +240,10 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const [savedArrangements, setSavedArrangements] = useState<SavedArrangement[]>([]);
   const [renameTarget, setRenameTarget] = useState<SavedArrangement | null>(null);
   const [renameValue, setRenameValue] = useState('');
-  const liveRef = useRef({ bpm, loop, drumKitId: melody.drumKitId });
+  const liveRef = useRef({ bpm, loop, drumKitId: melody.drumKitId, metronome, countInBars });
   useEffect(() => {
-    liveRef.current = { bpm, loop, drumKitId: melody.drumKitId };
-  }, [bpm, loop, melody.drumKitId]);
+    liveRef.current = { bpm, loop, drumKitId: melody.drumKitId, metronome, countInBars };
+  }, [bpm, loop, melody.drumKitId, metronome, countInBars]);
 
   const bassStyles = getGenreMelodyStyles(genreId, 'bass');
   const leadStyles = getGenreMelodyStyles(genreId, 'lead');
@@ -322,6 +326,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       bpm: liveRef.current.bpm,
       loop: liveRef.current.loop,
       drumKitId: liveRef.current.drumKitId,
+      metronome: liveRef.current.metronome,
+      countInBars: liveRef.current.countInBars,
       sections: melody.sections,
       octaves: melody.octaves,
       swing: melody.swing,

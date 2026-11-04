@@ -16,6 +16,7 @@ import {
   type ChordInfo,
 } from './utils/musicTheory';
 import { initAudio, playChord, playProgression, setPlaybackBpm, setVolume, stopPlayback } from './utils/audioEngine';
+import { setMetronomeEnabled } from './utils/metronome';
 import { setArrangementBpm, setArrangementLoop, stopArrangement } from './utils/mixer';
 import { loadPersistedState, parseProjectFile, savePersistedState, serializeProject } from './utils/persistence';
 import { chordTypeKey, decodeShare, encodeShare, expandChord } from './utils/share';
@@ -168,6 +169,8 @@ function Studio() {
   const [arrangementPlaying, setArrangementPlaying] = useState(false);
   const [arrangementStep, setArrangementStep] = useState<number | null>(null);
   const [loop, setLoop] = useState(sharedProject?.loop ?? persisted.loop ?? true);
+  const [metronome, setMetronome] = useState(persisted.metronome ?? false);
+  const [countIn, setCountIn] = useState(persisted.countInBars ?? 0);
   const [doubleTime, setDoubleTime] = useState(sharedProject?.doubleTime ?? persisted.doubleTime ?? false);
   const [chordComplexity, setChordComplexity] = useState<ChordComplexity>(sharedProject?.chordComplexity ?? persisted.chordComplexity ?? 'basic');
   const [activeTab, setActiveTab] = useState<'chords' | 'melodies'>(() => {
@@ -285,8 +288,10 @@ function Studio() {
       () => setChordsPlaying(false),
       loop,
       doubleTime,
+      metronome,
+      countIn,
     );
-  }, [progression, selectedSynth, bpm, selectedRhythm, loop, doubleTime]);
+  }, [progression, selectedSynth, bpm, selectedRhythm, loop, doubleTime, metronome, countIn]);
 
   const handleStopChords = useCallback(() => {
     stopPlayback();
@@ -324,6 +329,9 @@ function Studio() {
   useEffect(() => { setVolume(volume); }, [volume]);
   useEffect(() => { setPlaybackBpm(bpm); setArrangementBpm(bpm); }, [bpm]);
   useEffect(() => { setArrangementLoop(loop); }, [loop]);
+  useEffect(() => {
+    if (chordsPlaying || arrangementPlaying) setMetronomeEnabled(metronome, bpm);
+  }, [metronome, chordsPlaying, arrangementPlaying, bpm]);
 
   useEffect(() => {
     savePersistedState({
@@ -340,10 +348,12 @@ function Studio() {
       activeTab,
       melody,
       customProgression,
+      metronome,
+      countInBars: countIn,
     });
   }, [
     selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth,
-    bpm, volume, loop, doubleTime, chordComplexity, activeTab, melody, customProgression,
+    bpm, volume, loop, doubleTime, chordComplexity, activeTab, melody, customProgression, metronome, countIn,
   ]);
 
   const chordsPlayingRef = useRef(chordsPlaying);
@@ -612,6 +622,10 @@ function Studio() {
             onLoopChange={handleLoopChange}
             volume={volume}
             onVolumeChange={setVolumeState}
+            metronome={metronome}
+            onMetronomeChange={setMetronome}
+            countIn={countIn}
+            onCountInChange={setCountIn}
             position={position}
           />
         </div>
@@ -787,6 +801,8 @@ function Studio() {
             loop={loop}
             doubleTime={doubleTime}
             masterVolume={volume}
+            metronome={metronome}
+            countInBars={countIn}
             isPlaying={arrangementPlaying}
             onPlayingChange={handleArrangementPlayingChange}
             onStepChange={setArrangementStep}

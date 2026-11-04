@@ -9,11 +9,10 @@ A fully offline Progressive Web App (PWA) for turning an EDM idea into a playabl
 
 ---
 
-## What's new in 0.11
+## What's new in 0.12
 
-- **New name: ∞ Melodies** (the app was “EDM Studio”).
-- **Arpeggiator now fills the whole bar**: eighth-note arps play 8 notes, sixteenth-note arps 16, cycling the chord pattern instead of stopping after one pass.
-- **Playhead is driven by the audio transport clock**, so it starts with the first sound and stays in sync.
+- **Metronome and count-in**: a Click toggle with bar accents and an Off/1-bar/2-bars count-in that starts the transport exactly on “one”.
+- **∞ Melodies** name, full-bar arpeggios and a transport-synced playhead.
 - **Velocity editing**, **range width selector**, song sections, piano roll, stems, WAV/MIDI export.
 - **Drum MIDI per instrument**: Kick/Snare/Clap/Hat as separate tracks in the DAW drum zone (GM notes, channel 10).
 - **Correct chord MIDI** and **reliable track Preview**.
@@ -49,7 +48,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 
 ### Transport & export
 
-- Sticky transport: play/stop, bar counter, BPM (slider + input), loop, master volume.
+- Sticky transport: play/stop, bar counter, BPM (slider + input), loop, master volume, metronome and count-in.
 - `Cmd/Ctrl+Space`/`Space` play-stop, `Cmd/Ctrl+Z`/`Shift+Z` undo-redo, `Cmd/Ctrl+S` save, `Cmd/Ctrl+O` open.
 - **MIDI:** chord progression, full arrangement, per-track files, and separate drum tracks (Kick/Snare/Clap/Hat) on GM notes; section markers included.
 - **WAV mix** and **stems** (4-track zip) rendered offline with the same instruments, kit and effects as playback.

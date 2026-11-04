@@ -3,6 +3,24 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [0.12.0] — 2026-11-04
+
+### Added
+
+- **Metronome (“Click”) in the transport.** A toggle schedules quarter-note clicks with an accent on the first beat of the bar. It works for both the Harmony and Arrangement engines, can be switched on or off during playback, and follows the tempo.
+- **Count-in**: Off / 1 bar / 2 bars. The clicks are scheduled on the audio clock and the transport starts exactly when the count-in ends, so the first note lands on the “one”. The playhead stays at bar 1 during the count-in, then follows the transport.
+- Both settings are remembered in the session (localStorage). They are transport preferences, so they are intentionally not part of project files or share links.
+- No new UI translation: the app remains English-only, by design.
+
+### Implementation
+
+- `utils/metronome.ts`: accented membrane click, count-in scheduling, start/stop for the live transport.
+- `playArrangement` and `playProgression` accept `metronome` and `countInBars`; stopping either engine stops the clicks.
+- Transport bar shows the Click toggle and the count-in selector; both are 44 px on mobile.
+
+### Tests
+
+- 56 unit tests remain green; the count-in timing was verified in a muted browser: with a 1-bar count-in the playhead is still at 1/4 after 1 s and at 2/4 after 4 s (124 BPM), i.e. music starts after the count-in.
 ## [0.11.0] — 2026-11-04
 
 ### Changed
