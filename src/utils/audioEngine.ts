@@ -211,4 +211,3 @@ export function setPlaybackBpm(bpm: number): void {
 export function setVolume(db: number): void {
   Tone.getDestination().volume.value = db;
 }
-

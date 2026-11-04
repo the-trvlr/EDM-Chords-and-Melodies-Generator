@@ -3,6 +3,24 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [0.7.0] — 2026-11-04
+
+### Fixed
+
+- **Track Preview did not behave like an audition.** It rendered the whole song (up to 54 s with a 28-bar structure), could be silent when the track was muted or another track was soloed, and its end callback could be lost, leaving the button stuck on “Playing…”. Preview now plays one pass through the chord progression, ignores the song structure, temporarily solos the chosen track (restoring the mixer afterwards), stops deterministically, and you can switch between track previews without waiting.
+- **Chord MIDI had an empty bar between chords.** `midi-writer-js` measures `wait` after the previous note-off, so a one-bar chord plus a one-bar wait produced a two-bar grid. All notes are now written on absolute ticks: whole-note chords land on ticks 0, 512, 1024… with no gap, and the exported sequence is the same tempo as the rest of the project.
+- **Drums exported outside the DAW drum zone.** GM notes used C1/D1/E1/G#5 (MIDI 24/26/28/92) instead of kick 36, snare 38, clap 39 and hat 42. Drum MIDI now uses C2/D2/D#2/F#2 on channel 10.
+- **Arrangement MIDI now writes one track per drum instrument** (Kick, Snare, Clap, Hat) instead of one merged track, so each part can be routed to its own sampler or replaced with samples.
+
+### Added
+
+- **Section markers in arrangement MIDI**: a dedicated Sections track with `INTRO 1 (4 bars)`-style markers.
+- **Duplicate saved arrangement** (“Copy”) in the project library dialog.
+- Tests for chord tick spacing, drum track separation/channel 10 and arrangement duplication (44 unit tests).
+
+### Known limitations
+
+- Velocity editing, metronome/count-in and RU/EN localisation are the remaining 0.7 items.
 ## [0.6.1] — 2026-11-03
 
 ### Fixed

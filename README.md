@@ -9,14 +9,14 @@ A fully offline Progressive Web App (PWA) for turning an EDM idea into a playabl
 
 ---
 
-## What's new in 0.6
+## What's new in 0.7
 
-- **Song sections**: Intro/Build/Drop/Break/Outro blocks with per-section track gating, reordering and duplication.
-- **Piano-roll editing** for bass and lead, plus swing and humanize that also affect WAV, stems and MIDI.
-- **Per-track octave transposition** for chords, bass and lead.
-- **Stems export**: four separate WAVs packed into a zip.
-- **Audio fixes**: master limiter, supersaw voice budget, per-rhythm ADSR so tails do not collide, genre-accurate drum patterns.
-- **40 unit tests** wired into CI.
+- **Drum MIDI per instrument**: Kick/Snare/Clap/Hat as separate tracks in the DAW drum zone (GM notes, channel 10).
+- **Correct chord MIDI**: no empty bar between chords, absolute grid, section markers included.
+- **Reliable track Preview**: auditions one progression pass, forces the track audible, restores the mixer.
+- **Song sections**, **piano-roll editing**, **swing/humanize**, **per-track octave shift**, **stems export**.
+- **Audio fixes**: master limiter, voice budget, per-rhythm ADSR, genre-accurate drums.
+- **44 unit tests** wired into CI.
 
 See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 
@@ -48,7 +48,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 
 - Sticky transport: play/stop, bar counter, BPM (slider + input), loop, master volume.
 - `Cmd/Ctrl+Space`/`Space` play-stop, `Cmd/Ctrl+Z`/`Shift+Z` undo-redo, `Cmd/Ctrl+S` save, `Cmd/Ctrl+O` open.
-- **MIDI:** chord progression, full arrangement, and per-track files (bass, lead, drums on GM channel 10).
+- **MIDI:** chord progression, full arrangement, per-track files, and separate drum tracks (Kick/Snare/Clap/Hat) on GM notes; section markers included.
 - **WAV mix** and **stems** (4-track zip) rendered offline with the same instruments, kit and effects as playback.
 - **Project files** (`.json`) with harmony + arrangement; browser-stored arrangement snapshots.
 - **Share links** that restore the whole project, including custom chords and mixer.
@@ -143,7 +143,7 @@ src/
 | `npm run build` | Type-check and build for production |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Unit tests (Vitest) |
+| `npm test` | Unit tests (Vitest, 44) |
 | `npm run test:watch` | Unit tests in watch mode |
 
 ## Testing

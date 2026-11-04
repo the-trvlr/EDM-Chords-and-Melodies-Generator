@@ -22,7 +22,7 @@ import { exportArrangementToMidi, exportDrumsToMidi, exportMelodyToMidi } from '
 import { stopPlayback } from '../utils/audioEngine';
 import { arpeggiate, type ArpPattern, type ArpRate } from '../utils/arpeggiator';
 import { generateDrums, type DrumPattern } from '../utils/drumGenerator';
-import { deleteArrangement, getSavedArrangements, saveArrangement, type SavedArrangement } from '../utils/persistence';
+import { deleteArrangement, duplicateArrangement, getSavedArrangements, saveArrangement, type SavedArrangement } from '../utils/persistence';
 import type { MelodyState, MixerState, ProjectSnapshot, SongSection, TrackMix } from '../types';
 import { Modal } from './Modal';
 import { ChordLane, DrumGrid, EditablePianoRoll, PianoRollLane } from './lanes';
@@ -571,7 +571,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     );
   }
 
-  const busy = isPlaying || previewingTrack !== null;
+  // Arrangement playback blocks previews, but switching between previews is allowed.
+  const busy = isPlaying;
   const displayStep = isPlaying || previewingTrack !== null ? activeStep : null;
   const laneStep = displayStep !== null ? displayStep % laneSteps : null;
 
@@ -1049,6 +1050,20 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
                       className="h-11 rounded-md bg-purple-600 px-2 text-xs font-semibold text-white hover:bg-purple-500 sm:h-9"
                     >
                       Load
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const copy = duplicateArrangement(arrangement.id);
+                        if (copy) {
+                          setSavedArrangements(prev => [...prev, copy]);
+                          toast.show('Arrangement duplicated', 'success');
+                        }
+                      }}
+                      aria-label={`Duplicate ${arrangement.name}`}
+                      className="h-11 rounded-md border border-gray-700 px-2 text-xs font-semibold text-gray-200 hover:border-gray-500 sm:h-9"
+                    >
+                      Copy
                     </button>
                     <button
                       type="button"

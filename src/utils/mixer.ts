@@ -12,6 +12,7 @@ import {
   eventsForTrack,
   groupByStep,
   songSteps,
+  totalSteps,
   type DrumInstrument,
   type ScheduleEvent,
   type TrackId,
@@ -45,6 +46,7 @@ let arrTotalSteps = 0;
 let currentKitId: DrumKitId = 'acoustic';
 let previewLoop: Tone.Loop | null = null;
 let previewPlaying = false;
+let previewMixRestore: Record<TrackId, { mute: boolean; solo: boolean }> | null = null;
 
 function getDrumSynthParams(kitId: DrumKitId) {
   switch (kitId) {
@@ -287,8 +289,13 @@ export function playArrangement(opts: ArrangementOptions): void {
       if (arrLoopEnabled) {
         step = 0;
       } else {
-        Tone.getDraw().schedule(() => opts.onStop?.(), time);
-        stopArrangement();
+        arrPlaying = false;
+        arrLoop?.stop(time);
+        arrLoop?.dispose();
+        arrLoop = null;
+        opts.onStop?.();
+        Tone.getTransport().stop(time);
+        Tone.getTransport().position = 0;
       }
     }
   }, '16n');
@@ -325,11 +332,26 @@ export function setArrangementBpm(bpm: number): void {
 export function playTrackPreview(opts: TrackPreviewOptions): void {
   stopTrackPreview();
   stopArrangement();
-  const { mixer: m, steps } = prepareMixer(opts);
-  const previewEvents = new Map<number, ScheduleEvent[]>();
-  const trackEvents = eventsForTrack(buildSchedule(opts), opts.trackId);
-  const filtered = groupByStep(trackEvents);
-  for (const [step, events] of filtered) previewEvents.set(step, events);
+  const { mixer: m } = prepareMixer(opts);
+
+  // Preview is an audition: ignore the song structure, play the raw pattern
+  // for one pass through the progression, and force the chosen track audible
+  // even if the user muted it or soloed another track.
+  const previewSchedule = buildSchedule({ ...opts, sections: null });
+  const trackEvents = eventsForTrack(previewSchedule, opts.trackId);
+  const steps = totalSteps(opts.chords);
+  previewMixRestore = {
+    chord: { mute: m.channels.chord.mute, solo: m.channels.chord.solo },
+    bass: { mute: m.channels.bass.mute, solo: m.channels.bass.solo },
+    lead: { mute: m.channels.lead.mute, solo: m.channels.lead.solo },
+    drums: { mute: m.channels.drums.mute, solo: m.channels.drums.solo },
+  };
+  for (const id of TRACK_IDS) {
+    m.channels[id].mute = false;
+    m.channels[id].solo = id === opts.trackId;
+  }
+
+  const previewEvents = groupByStep(trackEvents);
 
   let step = 0;
   previewLoop = new Tone.Loop((time) => {
@@ -343,8 +365,14 @@ export function playTrackPreview(opts: TrackPreviewOptions): void {
 
     step++;
     if (step >= steps) {
-      Tone.getDraw().schedule(() => opts.onStop?.(), time);
-      stopTrackPreview();
+      previewPlaying = false;
+      previewLoop?.stop(time);
+      previewLoop?.dispose();
+      previewLoop = null;
+      restorePreviewMix();
+      opts.onStop?.();
+      Tone.getTransport().stop(time);
+      Tone.getTransport().position = 0;
     }
   }, '16n');
 
@@ -354,12 +382,23 @@ export function playTrackPreview(opts: TrackPreviewOptions): void {
   previewPlaying = true;
 }
 
+function restorePreviewMix(): void {
+  if (!previewMixRestore) return;
+  const m = ensureMixer();
+  for (const id of TRACK_IDS) {
+    m.channels[id].mute = previewMixRestore[id].mute;
+    m.channels[id].solo = previewMixRestore[id].solo;
+  }
+  previewMixRestore = null;
+}
+
 export function stopTrackPreview(): void {
   if (previewLoop) {
     previewLoop.stop();
     previewLoop.dispose();
     previewLoop = null;
   }
+  restorePreviewMix();
   Tone.getTransport().stop();
   Tone.getTransport().position = 0;
   previewPlaying = false;
@@ -517,3 +556,4 @@ export function getCurrentDrumKit(): DrumKitId {
 export function getArrangementTotalSteps(): number {
   return arrTotalSteps;
 }
+

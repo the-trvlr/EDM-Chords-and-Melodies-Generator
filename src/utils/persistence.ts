@@ -178,6 +178,12 @@ export function saveArrangement(name: string, project: ProjectSnapshot): SavedAr
   return arrangement;
 }
 
+export function duplicateArrangement(id: string): SavedArrangement | null {
+  const source = getSavedArrangements().find(arrangement => arrangement.id === id);
+  if (!source) return null;
+  return saveArrangement(`${source.name} copy`, source.data.project);
+}
+
 export function deleteArrangement(id: string): boolean {
   const arrangements = getSavedArrangements();
   const filtered = arrangements.filter(arrangement => arrangement.id !== id);
