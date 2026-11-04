@@ -7,6 +7,7 @@ import type { DrumPattern } from './drumGenerator';
 import { createSynth, getChordEnvelope, type SynthPresetId } from './audioEngine';
 import type { DrumKitId } from '../data/drumKits';
 import type { SongSection, TrackOctaves } from '../types';
+import { prepareCountIn, startMetronome, stopMetronome } from './metronome';
 import {
   buildSchedule,
   eventsForTrack,
@@ -243,6 +244,8 @@ interface ArrangementInput {
   octaves?: TrackOctaves;
   swing?: number;
   humanize?: boolean;
+  metronome?: boolean;
+  countInBars?: number;
 }
 
 export interface ArrangementOptions extends ArrangementInput {
@@ -310,13 +313,17 @@ export function playArrangement(opts: ArrangementOptions): void {
     }
   }, '16n');
 
+  const transportStart = prepareCountIn(opts.bpm, opts.countInBars ?? 0);
+  if (opts.metronome) startMetronome(opts.bpm);
+
   opts.onStep?.(0);
   arrLoop.start(0);
-  Tone.getTransport().start();
+  Tone.getTransport().start(transportStart);
   arrPlaying = true;
 }
 
 export function stopArrangement(): void {
+  stopMetronome();
   if (arrLoop) {
     arrLoop.stop();
     arrLoop.dispose();

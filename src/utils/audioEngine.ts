@@ -2,6 +2,7 @@ import * as Tone from 'tone';
 import type { ChordInfo } from './musicTheory';
 import type { RhythmPattern } from '../data/genres';
 import { PRESET_ENVELOPES, PRESET_VOICES, getChordEnvelope, type Envelope } from './audioProfiles';
+import { prepareCountIn, startMetronome, stopMetronome } from './metronome';
 export { getChordEnvelope, getVoiceBudget } from './audioProfiles';
 
 export type SynthPresetId = 'piano' | 'pad' | 'supersaw' | 'pluck' | 'dark' | 'bell' | 'organ';
@@ -130,6 +131,8 @@ export function playProgression(
   onStop?: () => void,
   loop = false,
   doubleTime = false,
+  metronome = false,
+  countInBars = 0,
 ): void {
   stopPlayback();
   Tone.getTransport().bpm.value = bpm;
@@ -182,13 +185,17 @@ export function playProgression(
     }
   }, '16n');
 
+  const transportStart = prepareCountIn(bpm, countInBars);
+  if (metronome) startMetronome(bpm);
+
   if (onChordChange) onChordChange(0);
   loopRef.start(0);
-  Tone.getTransport().start();
+  Tone.getTransport().start(transportStart);
   isPlaying = true;
 }
 
 export function stopPlayback(): void {
+  stopMetronome();
   if (loopRef) {
     loopRef.stop();
     loopRef.dispose();
