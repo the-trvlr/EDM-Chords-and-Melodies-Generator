@@ -56,6 +56,17 @@ describe('buildSchedule', () => {
     expect(snare.map(event => event.step)).toEqual([4, 20]);
   });
 
+  it('carries note velocity into schedule events', () => {
+    const bass = {
+      notes: [{ midi: 40, step: 0, duration: 2, velocity: 0.35 }],
+      type: 'bass' as const,
+      styleId: 't',
+      stepsPerChord: 16,
+    };
+    const events = buildSchedule({ chords, rhythm, bass }).filter(event => event.track === 'bass');
+    expect(events[0]).toMatchObject({ track: 'bass', velocity: 0.35 });
+  });
+
   it('clips melody notes that fall outside the progression', () => {
     const bass = {
       notes: [

@@ -55,19 +55,19 @@ interface SharePayloadV2 {
     sc?: [string, number, string][];
     sw?: number;
     hu?: boolean;
-    bn?: [number, number, number][] | null;
-    ln?: [number, number, number][] | null;
+    bn?: [number, number, number, number][] | null;
+    ln?: [number, number, number, number][] | null;
   };
 }
 
-function compactNotes(notes: { step: number; midi: number; duration: number }[] | null) {
-  return notes ? notes.map(note => [note.step, note.midi, note.duration] as [number, number, number]) : null;
+function compactNotes(notes: { step: number; midi: number; duration: number; velocity?: number }[] | null) {
+  return notes ? notes.map(note => [note.step, note.midi, note.duration, note.velocity ?? 0.8] as [number, number, number, number]) : null;
 }
 
 function expandNotes(value: unknown): unknown {
   if (!Array.isArray(value)) return undefined;
   return value.map(item => Array.isArray(item)
-    ? { step: item[0], midi: item[1], duration: item[2] }
+    ? { step: item[0], midi: item[1], duration: item[2], velocity: item[3] }
     : item);
 }
 

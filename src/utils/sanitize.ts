@@ -68,7 +68,7 @@ export function sanitizeNotes(value: unknown): MelodyNote[] | null {
     const step = clampIn(raw.step, 0, 4096, 0);
     const midi = clampIn(raw.midi, 0, 127, 60);
     const duration = clampIn(raw.duration, 1, 64, 1);
-    return [{ step, midi, duration }];
+    return [{ step, midi, duration, velocity: clampNum(raw.velocity, 0.05, 1, 0.8) }];
   });
 }
 

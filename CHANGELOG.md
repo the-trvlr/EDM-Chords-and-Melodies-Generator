@@ -3,6 +3,24 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [0.10.1] — 2026-11-04
+
+### Added
+
+- The current app version is shown as a small chip next to the “EDM Studio” title, filled from `package.json` at build time.
+
+## [0.10.0] — 2026-11-04
+
+### Added
+
+- **Velocity editing in the piano roll.** Bass and lead lanes now have a compact velocity strip under the notes: drag a bar (or focus it and use ↑/↓) to set that note's velocity from 5% to 100%. Notes are drawn with an opacity that follows their velocity.
+- Generated melodies get a musical accent pattern by default (0.9 on beats, 0.72 elsewhere).
+- Velocity is part of the project, share links (`bn`/`ln` notes now carry a fourth value), MIDI export (scaled to 1–100) and offline WAV rendering.
+
+### Tests
+
+- 51 unit tests; velocity survives share/sanitise and reaches the shared schedule events.
+- Verified in a muted browser: dragging the first bass note changed its velocity from 90% to 33% and persisted `0.33`.
 ## [0.9.0] — 2026-11-04
 
 ### Changed

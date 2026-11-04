@@ -160,19 +160,25 @@ function ensureDrumKit(m: MixerNodes, kitId: DrumKitId): DrumSynths {
   return m.drumSynths;
 }
 
-function triggerDrum(drums: DrumSynths, instrument: DrumInstrument, sixteenth: number, time: number): void {
+function triggerDrum(
+  drums: DrumSynths,
+  instrument: DrumInstrument,
+  sixteenth: number,
+  time: number,
+  velocity = 0.8,
+): void {
   switch (instrument) {
     case 'kick':
-      drums.kick.triggerAttackRelease('C1', sixteenth * 0.8, time);
+      drums.kick.triggerAttackRelease('C1', sixteenth * 0.8, time, velocity);
       break;
     case 'snare':
-      drums.snare.triggerAttackRelease(sixteenth * 0.6, time);
+      drums.snare.triggerAttackRelease(sixteenth * 0.6, time, velocity);
       break;
     case 'clap':
-      drums.clap.triggerAttackRelease(sixteenth * 0.5, time);
+      drums.clap.triggerAttackRelease(sixteenth * 0.5, time, velocity);
       break;
     case 'hat':
-      drums.hat.triggerAttackRelease('32n', sixteenth * 0.3, time);
+      drums.hat.triggerAttackRelease('32n', sixteenth * 0.3, time, velocity);
       break;
   }
 }
@@ -189,6 +195,7 @@ function playEvent(
         event.midis.map(midiNoteToToneName),
         sixteenth * event.durationSteps * GATE,
         time,
+        event.velocity,
       );
       break;
     case 'arp':
@@ -196,6 +203,7 @@ function playEvent(
         midiNoteToToneName(event.midi),
         sixteenth * event.durationSteps * GATE,
         time,
+        event.velocity,
       );
       break;
     case 'bass':
@@ -203,6 +211,7 @@ function playEvent(
         midiNoteToToneName(event.midi),
         sixteenth * event.durationSteps * GATE,
         time,
+        event.velocity,
       );
       break;
     case 'lead':
@@ -210,10 +219,11 @@ function playEvent(
         midiNoteToToneName(event.midi),
         sixteenth * event.durationSteps * GATE,
         time,
+        event.velocity,
       );
       break;
     case 'drums':
-      if (m.drumSynths) triggerDrum(m.drumSynths, event.instrument, sixteenth, time);
+      if (m.drumSynths) triggerDrum(m.drumSynths, event.instrument, sixteenth, time, event.velocity);
       break;
   }
 }
@@ -516,6 +526,7 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
             event.midis.map(midiNoteToToneName),
             secPer16 * event.durationSteps * GATE,
             time,
+            event.velocity,
           );
           break;
         case 'arp':
@@ -523,6 +534,7 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
             midiNoteToToneName(event.midi),
             secPer16 * event.durationSteps * GATE,
             time,
+            event.velocity,
           );
           break;
         case 'bass':
@@ -530,6 +542,7 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
             midiNoteToToneName(event.midi),
             secPer16 * event.durationSteps * GATE,
             time,
+            event.velocity,
           );
           break;
         case 'lead':
@@ -537,10 +550,11 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
             midiNoteToToneName(event.midi),
             secPer16 * event.durationSteps * GATE,
             time,
+            event.velocity,
           );
           break;
         case 'drums':
-          triggerDrum(drums, event.instrument, secPer16, time);
+          triggerDrum(drums, event.instrument, secPer16, time, event.velocity);
           break;
       }
     }

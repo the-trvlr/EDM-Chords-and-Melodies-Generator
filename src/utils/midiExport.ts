@@ -121,7 +121,7 @@ export function exportMelodyToMidi(
       midiToPitch(note.midi),
       note.step * TICKS_PER_16,
       note.duration * TICKS_PER_16 * 0.98,
-      80,
+      Math.round((note.velocity ?? 0.8) * 100),
     );
   }
   download([track], `edm-${label.toLowerCase()}-${keyName}-${scaleName}-${bpm}bpm.mid`);
@@ -226,7 +226,7 @@ export function exportArrangementToMidi(
       if (event.track === 'chord') {
         addEvent(chordTrack, event.midis.map(midiToPitch), tickOf(event), event.durationSteps * TICKS_PER_16 * 0.98, 80);
       } else if (event.track === 'arp') {
-        addEvent(chordTrack, midiToPitch(event.midi), tickOf(event), event.durationSteps * TICKS_PER_16 * 0.98, 80);
+        addEvent(chordTrack, midiToPitch(event.midi), tickOf(event), event.durationSteps * TICKS_PER_16 * 0.98, Math.round(event.velocity * 100));
       }
     }
     tracks.push(chordTrack);
@@ -237,7 +237,7 @@ export function exportArrangementToMidi(
     const track = newTrack(name, bpm);
     for (const event of eventsForTrack) {
       if (event.track === 'bass' || event.track === 'lead') {
-        addEvent(track, midiToPitch(event.midi), tickOf(event), event.durationSteps * TICKS_PER_16 * 0.98, 80);
+        addEvent(track, midiToPitch(event.midi), tickOf(event), event.durationSteps * TICKS_PER_16 * 0.98, Math.round(event.velocity * 100));
       }
     }
     tracks.push(track);
@@ -260,7 +260,7 @@ export function exportArrangementToMidi(
           DRUM_PITCH[instrument.id],
           tickOf(event),
           TICKS_PER_16,
-          instrument.velocity,
+          Math.round(event.velocity * 100),
           10,
         );
       }
