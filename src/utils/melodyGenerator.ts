@@ -495,6 +495,52 @@ const LEAD_PATTERN_MAP: Record<string, PatternFn> = {
 
 // ──── Main generation function ────
 
+const MAX_LEAP: Record<MelodyType, number> = { bass: 7, lead: 9 };
+
+export function melodyRangeStart(octave: number): number {
+  return (octave + 1) * 12;
+}
+
+export function melodyRangeLabel(octave: number): string {
+  return `C${octave}–B${octave}`;
+}
+
+function foldIntoRange(midi: number, start: number, end: number): number {
+  let value = midi;
+  while (value < start) value += 12;
+  while (value > end) value -= 12;
+  return value;
+}
+
+/**
+ * Keeps the generated line inside one octave and removes the large leaps that
+ * made bass/lead parts jump across the keyboard. The octave is a base register:
+ * C2 means C2..B2, C4 means C4..B4.
+ */
+export function fitMelodyToRange(
+  notes: MelodyNote[],
+  type: MelodyType,
+  rangeOctave: number,
+  scale: number[],
+): MelodyNote[] {
+  const start = melodyRangeStart(rangeOctave);
+  const end = start + 11;
+  const rangeScale = scale.filter(note => note >= start && note <= end);
+  const maxLeap = MAX_LEAP[type];
+  let prev: number | null = null;
+
+  return notes.map(note => {
+    let midi = foldIntoRange(note.midi, start, end);
+    if (prev !== null && Math.abs(midi - prev) > maxLeap) {
+      const direction = midi > prev ? 1 : -1;
+      const target = Math.max(start, Math.min(end, prev + direction * (maxLeap - 1)));
+      midi = rangeScale.length > 0 ? nearestInScale(target, rangeScale) : target;
+    }
+    prev = midi;
+    return { ...note, midi };
+  });
+}
+
 export function generateMelody(
   chords: ChordInfo[],
   type: MelodyType,
@@ -502,6 +548,7 @@ export function generateMelody(
   rootKey: string,
   scaleType: string,
   seed: number = 0,
+  rangeOctave: number = type === 'bass' ? 2 : 5,
 ): GeneratedMelody {
   const rng = new SeededRandom(seed * 31337 + styleId.length * 7 + (type === 'bass' ? 1 : 2));
   const scale = buildFullScale(rootKey, scaleType, 0, 7);
@@ -525,8 +572,10 @@ export function generateMelody(
     }
   });
 
+  const rangedNotes = fitMelodyToRange(allNotes, type, rangeOctave, scale);
+
   return {
-    notes: allNotes,
+    notes: rangedNotes,
     type,
     styleId,
     stepsPerChord,

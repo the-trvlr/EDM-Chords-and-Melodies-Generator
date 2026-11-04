@@ -109,6 +109,7 @@ describe('project files', () => {
       scale: 'minor',
       melody: {
         octaves: { chord: 9, bass: -9, lead: 1 },
+        ranges: { bass: 9, lead: -1 },
         sections: [
           { kind: 'drop', bars: 999, tracks: ['chord', 'nope'] },
           { kind: 'unknown', bars: -2, tracks: [] },
@@ -120,6 +121,7 @@ describe('project files', () => {
       },
     });
     expect(sanitized?.melody.octaves).toEqual({ chord: 2, bass: -2, lead: 1 });
+    expect(sanitized?.melody.ranges).toEqual({ bass: 4, lead: 2 });
     expect(sanitized?.melody.sections).toHaveLength(2);
     expect(sanitized?.melody.sections[0]).toMatchObject({ kind: 'drop', bars: 32, tracks: ['chord'] });
     expect(sanitized?.melody.sections[1].kind).toBe('drop');

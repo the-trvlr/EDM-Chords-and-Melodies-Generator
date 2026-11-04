@@ -72,6 +72,15 @@ export function sanitizeNotes(value: unknown): MelodyNote[] | null {
   });
 }
 
+function sanitizeRanges(value: unknown): MelodyState['ranges'] {
+  const range = Array.isArray(value) ? value : [];
+  const record = isRecord(value) ? value : {};
+  return {
+    bass: clampIn(record.bass ?? range[0], 1, 4, 2),
+    lead: clampIn(record.lead ?? range[1], 2, 7, 5),
+  };
+}
+
 function sanitizeOctaves(value: unknown): MelodyState['octaves'] {
   if (!isRecord(value)) return { chord: 0, bass: 0, lead: 0 };
   return {
@@ -164,6 +173,7 @@ export function sanitizeMelody(value: unknown): MelodyState {
     octaves: octaveTuple
       ? sanitizeOctaves({ chord: octaveTuple[0], bass: octaveTuple[1], lead: octaveTuple[2] })
       : sanitizeOctaves(value.octaves),
+    ranges: sanitizeRanges(value.ranges ?? value.rg),
     sections: sanitizeSections(value.sections ?? value.sc),
     swing: clampNum(value.swing ?? value.sw, 0, 0.6, 0),
     humanize: boolOr(value.humanize ?? value.hu, false),
