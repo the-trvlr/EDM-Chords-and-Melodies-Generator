@@ -35,7 +35,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 ### Arrangement
 
 - **Four tracks:** Chords (block or arpeggiated), Bass, Lead, Drums.
-- **Song sections** with per-section track gating and song-length playback.
+- **Song sections** with per-section track gating and song-length playback; saved arrangements can be renamed, duplicated and deleted.
 - **Piano-roll editing** for bass/lead (draw, move, resize, delete) and per-track octave shift.
 - **Swing and humanize** applied consistently to playback and all exports.
 - Per-track instrument, volume, mute and solo; solo preview per track.
@@ -143,7 +143,7 @@ src/
 | `npm run build` | Type-check and build for production |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Unit tests (Vitest, 50) |
+| `npm test` | Unit tests (Vitest, 51) |
 | `npm run test:watch` | Unit tests in watch mode |
 
 ## Testing

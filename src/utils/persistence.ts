@@ -178,6 +178,17 @@ export function saveArrangement(name: string, project: ProjectSnapshot): SavedAr
   return arrangement;
 }
 
+export function renameArrangement(id: string, name: string): SavedArrangement | null {
+  const arrangements = getSavedArrangements();
+  const index = arrangements.findIndex(arrangement => arrangement.id === id);
+  const trimmed = name.trim().slice(0, 80);
+  if (index === -1 || trimmed.length === 0) return null;
+  const updated: SavedArrangement = { ...arrangements[index], name: trimmed, updatedAt: Date.now() };
+  arrangements[index] = updated;
+  writeArrangements(arrangements);
+  return updated;
+}
+
 export function duplicateArrangement(id: string): SavedArrangement | null {
   const source = getSavedArrangements().find(arrangement => arrangement.id === id);
   if (!source) return null;
