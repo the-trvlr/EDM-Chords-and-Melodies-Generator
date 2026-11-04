@@ -9,9 +9,9 @@ A fully offline Progressive Web App (PWA) for turning an EDM idea into a playabl
 
 ---
 
-## What's new in 0.8
+## What's new in 0.9
 
-- **One-octave melody ranges** for bass (`C2–B2`) and lead (`C5–B5`) with a range selector; no more octave-wide random jumps.
+- **Melody range width selector** for bass and lead: 1, 2 or 3 octaves (bass from C2, lead from C5), independent of the octave stepper; no more random octave-wide jumps.
 - **Drum MIDI per instrument**: Kick/Snare/Clap/Hat as separate tracks in the DAW drum zone (GM notes, channel 10).
 - **Correct chord MIDI** and **reliable track Preview**.
 - **Song sections**, **piano-roll editing**, **swing/humanize**, **per-track octave shift**, **stems export**.
@@ -40,7 +40,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 - **Swing and humanize** applied consistently to playback and all exports.
 - Per-track instrument, volume, mute and solo; solo preview per track.
 - **Arpeggiator:** up/down/up-down/random, 1/8 or 1/16, 1–3 octaves, gate.
-- **Bass and lead generators** with genre-specific styles, seeded and regenerable; each line stays inside a selectable one-octave range.
+- **Bass and lead generators** with genre-specific styles, seeded and regenerable; each line stays inside a selectable 1/2/3-octave range.
 - **Drum machine:** genre-accurate one-bar patterns (two-step DnB, half-time dubstep, trap hats, four-on-the-floor house), 5 kits, click-to-edit steps.
 - Piano-roll lanes with bar ruler, grid and synced playhead.
 
@@ -143,7 +143,7 @@ src/
 | `npm run build` | Type-check and build for production |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Unit tests (Vitest, 51) |
+| `npm test` | Unit tests (Vitest, 50) |
 | `npm run test:watch` | Unit tests in watch mode |
 
 ## Testing

@@ -497,19 +497,30 @@ const LEAD_PATTERN_MAP: Record<string, PatternFn> = {
 
 const MAX_LEAP: Record<MelodyType, number> = { bass: 7, lead: 9 };
 
-export function melodyRangeStart(octave: number): number {
-  return (octave + 1) * 12;
+/** Fixed base register; the octave stepper shifts the finished line. */
+const BASE_START: Record<MelodyType, number> = { bass: 36, lead: 72 };
+export const MIN_RANGE_SPAN = 1;
+export const MAX_RANGE_SPAN = 3;
+
+export function melodySpanBounds(type: MelodyType, spanOctaves: number): { start: number; end: number } {
+  const span = Math.max(MIN_RANGE_SPAN, Math.min(MAX_RANGE_SPAN, Math.round(spanOctaves)));
+  const start = BASE_START[type];
+  return { start, end: start + span * 12 - 1 };
 }
 
-export function melodyRangeLabel(octave: number): string {
-  return `C${octave}–B${octave}`;
+export function melodySpanLabel(spanOctaves: number): string {
+  const span = Math.max(MIN_RANGE_SPAN, Math.min(MAX_RANGE_SPAN, Math.round(spanOctaves)));
+  return span === 1 ? '1 octave' : `${span} octaves`;
 }
 
-function foldIntoRange(midi: number, start: number, end: number): number {
-  let value = midi;
-  while (value < start) value += 12;
-  while (value > end) value -= 12;
-  return value;
+export function fitNotesToSpan(notes: MelodyNote[], type: MelodyType, spanOctaves: number): MelodyNote[] {
+  const { start, end } = melodySpanBounds(type, spanOctaves);
+  return notes.map(note => {
+    let midi = note.midi;
+    while (midi < start) midi += 12;
+    while (midi > end) midi -= 12;
+    return { ...note, midi };
+  });
 }
 
 /**
@@ -520,17 +531,18 @@ function foldIntoRange(midi: number, start: number, end: number): number {
 export function fitMelodyToRange(
   notes: MelodyNote[],
   type: MelodyType,
-  rangeOctave: number,
+  spanOctaves: number,
   scale: number[],
 ): MelodyNote[] {
-  const start = melodyRangeStart(rangeOctave);
-  const end = start + 11;
+  const { start, end } = melodySpanBounds(type, spanOctaves);
   const rangeScale = scale.filter(note => note >= start && note <= end);
   const maxLeap = MAX_LEAP[type];
   let prev: number | null = null;
 
   return notes.map(note => {
-    let midi = foldIntoRange(note.midi, start, end);
+    let midi = note.midi;
+    while (midi < start) midi += 12;
+    while (midi > end) midi -= 12;
     if (prev !== null && Math.abs(midi - prev) > maxLeap) {
       const direction = midi > prev ? 1 : -1;
       const target = Math.max(start, Math.min(end, prev + direction * (maxLeap - 1)));
@@ -548,7 +560,7 @@ export function generateMelody(
   rootKey: string,
   scaleType: string,
   seed: number = 0,
-  rangeOctave: number = type === 'bass' ? 2 : 5,
+  rangeSpan: number = 1,
 ): GeneratedMelody {
   const rng = new SeededRandom(seed * 31337 + styleId.length * 7 + (type === 'bass' ? 1 : 2));
   const scale = buildFullScale(rootKey, scaleType, 0, 7);
@@ -572,7 +584,7 @@ export function generateMelody(
     }
   });
 
-  const rangedNotes = fitMelodyToRange(allNotes, type, rangeOctave, scale);
+  const rangedNotes = fitMelodyToRange(allNotes, type, rangeSpan, scale);
 
   return {
     notes: rangedNotes,

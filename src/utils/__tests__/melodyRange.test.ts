@@ -3,10 +3,11 @@ import { GENRES } from '../../data/genres';
 import { getChordNotes, getChordsInKey } from '../musicTheory';
 import {
   fitMelodyToRange,
+  fitNotesToSpan,
   generateMelody,
   getGenreMelodyStyles,
-  melodyRangeLabel,
-  melodyRangeStart,
+  melodySpanBounds,
+  melodySpanLabel,
 } from '../melodyGenerator';
 
 function progressionFor(genreId: string, key: string, scale: string) {
@@ -24,64 +25,74 @@ const maxLeap = (notes: { midi: number }[]) => notes.reduce(
   0,
 );
 
-describe('melody range', () => {
-  it('labels ranges as one octave', () => {
-    expect(melodyRangeStart(2)).toBe(36);
-    expect(melodyRangeLabel(2)).toBe('C2–B2');
-    expect(melodyRangeStart(4)).toBe(60);
+const rangeOf = (notes: { midi: number }[]) => ({
+  min: Math.min(...notes.map(note => note.midi)),
+  max: Math.max(...notes.map(note => note.midi)),
+});
+
+describe('melody range span', () => {
+  it('exposes 1, 2 and 3 octave windows', () => {
+    expect(melodySpanLabel(1)).toBe('1 octave');
+    expect(melodySpanLabel(3)).toBe('3 octaves');
+    expect(melodySpanBounds('bass', 1)).toEqual({ start: 36, end: 47 });
+    expect(melodySpanBounds('bass', 2)).toEqual({ start: 36, end: 59 });
+    expect(melodySpanBounds('lead', 1)).toEqual({ start: 72, end: 83 });
+    expect(melodySpanBounds('lead', 3)).toEqual({ start: 72, end: 107 });
   });
 
-  it('keeps every bass style inside C2–B2 with small leaps', () => {
-    for (const genre of GENRES) {
-      for (const style of getGenreMelodyStyles(genre.id, 'bass')) {
-        for (let seed = 1; seed <= 12; seed++) {
-          const notes = generateMelody(progressionFor(genre.id, 'A', 'minor'), 'bass', style.id, 'A', 'minor', seed, 2).notes;
-          expect(Math.min(...notes.map(note => note.midi)), `${genre.id}/${style.id}/${seed}`).toBeGreaterThanOrEqual(36);
-          expect(Math.max(...notes.map(note => note.midi)), `${genre.id}/${style.id}/${seed}`).toBeLessThanOrEqual(47);
-          expect(maxLeap(notes), `${genre.id}/${style.id}/${seed}`).toBeLessThanOrEqual(7);
+  it('keeps every bass style inside the selected span with small leaps', () => {
+    for (const span of [1, 2, 3]) {
+      const { start, end } = melodySpanBounds('bass', span);
+      for (const genre of GENRES) {
+        for (const style of getGenreMelodyStyles(genre.id, 'bass')) {
+          for (let seed = 1; seed <= 12; seed++) {
+            const notes = generateMelody(progressionFor(genre.id, 'A', 'minor'), 'bass', style.id, 'A', 'minor', seed, span).notes;
+            const { min, max } = rangeOf(notes);
+            const label = `${genre.id}/${style.id}/${seed}/span${span}`;
+            expect(min, label).toBeGreaterThanOrEqual(start);
+            expect(max, label).toBeLessThanOrEqual(end);
+            expect(maxLeap(notes), label).toBeLessThanOrEqual(7);
+          }
         }
       }
     }
   });
 
-  it('keeps every lead style inside C4–B4 with small leaps', () => {
-    for (const genre of GENRES) {
-      for (const style of getGenreMelodyStyles(genre.id, 'lead')) {
-        for (let seed = 1; seed <= 12; seed++) {
-          const notes = generateMelody(progressionFor(genre.id, 'A', 'minor'), 'lead', style.id, 'A', 'minor', seed, 4).notes;
-          expect(Math.min(...notes.map(note => note.midi)), `${genre.id}/${style.id}/${seed}`).toBeGreaterThanOrEqual(60);
-          expect(Math.max(...notes.map(note => note.midi)), `${genre.id}/${style.id}/${seed}`).toBeLessThanOrEqual(71);
-          expect(maxLeap(notes), `${genre.id}/${style.id}/${seed}`).toBeLessThanOrEqual(9);
+  it('keeps every lead style inside the selected span with small leaps', () => {
+    for (const span of [1, 2, 3]) {
+      const { start, end } = melodySpanBounds('lead', span);
+      for (const genre of GENRES) {
+        for (const style of getGenreMelodyStyles(genre.id, 'lead')) {
+          for (let seed = 1; seed <= 12; seed++) {
+            const notes = generateMelody(progressionFor(genre.id, 'A', 'minor'), 'lead', style.id, 'A', 'minor', seed, span).notes;
+            const { min, max } = rangeOf(notes);
+            const label = `${genre.id}/${style.id}/${seed}/span${span}`;
+            expect(min, label).toBeGreaterThanOrEqual(start);
+            expect(max, label).toBeLessThanOrEqual(end);
+            expect(maxLeap(notes), label).toBeLessThanOrEqual(9);
+          }
         }
       }
     }
   });
 
-  it('uses C5–B5 as the default lead register', () => {
-    const chords = progressionFor('house', 'A', 'minor');
-    const notes = generateMelody(chords, 'lead', 'house-soulful', 'A', 'minor', 7).notes;
-    expect(Math.min(...notes.map(note => note.midi))).toBeGreaterThanOrEqual(72);
-    expect(Math.max(...notes.map(note => note.midi))).toBeLessThanOrEqual(83);
+  it('uses the extra octaves when the span grows', () => {
+    const chords = progressionFor('techno', 'A', 'minor');
+    const one = generateMelody(chords, 'bass', 'techno-hypnotic', 'A', 'minor', 3, 1).notes;
+    const two = generateMelody(chords, 'bass', 'techno-hypnotic', 'A', 'minor', 3, 2).notes;
+    expect(rangeOf(one).max).toBeLessThanOrEqual(47);
+    expect(rangeOf(two).max).toBeLessThanOrEqual(59);
+    // The octave-bounce pattern is flattened inside one octave and opens up with two.
+    expect(rangeOf(two).max).toBeGreaterThan(rangeOf(one).max);
   });
 
-  it('moves the whole line when the base range changes', () => {
-    const chords = progressionFor('house', 'A', 'minor');
-    const low = generateMelody(chords, 'bass', 'house-groove', 'A', 'minor', 1, 1).notes;
-    const high = generateMelody(chords, 'bass', 'house-groove', 'A', 'minor', 1, 3).notes;
-    expect(Math.min(...low.map(note => note.midi))).toBeGreaterThanOrEqual(24);
-    expect(Math.max(...low.map(note => note.midi))).toBeLessThanOrEqual(35);
-    expect(Math.min(...high.map(note => note.midi))).toBeGreaterThanOrEqual(48);
-    expect(Math.max(...high.map(note => note.midi))).toBeLessThanOrEqual(59);
-  });
-
-  it('folds arbitrary notes into the requested octave', () => {
-    const fitted = fitMelodyToRange(
+  it('folds arbitrary notes into the requested span', () => {
+    const folded = fitNotesToSpan(
       [{ step: 0, midi: 12, duration: 1 }, { step: 4, midi: 120, duration: 1 }],
       'lead',
-      4,
-      [60, 62, 64, 65, 67, 69, 71],
+      1,
     );
-    expect(fitted.every(note => note.midi >= 60 && note.midi <= 71)).toBe(true);
-    expect(maxLeap(fitted)).toBeLessThanOrEqual(9);
+    expect(folded.every(note => note.midi >= 72 && note.midi <= 83)).toBe(true);
+    expect(maxLeap(fitMelodyToRange(folded, 'lead', 1, [72, 74, 76, 77, 79, 81, 83]))).toBeLessThanOrEqual(9);
   });
 });
