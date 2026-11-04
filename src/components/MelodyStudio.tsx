@@ -25,7 +25,7 @@ import { generateDrums, type DrumPattern } from '../utils/drumGenerator';
 import { deleteArrangement, duplicateArrangement, getSavedArrangements, renameArrangement, saveArrangement, type SavedArrangement } from '../utils/persistence';
 import type { MelodyState, MixerState, ProjectSnapshot, SongSection, TrackMix } from '../types';
 import { Modal } from './Modal';
-import { ChordLane, DrumGrid, EditablePianoRoll, PianoRollLane } from './lanes';
+import { ChordLane, DrumGrid, EditablePianoRoll, PianoRollLane, VelocityLane } from './lanes';
 import { useToast } from '../hooks/useToast';
 import { SectionsTimeline } from './SectionsTimeline';
 import { songBars } from '../utils/schedule';
@@ -872,6 +872,13 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
             activeColor="bg-orange-300"
             label="Bass"
           />
+          <VelocityLane
+            notes={bassMelody.notes}
+            onChange={handleBassNotes}
+            totalSteps={laneSteps}
+            label="Bass"
+            color="bg-orange-400/80"
+          />
           <p className="mt-1 hidden text-[11px] text-gray-400 sm:block">
             Click a note to delete · drag to move · drag the right edge to resize
           </p>
@@ -942,6 +949,13 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
             color="bg-cyan-400/80"
             activeColor="bg-cyan-300"
             label="Lead"
+          />
+          <VelocityLane
+            notes={leadMelody.notes}
+            onChange={handleLeadNotes}
+            totalSteps={laneSteps}
+            label="Lead"
+            color="bg-cyan-400/80"
           />
           <p className="mt-1 hidden text-[11px] text-gray-400 sm:block">
             Click a note to delete · drag to move · drag the right edge to resize

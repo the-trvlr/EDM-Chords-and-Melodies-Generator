@@ -125,7 +125,7 @@ describe('share codec', () => {
         { id: 's1', kind: 'intro' as const, bars: 4, tracks: ['chord' as const] },
         { id: 's2', kind: 'drop' as const, bars: 8, tracks: ['chord' as const, 'bass' as const, 'lead' as const, 'drums' as const] },
       ],
-      bassNotes: [{ step: 0, midi: 40, duration: 2 }, { step: 4, midi: 43, duration: 1 }],
+      bassNotes: [{ step: 0, midi: 40, duration: 2, velocity: 0.35 }, { step: 4, midi: 43, duration: 1, velocity: 0.9 }],
     };
     const decoded = decodeShare(encodeShare(snapshot({ melody })));
     expect(decoded?.melody.octaves).toEqual({ chord: 1, bass: -1, lead: 2 });

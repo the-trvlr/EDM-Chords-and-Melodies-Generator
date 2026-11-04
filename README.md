@@ -9,9 +9,10 @@ A fully offline Progressive Web App (PWA) for turning an EDM idea into a playabl
 
 ---
 
-## What's new in 0.9
+## What's new in 0.10
 
-- **Melody range width selector** for bass and lead: 1, 2 or 3 octaves (bass from C2, lead from C5), independent of the octave stepper; no more random octave-wide jumps.
+- **Velocity editing**: a velocity strip under the bass/lead piano roll (drag or ↑/↓), applied to playback, WAV, stems, MIDI and share links.
+- **Melody range width selector** for bass and lead: 1, 2 or 3 octaves (bass from C2, lead from C5), independent of the octave stepper.
 - **Drum MIDI per instrument**: Kick/Snare/Clap/Hat as separate tracks in the DAW drum zone (GM notes, channel 10).
 - **Correct chord MIDI** and **reliable track Preview**.
 - **Song sections**, **piano-roll editing**, **swing/humanize**, **per-track octave shift**, **stems export**.
@@ -143,7 +144,7 @@ src/
 | `npm run build` | Type-check and build for production |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Unit tests (Vitest, 50) |
+| `npm test` | Unit tests (Vitest, 51) |
 | `npm run test:watch` | Unit tests in watch mode |
 
 ## Testing

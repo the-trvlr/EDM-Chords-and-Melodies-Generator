@@ -15,9 +15,9 @@ export type TrackId = 'chord' | 'bass' | 'lead' | 'drums';
 export type DrumInstrument = 'kick' | 'snare' | 'clap' | 'hat';
 
 export type ScheduleEvent =
-  | { track: 'chord'; step: number; durationSteps: number; midis: number[]; offset: number }
-  | { track: 'bass' | 'lead' | 'arp'; step: number; durationSteps: number; midi: number; offset: number }
-  | { track: 'drums'; step: number; durationSteps: number; instrument: DrumInstrument; offset: number };
+  | { track: 'chord'; step: number; durationSteps: number; midis: number[]; offset: number; velocity: number }
+  | { track: 'bass' | 'lead' | 'arp'; step: number; durationSteps: number; midi: number; offset: number; velocity: number }
+  | { track: 'drums'; step: number; durationSteps: number; instrument: DrumInstrument; offset: number; velocity: number };
 
 export interface ScheduleInput {
   chords: ChordInfo[];
@@ -112,6 +112,7 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
             durationSteps: note.duration,
             midi: shiftMidi(note.midi, octaves.chord),
             offset: 0,
+            velocity: note.velocity ?? 0.8,
           });
         }
       }
@@ -125,6 +126,7 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
           durationSteps: nextHitDistance(pattern, ps),
           midis: chord.midiNotes.map(midi => shiftMidi(midi, octaves.chord)),
           offset: 0,
+          velocity: 0.8,
         });
       }
     }
@@ -144,6 +146,7 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
           durationSteps: note.duration,
           midi: shiftMidi(note.midi, octave),
           offset: 0,
+          velocity: note.velocity ?? 0.8,
         });
       }
     };
@@ -162,6 +165,7 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
             durationSteps: 1,
             instrument,
             offset: 0,
+            velocity: instrument === 'kick' ? 0.95 : instrument === 'snare' ? 0.85 : instrument === 'clap' ? 0.8 : 0.6,
           });
         }
       }

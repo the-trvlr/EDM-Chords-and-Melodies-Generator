@@ -7,6 +7,8 @@ export interface MelodyNote {
   midi: number;
   step: number;
   duration: number; // in 16th note steps
+  /** Normalised velocity (0.05..1); defaults to an accent pattern. */
+  velocity?: number;
 }
 
 export interface MelodyStyle {
@@ -579,6 +581,7 @@ export function generateMelody(
           midi: note.midi,
           step: chordIdx * stepsPerChord + note.step,
           duration: Math.min(note.duration, stepsPerChord - note.step),
+          velocity: note.velocity ?? (note.step % 4 === 0 ? 0.9 : 0.72),
         });
       }
     }

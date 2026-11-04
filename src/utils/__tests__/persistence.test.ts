@@ -116,7 +116,7 @@ describe('project files', () => {
         ],
         swing: 5,
         humanize: true,
-        bassNotes: [{ step: -1, midi: 200, duration: 0 }],
+        bassNotes: [{ step: -1, midi: 200, duration: 0, velocity: 5 }],
         leadNotes: 'not-an-array',
       },
     });
@@ -127,7 +127,7 @@ describe('project files', () => {
     expect(sanitized?.melody.sections[1].kind).toBe('drop');
     expect(sanitized?.melody.swing).toBe(0.6);
     expect(sanitized?.melody.humanize).toBe(true);
-    expect(sanitized?.melody.bassNotes).toEqual([{ step: 0, midi: 127, duration: 1 }]);
+    expect(sanitized?.melody.bassNotes).toEqual([{ step: 0, midi: 127, duration: 1, velocity: 1 }]);
     expect(sanitized?.melody.leadNotes).toBeNull();
   });
 

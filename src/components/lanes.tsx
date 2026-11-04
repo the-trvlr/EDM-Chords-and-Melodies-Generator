@@ -267,7 +267,7 @@ export function EditablePianoRoll({
   const handlePointerDown = (event: React.PointerEvent) => {
     if (event.button !== 0) return;
     const { step, midi } = positionFromEvent(event.clientX, event.clientY);
-    const next = [...rendered, { step, midi, duration: 1 }].sort((a, b) => a.step - b.step);
+    const next = [...rendered, { step, midi, duration: 1, velocity: 0.8 }].sort((a, b) => a.step - b.step);
     const index = next.findIndex(note => note.step === step && note.midi === midi);
     containerRef.current?.setPointerCapture(event.pointerId);
     dragRef.current = { mode: 'move', index, startX: event.clientX, startY: event.clientY, note: { ...next[index] }, moved: false, added: true };
@@ -375,6 +375,96 @@ export function EditablePianoRoll({
           );
         })}
         {activeStep !== null && <Playhead position={activeStep / totalSteps} />}
+      </div>
+    </div>
+  );
+}
+
+interface VelocityLaneProps {
+  notes: MelodyNote[];
+  onChange: (notes: MelodyNote[]) => void;
+  totalSteps: number;
+  label: string;
+  color: string;
+}
+
+/** Compact velocity lane: drag a bar (or use arrow keys) to set note velocity. */
+export function VelocityLane({ notes, onChange, totalSteps, label, color }: VelocityLaneProps) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ index: number } | null>(null);
+  const [draft, setDraft] = useState<MelodyNote[] | null>(null);
+  const rendered = draft ?? notes;
+
+  const velocityFromY = (clientY: number): number => {
+    const rect = trackRef.current?.getBoundingClientRect();
+    if (!rect || rect.height === 0) return 0.8;
+    const value = 1 - (clientY - rect.top) / rect.height;
+    return Math.max(0.05, Math.min(1, Math.round(value * 100) / 100));
+  };
+
+  const start = (event: React.PointerEvent, index: number) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    trackRef.current?.setPointerCapture(event.pointerId);
+    dragRef.current = { index };
+    const velocity = velocityFromY(event.clientY);
+    setDraft(notes.map((note, i) => i === index ? { ...note, velocity } : { ...note }));
+  };
+
+  const move = (event: React.PointerEvent) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const velocity = velocityFromY(event.clientY);
+    setDraft(prev => prev?.map((note, i) => i === drag.index ? { ...note, velocity } : note) ?? prev);
+  };
+
+  const finish = () => {
+    if (draft) onChange(draft);
+    dragRef.current = null;
+    setDraft(null);
+  };
+
+  return (
+    <div className="mt-1 flex items-center gap-2">
+      <span className="w-10 shrink-0 text-[10px] uppercase tracking-wide text-gray-400">Vel</span>
+      <div
+        ref={trackRef}
+        className="relative h-10 min-w-0 flex-1 overflow-hidden rounded border border-gray-700/60 bg-gray-950/60"
+        role="group"
+        aria-label={`${label} velocity lane`}
+        onPointerMove={move}
+        onPointerUp={finish}
+        onPointerCancel={finish}
+      >
+        {rendered.map((note, index) => {
+          const velocity = Math.round((note.velocity ?? 0.8) * 100);
+          return (
+            <div
+              key={`${note.step}-${note.midi}-${index}`}
+              role="slider"
+              tabIndex={0}
+              aria-label={`${label} note at step ${note.step + 1} velocity`}
+              aria-valuemin={5}
+              aria-valuemax={100}
+              aria-valuenow={velocity}
+              title={`Velocity ${velocity}%`}
+              onPointerDown={event => start(event, index)}
+              onKeyDown={event => {
+                if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+                event.preventDefault();
+                const next = event.key === 'ArrowUp' ? Math.min(1, (note.velocity ?? 0.8) + 0.05) : Math.max(0.05, (note.velocity ?? 0.8) - 0.05);
+                onChange(notes.map((item, i) => i === index ? { ...item, velocity: Math.round(next * 100) / 100 } : item));
+              }}
+              className={`absolute bottom-0 w-1.5 cursor-ns-resize rounded-t ${color} hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white`}
+              style={{
+                left: `${(note.step / totalSteps) * 100}%`,
+                height: `${velocity}%`,
+                opacity: 0.55 + velocity / 200,
+              }}
+            />
+          );
+        })}
       </div>
     </div>
   );

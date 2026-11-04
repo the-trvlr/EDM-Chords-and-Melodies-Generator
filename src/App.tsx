@@ -546,7 +546,15 @@ function Studio() {
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-3 py-2 sm:px-6">
           <div className="flex flex-wrap items-center gap-2">
             <div className="min-w-0">
-              <h1 className="truncate text-base font-bold text-white sm:text-lg">EDM Studio</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="truncate text-base font-bold text-white sm:text-lg">EDM Studio</h1>
+                <span
+                  className="rounded bg-gray-800 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-gray-300"
+                  title="App version"
+                >
+                  v{__APP_VERSION__}
+                </span>
+              </div>
               <p className="truncate text-[11px] text-gray-400">
                 {selectedKey} {selectedScale} · {selectedGenre.name} · {bpm} BPM
               </p>
