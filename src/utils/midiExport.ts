@@ -178,6 +178,7 @@ export interface ArrangementMidiOptions {
   octaves?: TrackOctaves;
   swing?: number;
   humanize?: boolean;
+  timeScales?: Record<'chord' | 'bass' | 'lead' | 'drums', number>;
 }
 
 /**
@@ -210,6 +211,7 @@ export function exportArrangementToMidi(
     octaves: options.octaves,
     swing: options.swing,
     humanize: options.humanize,
+    timeScales: options.timeScales,
   });
   if (events.length === 0) return;
 

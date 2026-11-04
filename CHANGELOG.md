@@ -3,6 +3,30 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.0.0] — 2026-11-04
+
+### Studio 1.0 — one workspace instead of tabs
+
+- **Harmony and Arrangement tabs are gone.** One Studio screen now holds the progression, song sections and all four tracks. Playback can continue while you edit any of them.
+- **Project Bar** above the progression: compact `Key`, `Scale`, `Genre` and `Chords` (complexity) dropdowns. BPM, loop, click and count-in stay in the transport.
+- **Progression Strip** replaces the old Harmony panel: chord cards are always visible, `+ Add chord` opens the palette, `Template` picks the genre progression, `Preview` auditions the progression. Selected chord moves into the inspector.
+- **Inspector panel** on the right (above the tracks on mobile, collapsible): chord detail, piano keyboard, inversions, reorder/remove, voice leading and an **optional staff notation toggle**. Notation is off by default; VexFlow loads only when you turn it on.
+- **Rhythm is global** and lives on the Chords track; the duplicate global synth selector was removed (each track owns its instrument).
+- **Per-track time feel**: `½ / 1× / 2×` buttons on Chords, Bass, Lead and Drums. Half time stretches the track, double time quantises it to the 8th grid and repeats it across the second half of the arrangement. The shared schedule applies it to playback, WAV, stems and MIDI.
+- **Genre change is a full project reset**: progression, custom chords, rhythm, BPM, complexity, synth, sections, melody edits, drum kit and time feels return to genre defaults. The old project is kept for **Undo**; a toast with Undo appears, and the header Undo restores it.
+- **Undo/Redo moved to the header** (also `Cmd/Ctrl+Z` / `Shift+Cmd/Ctrl+Z`). Chord edits and melody edits are tracked; a genre reset is undoable.
+- Mobile: project bar wraps, progression scrolls horizontally, the inspector collapses to a one-line panel, tracks stay below. No horizontal page overflow.
+- Removed the tab-dependent `activeTab` state and the old Harmony components from the bundle.
+
+### Tests
+
+- 60 unit tests: schedule now covers per-track half/double time, chord-tone snapping, density and range; persistence/share cover the new time feels.
+- Muted browser checks: no tabs, project bar/progression/inspector render, add chord + Undo works, genre reset clears the project and Undo restores it, A-minor chord shows in the inspector, notation loads only when toggled, mobile has no overflow.
+
+### Notes
+
+- The app remains English-only by design; RU/EN was removed from the roadmap.
+- The Safari-only playhead delay reported earlier is still deferred.
 ## [0.13.0] — 2026-11-04
 
 ### Added

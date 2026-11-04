@@ -244,6 +244,7 @@ interface ArrangementInput {
   octaves?: TrackOctaves;
   swing?: number;
   humanize?: boolean;
+  timeScales?: Record<TrackId, number>;
   metronome?: boolean;
   countInBars?: number;
 }
@@ -453,6 +454,7 @@ export interface RenderOptions {
   octaves?: TrackOctaves;
   swing?: number;
   humanize?: boolean;
+  timeScales?: Record<TrackId, number>;
 }
 
 function audioBufferToWav(buffer: AudioBuffer): Blob {

@@ -73,6 +73,20 @@ export function sanitizeNotes(value: unknown): MelodyNote[] | null {
   });
 }
 
+function sanitizeTimeScales(value: unknown): MelodyState['timeScales'] {
+  const record = isRecord(value) ? value : {};
+  const read = (key: TrackId) => {
+    const scale = Number(record[key]);
+    return scale === 0.5 || scale === 2 ? scale : 1;
+  };
+  return {
+    chord: read('chord'),
+    bass: read('bass'),
+    lead: read('lead'),
+    drums: read('drums'),
+  };
+}
+
 function sanitizeDensity(value: unknown): MelodyDensity {
   return (MELODY_DENSITIES as string[]).includes(String(value)) ? (value as MelodyDensity) : 'medium';
 }
@@ -183,6 +197,7 @@ export function sanitizeMelody(value: unknown): MelodyState {
     leadDensity: sanitizeDensity(value.leadDensity ?? value.ld),
     bassIdea: clampIn(value.bassIdea ?? value.bi, 1, 3, 1),
     leadIdea: clampIn(value.leadIdea ?? value.li, 1, 3, 1),
+    timeScales: sanitizeTimeScales(value.timeScales ?? value.ts),
     sections: sanitizeSections(value.sections ?? value.sc),
     swing: clampNum(value.swing ?? value.sw, 0, 0.6, 0),
     humanize: boolOr(value.humanize ?? value.hu, false),

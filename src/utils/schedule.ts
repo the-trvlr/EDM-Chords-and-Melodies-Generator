@@ -31,6 +31,8 @@ export interface ScheduleInput {
   /** 0..0.6 — delays odd 16th steps. */
   swing?: number;
   humanize?: boolean;
+  /** Per-track time feel: 0.5 = half time, 1 = normal, 2 = double time. */
+  timeScales?: Record<TrackId, number>;
 }
 
 const ALL_TRACKS: TrackId[] = ['chord', 'bass', 'lead', 'drums'];
@@ -189,11 +191,44 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
     }
   }
 
+  const timeScales = input.timeScales ?? { chord: 1, bass: 1, lead: 1, drums: 1 };
+  const scaled: ScheduleEvent[] = [];
+
   for (const event of events) {
+    const trackId: TrackId = event.track === 'arp' ? 'chord' : event.track;
+    const scale = timeScales[trackId] ?? 1;
+
+    if (scale === 1) {
+      scaled.push(event);
+      continue;
+    }
+
+    const barBase = Math.floor(event.step / STEPS_PER_CHORD) * STEPS_PER_CHORD;
+    const localStep = event.step % STEPS_PER_CHORD;
+
+    if (scale === 2) {
+      // Double time within each bar: compress the pattern to the first half
+      // and repeat it in the second half, so every bar stays full.
+      const local = Math.floor(localStep / 2);
+      const durationSteps = Math.max(1, Math.round(event.durationSteps / 2));
+      scaled.push({ ...event, step: barBase + local, durationSteps });
+      if (local + 8 < STEPS_PER_CHORD) {
+        scaled.push({ ...event, step: barBase + local + 8, durationSteps });
+      }
+      continue;
+    }
+
+    // Half time within each bar: stretch the pattern to twice its step length.
+    const local = localStep * 2;
+    if (local >= STEPS_PER_CHORD) continue;
+    scaled.push({ ...event, step: barBase + local, durationSteps: event.durationSteps * 2 });
+  }
+
+  for (const event of scaled) {
     event.offset = eventOffset(event.step, event.track, swing, humanize);
   }
 
-  return events.sort((a, b) => (a.step + a.offset) - (b.step + b.offset));
+  return scaled.sort((a, b) => (a.step + a.offset) - (b.step + b.offset));
 }
 
 export function groupByStep(events: ScheduleEvent[]): Map<number, ScheduleEvent[]> {
