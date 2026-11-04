@@ -72,7 +72,8 @@ export function arpeggiate(
   const notes: MelodyNote[] = [];
   
   const stepsPerArpNote = settings.rate === 'eighth' ? 2 : 1; // 2 steps for eighth, 1 for sixteenth
-  const noteDuration = Math.max(1, Math.floor(stepsPerArpNote * settings.gate));
+  // Gate is a fraction of the step: 0.8 leaves a small gap before the next note.
+  const noteDuration = stepsPerArpNote * Math.max(0.05, Math.min(1, settings.gate));
   
   let currentStep = 0;
   
@@ -80,18 +81,24 @@ export function arpeggiate(
     const arpNotes = getArpNotes(chord, settings.octaveRange);
     const patternedNotes = applyPattern(arpNotes, settings.pattern, rng);
     
-    let noteIndex = 0;
-    for (let step = 0; step < stepsPerChord; step += stepsPerArpNote) {
-      if (noteIndex < patternedNotes.length) {
-        notes.push({
-          midi: patternedNotes[noteIndex],
-          step: currentStep + step,
-          duration: noteDuration,
-        });
-        noteIndex++;
-      }
+    if (patternedNotes.length === 0) {
+      currentStep += stepsPerChord;
+      continue;
     }
-    
+
+    let noteIndex = 0;
+    // Cycle the pattern for the whole bar, so an eighth-note arp always fills
+    // 8 steps and a sixteenth-note arp fills 16, regardless of chord size.
+    for (let step = 0; step < stepsPerChord; step += stepsPerArpNote) {
+      notes.push({
+        midi: patternedNotes[noteIndex % patternedNotes.length],
+        step: currentStep + step,
+        duration: noteDuration,
+        velocity: step % 4 === 0 ? 0.9 : 0.75,
+      });
+      noteIndex++;
+    }
+
     currentStep += stepsPerChord;
   }
   

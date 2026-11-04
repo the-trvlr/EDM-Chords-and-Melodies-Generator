@@ -3,6 +3,21 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [0.11.0] — 2026-11-04
+
+### Changed
+
+- **The project is now called ∞ Melodies** (previously “EDM Studio”). The header, landing screen, footer, page title and PWA manifest use the infinity symbol; the npm package is `infinite-melodies`.
+
+### Fixed
+
+- **Arpeggiator notes now fill the whole bar.** The generator used to place at most one pattern pass (3–5 notes) at the start of the bar and leave the rest empty. It now cycles the chord pattern: 1/8 rate = 8 notes (steps 0,2,…,14), 1/16 rate = 16 notes. Gate is applied as a fraction of the step, so there is a real gap before the next note instead of a legato overlap.
+- **Playhead no longer lags behind the audio.** It was driven by `Tone.Draw` callbacks scheduled from the loop. A requestAnimationFrame loop now reads the audio transport clock (`getTransportStep`) and updates the position only when the 16th-step changes, wrapping at the song length. The playhead starts together with the first sound and does not drift at 130 BPM.
+
+### Tests
+
+- 56 unit tests, including arpeggiator coverage: both rates fill a bar, the pattern cycles, octaves are spread, random is deterministic.
+- Browser checks stay muted (`--mute-audio`).
 ## [0.10.1] — 2026-11-04
 
 ### Added

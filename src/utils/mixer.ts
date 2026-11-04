@@ -571,3 +571,10 @@ export function getArrangementTotalSteps(): number {
   return arrTotalSteps;
 }
 
+/** Current 16th-note position from the audio transport, for a synced playhead. */
+export function getTransportStep(bpm: number): number {
+  const sixteenth = 60 / Math.max(1, bpm) / 4;
+  const seconds = Tone.getTransport().seconds;
+  return Math.max(0, Math.floor(seconds / sixteenth));
+}
+

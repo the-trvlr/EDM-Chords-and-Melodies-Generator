@@ -517,7 +517,7 @@ function Studio() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-950 px-4">
         <div className="max-w-md text-center">
-          <h1 className="text-3xl font-bold text-white sm:text-4xl">EDM Studio</h1>
+          <h1 className="text-3xl font-bold text-white sm:text-4xl">∞ Melodies</h1>
           <p className="mt-2 text-sm text-gray-300">
             Chord progressions, bass, lead and drums — generated, arranged and exported to your DAW.
           </p>
@@ -538,7 +538,9 @@ function Studio() {
   const totalBars = Math.max(1, songBars({ chords: progression, sections: melody.sections }));
   const position = chordsPlaying
     ? { bar: Math.min(activeChordIndex + 1, totalBars), totalBars }
-    : { bar: Math.floor((arrangementStep ?? 0) / 16) + 1, totalBars };
+    : arrangementPlaying
+      ? { bar: Math.floor((arrangementStep ?? 0) / 16) + 1, totalBars }
+      : { bar: 1, totalBars };
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -547,7 +549,7 @@ function Studio() {
           <div className="flex flex-wrap items-center gap-2">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="truncate text-base font-bold text-white sm:text-lg">EDM Studio</h1>
+                <h1 className="truncate text-base font-bold text-white sm:text-lg">∞ Melodies</h1>
                 <span
                   className="rounded bg-gray-800 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-gray-300"
                   title="App version"
@@ -798,7 +800,7 @@ function Studio() {
       </main>
 
       <footer className="mt-8 border-t border-gray-800 py-4 text-center text-xs text-gray-400">
-        EDM Studio · works fully offline · PWA
+        ∞ Melodies · works fully offline · PWA
       </footer>
     </div>
   );
