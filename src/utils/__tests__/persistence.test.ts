@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { getChordNotes, invertChord, keyPrefersFlats, voiceLeading } from '../musicTheory';
-import { duplicateArrangement, getSavedArrangements, loadPersistedState, parseProjectFile, sanitizeProject, saveArrangement, savePersistedState, serializeProject } from '../persistence';
+import { duplicateArrangement, getSavedArrangements, loadPersistedState, parseProjectFile, renameArrangement, sanitizeProject, saveArrangement, savePersistedState, serializeProject } from '../persistence';
 import { defaultMelodyState } from '../../types';
 
 describe('music theory helpers', () => {
@@ -179,6 +179,22 @@ describe('project files', () => {
     expect(copy?.name).toBe('Night drive copy');
     expect(getSavedArrangements()).toHaveLength(2);
     expect(getSavedArrangements()[1].data.project.key).toBe('A');
+    vi.unstubAllGlobals();
+  });
+
+  it('renames a saved arrangement and rejects empty names', () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, value); },
+      removeItem: (key: string) => { store.delete(key); },
+    });
+    const project = sanitizeProject({ key: 'A', scale: 'minor', genreId: 'house' })!;
+    const saved = saveArrangement('Demo', project);
+    const renamed = renameArrangement(saved.id, 'Night drive');
+    expect(renamed?.name).toBe('Night drive');
+    expect(getSavedArrangements()[0].name).toBe('Night drive');
+    expect(renameArrangement(saved.id, '   ')).toBeNull();
     vi.unstubAllGlobals();
   });
 });

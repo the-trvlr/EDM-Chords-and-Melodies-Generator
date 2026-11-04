@@ -3,6 +3,20 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [0.8.1] — 2026-11-04
+
+### Fixed
+
+- **Piano-roll notes can be deleted with a single click again.** Clicking empty space still draws a note; clicking an existing note without moving now removes it, while dragging moves it and dragging the right edge resizes it. Double-click deletion was removed so a click can no longer delete and re-create a note.
+- The note labels/tooltips explain the gesture (“Click a note to delete · drag to move · drag the right edge to resize”).
+
+### Added
+
+- **Rename saved arrangements** from the project library dialog (in addition to Copy/Delete).
+
+### Tests
+
+- 51 unit tests (arrangement rename included); the piano-roll gesture was verified in a muted headless browser: add 20→21, click note 21→20, drag keeps 20.
 ## [0.8.0] — 2026-11-04
 
 ### Fixed

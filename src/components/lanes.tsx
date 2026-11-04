@@ -212,6 +212,7 @@ export function EditablePianoRoll({
     startY: number;
     note: MelodyNote;
     moved: boolean;
+    added: boolean;
   } | null>(null);
   const [draft, setDraft] = useState<MelodyNote[] | null>(null);
 
@@ -241,11 +242,13 @@ export function EditablePianoRoll({
       startY: event.clientY,
       note: { ...rendered[index] },
       moved: false,
+      added: false,
     };
     setDraft(rendered.map(note => ({ ...note })));
   };
 
   const startResize = (event: React.PointerEvent, index: number) => {
+    if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
     containerRef.current?.setPointerCapture(event.pointerId);
@@ -256,6 +259,7 @@ export function EditablePianoRoll({
       startY: event.clientY,
       note: { ...rendered[index] },
       moved: false,
+      added: false,
     };
     setDraft(rendered.map(note => ({ ...note })));
   };
@@ -266,7 +270,7 @@ export function EditablePianoRoll({
     const next = [...rendered, { step, midi, duration: 1 }].sort((a, b) => a.step - b.step);
     const index = next.findIndex(note => note.step === step && note.midi === midi);
     containerRef.current?.setPointerCapture(event.pointerId);
-    dragRef.current = { mode: 'move', index, startX: event.clientX, startY: event.clientY, note: { ...next[index] }, moved: false };
+    dragRef.current = { mode: 'move', index, startX: event.clientX, startY: event.clientY, note: { ...next[index] }, moved: false, added: true };
     setDraft(next);
   };
 
@@ -298,6 +302,16 @@ export function EditablePianoRoll({
     if (!dragRef.current || !draft) {
       dragRef.current = null;
       setDraft(null);
+      return;
+    }
+    const drag = dragRef.current;
+    // A plain click (no drag) on an existing note removes it. Clicking empty
+    // space creates a note, so that gesture must not delete it again.
+    if (drag.mode === 'move' && !drag.moved && !drag.added) {
+      const next = draft.filter((_, index) => index !== drag.index).sort((a, b) => a.step - b.step);
+      dragRef.current = null;
+      setDraft(null);
+      onChange(next);
       return;
     }
     const next = [...draft]
@@ -342,8 +356,10 @@ export function EditablePianoRoll({
               key={`${note.step}-${note.midi}-${index}`}
               className={`absolute rounded-sm ${isActive ? activeColor : color}`}
               style={{ left: `${left}%`, width: `${width}%`, top: `${top}%`, height: 8 }}
-              onPointerDown={event => startMove(event, index)}
-              onDoubleClick={() => removeNote(index)}
+              onPointerDown={event => {
+                if (event.button !== 0) return;
+                startMove(event, index);
+              }}
               onContextMenu={event => {
                 event.preventDefault();
                 removeNote(index);

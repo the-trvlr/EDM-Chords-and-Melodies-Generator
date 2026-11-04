@@ -22,7 +22,7 @@ import { exportArrangementToMidi, exportDrumsToMidi, exportMelodyToMidi } from '
 import { stopPlayback } from '../utils/audioEngine';
 import { arpeggiate, type ArpPattern, type ArpRate } from '../utils/arpeggiator';
 import { generateDrums, type DrumPattern } from '../utils/drumGenerator';
-import { deleteArrangement, duplicateArrangement, getSavedArrangements, saveArrangement, type SavedArrangement } from '../utils/persistence';
+import { deleteArrangement, duplicateArrangement, getSavedArrangements, renameArrangement, saveArrangement, type SavedArrangement } from '../utils/persistence';
 import type { MelodyState, MixerState, ProjectSnapshot, SongSection, TrackMix } from '../types';
 import { Modal } from './Modal';
 import { ChordLane, DrumGrid, EditablePianoRoll, PianoRollLane } from './lanes';
@@ -233,6 +233,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const [loadDialog, setLoadDialog] = useState(false);
   const [saveName, setSaveName] = useState('');
   const [savedArrangements, setSavedArrangements] = useState<SavedArrangement[]>([]);
+  const [renameTarget, setRenameTarget] = useState<SavedArrangement | null>(null);
+  const [renameValue, setRenameValue] = useState('');
   const liveRef = useRef({ bpm, loop, drumKitId: melody.drumKitId });
   useEffect(() => {
     liveRef.current = { bpm, loop, drumKitId: melody.drumKitId };
@@ -877,6 +879,9 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
             activeColor="bg-orange-300"
             label="Bass"
           />
+          <p className="mt-1 hidden text-[11px] text-gray-400 sm:block">
+            Click a note to delete · drag to move · drag the right edge to resize
+          </p>
         </div>
       </section>
 
@@ -945,6 +950,9 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
             activeColor="bg-cyan-300"
             label="Lead"
           />
+          <p className="mt-1 hidden text-[11px] text-gray-400 sm:block">
+            Click a note to delete · drag to move · drag the right edge to resize
+          </p>
         </div>
       </section>
 
@@ -1112,6 +1120,17 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
                     </button>
                     <button
                       type="button"
+                      onClick={() => {
+                        setRenameTarget(arrangement);
+                        setRenameValue(arrangement.name);
+                      }}
+                      aria-label={`Rename ${arrangement.name}`}
+                      className="h-11 rounded-md border border-gray-700 px-2 text-xs font-semibold text-gray-200 hover:border-gray-500 sm:h-9"
+                    >
+                      Rename
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleDeleteArrangement(arrangement.id)}
                       className="h-11 rounded-md border border-rose-700/60 px-2 text-xs font-semibold text-rose-300 hover:border-rose-500 sm:h-9"
                     >
@@ -1122,6 +1141,51 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
               ))}
             </ul>
           )}
+        </Modal>
+      )}
+
+      {renameTarget && (
+        <Modal
+          title="Rename arrangement"
+          onClose={() => setRenameTarget(null)}
+          footer={(
+            <>
+              <button
+                type="button"
+                onClick={() => setRenameTarget(null)}
+                className="h-11 rounded-md border border-gray-700 px-3 text-xs font-semibold text-gray-200 hover:border-gray-500 sm:h-9"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const updated = renameArrangement(renameTarget.id, renameValue);
+                  if (!updated) {
+                    toast.show('Enter a name first', 'error');
+                    return;
+                  }
+                  setSavedArrangements(prev => prev.map(item => item.id === updated.id ? updated : item));
+                  setRenameTarget(null);
+                  toast.show('Arrangement renamed', 'success');
+                }}
+                className="h-11 rounded-md bg-purple-600 px-3 text-xs font-semibold text-white hover:bg-purple-500 sm:h-9"
+              >
+                Save name
+              </button>
+            </>
+          )}
+        >
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-gray-400">Name</span>
+            <input
+              type="text"
+              value={renameValue}
+              onChange={event => setRenameValue(event.target.value)}
+              onFocus={event => event.currentTarget.select()}
+              className="h-10 rounded-md border border-gray-700 bg-gray-950 px-3 text-sm text-white focus:border-purple-500 focus:outline-none"
+            />
+          </label>
         </Modal>
       )}
     </div>
