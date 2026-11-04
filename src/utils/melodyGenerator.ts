@@ -2,6 +2,12 @@ import type { ChordInfo } from './musicTheory';
 import { SCALE_INTERVALS, noteNameToPc } from './musicTheory';
 
 export type MelodyType = 'bass' | 'lead';
+export type MelodyDensity = 'sparse' | 'medium' | 'busy';
+
+export interface MelodyOptions {
+  density?: MelodyDensity;
+  idea?: number;
+}
 
 export interface MelodyNote {
   midi: number;
@@ -555,6 +561,96 @@ export function fitMelodyToRange(
   });
 }
 
+function snapStrongBeatsToChordTones(
+  notes: MelodyNote[],
+  chords: ChordInfo[],
+  stepsPerChord: number,
+): MelodyNote[] {
+  return notes.map(note => {
+    const localStep = note.step % stepsPerChord;
+    if (localStep % 4 !== 0) return note;
+    const chord = chords[Math.floor(note.step / stepsPerChord) % chords.length];
+    const pitchClasses = chord.midiNotes.map(midi => midi % 12);
+    if (pitchClasses.includes(note.midi % 12)) return note;
+
+    const base = note.midi - (note.midi % 12);
+    let best = note.midi;
+    let bestDistance = Infinity;
+    for (const pc of pitchClasses) {
+      for (const octave of [-1, 0, 1]) {
+        const candidate = base + pc + octave * 12;
+        const distance = Math.abs(candidate - note.midi);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = candidate;
+        }
+      }
+    }
+    return { ...note, midi: best };
+  });
+}
+
+function limitLeaps(
+  notes: MelodyNote[],
+  type: MelodyType,
+  rangeSpan: number,
+  scale: number[],
+  chords: ChordInfo[],
+  stepsPerChord: number,
+): MelodyNote[] {
+  const { start, end } = melodySpanBounds(type, rangeSpan);
+  const rangeScale = scale.filter(note => note >= start && note <= end);
+  const maxLeap = MAX_LEAP[type];
+  let prev: number | null = null;
+
+  return notes.map(note => {
+    let midi = note.midi;
+    if (prev !== null && Math.abs(midi - prev) > maxLeap) {
+      const localStep = note.step % stepsPerChord;
+      const chord = chords[Math.floor(note.step / stepsPerChord) % chords.length];
+      const chordPcs = new Set(chord.midiNotes.map(noteMidi => noteMidi % 12));
+      const chordPool = rangeScale.filter(noteMidi => chordPcs.has(noteMidi % 12));
+
+      if (localStep % 4 === 0 && chordPool.length > 0) {
+        // Strong beats snap to the chord tone closest to the previous note,
+        // which also keeps the melodic leap small.
+        midi = chordPool.reduce((best, candidate) => (
+          Math.abs(candidate - prev!) < Math.abs(best - prev!) ? candidate : best
+        ), chordPool[0]);
+      } else {
+        const direction = midi > prev ? 1 : -1;
+        const target = Math.max(start, Math.min(end, prev + direction * (maxLeap - 1)));
+        midi = rangeScale.length > 0 ? nearestInScale(target, rangeScale) : target;
+      }
+    }
+    prev = midi;
+    return { ...note, midi };
+  });
+}
+
+function applyDensity(
+  notes: MelodyNote[],
+  stepsPerChord: number,
+  density: MelodyDensity,
+): MelodyNote[] {
+  const step = density === 'sparse' ? 4 : density === 'medium' ? 2 : 1;
+  const byBar = new Map<number, MelodyNote[]>();
+  for (const note of notes) {
+    const bar = Math.floor(note.step / stepsPerChord);
+    const list = byBar.get(bar) ?? [];
+    list.push(note);
+    byBar.set(bar, list);
+  }
+
+  const kept: MelodyNote[] = [];
+  for (const barNotes of byBar.values()) {
+    let barKept = barNotes.filter((note, index) => index === 0 || (note.step % stepsPerChord) % step === 0);
+    if (barKept.length === 0) barKept = [barNotes[0]];
+    kept.push(...barKept);
+  }
+  return kept.sort((a, b) => a.step - b.step);
+}
+
 export function generateMelody(
   chords: ChordInfo[],
   type: MelodyType,
@@ -563,8 +659,10 @@ export function generateMelody(
   scaleType: string,
   seed: number = 0,
   rangeSpan: number = 1,
+  options: MelodyOptions = {},
 ): GeneratedMelody {
-  const rng = new SeededRandom(seed * 31337 + styleId.length * 7 + (type === 'bass' ? 1 : 2));
+  const ideaOffset = ((options.idea ?? 1) - 1) * 7919;
+  const rng = new SeededRandom(seed * 31337 + styleId.length * 7 + (type === 'bass' ? 1 : 2) + ideaOffset);
   const scale = buildFullScale(rootKey, scaleType, 0, 7);
 
   const patternMap = type === 'bass' ? BASS_PATTERN_MAP : LEAD_PATTERN_MAP;
@@ -587,7 +685,16 @@ export function generateMelody(
     }
   });
 
-  const rangedNotes = fitMelodyToRange(allNotes, type, rangeSpan, scale);
+  const dense = applyDensity(allNotes, stepsPerChord, options.density ?? 'medium');
+  const ranged = fitMelodyToRange(dense, type, rangeSpan, scale);
+  // Strong beats must land on chord tones; fold back into the chosen span
+  // afterwards (octave folding keeps the pitch class).
+  const snapped = fitNotesToSpan(
+    snapStrongBeatsToChordTones(ranged, chords, stepsPerChord),
+    type,
+    rangeSpan,
+  );
+  const rangedNotes = limitLeaps(snapped, type, rangeSpan, scale, chords, stepsPerChord);
 
   return {
     notes: rangedNotes,

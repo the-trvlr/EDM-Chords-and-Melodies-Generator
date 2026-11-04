@@ -4,7 +4,7 @@ import type { DrumKitId } from './data/drumKits';
 import type { DrumPattern } from './utils/drumGenerator';
 import type { SynthPresetId } from './utils/audioEngine';
 import type { TrackId } from './utils/schedule';
-import type { MelodyNote } from './utils/melodyGenerator';
+import type { MelodyDensity, MelodyNote } from './utils/melodyGenerator';
 
 export interface TrackMix {
   volume: number;
@@ -60,6 +60,11 @@ export interface MelodyState {
   octaves: TrackOctaves;
   /** Allowed range width for generated bass/lead melodies (1, 2 or 3 octaves). */
   rangeSpans: MelodyRangeSpans;
+  bassDensity: MelodyDensity;
+  leadDensity: MelodyDensity;
+  /** 1..3 quick alternatives for the same seed. */
+  bassIdea: number;
+  leadIdea: number;
   /** Song structure; empty means "loop the progression". */
   sections: SongSection[];
   /** 0..0.6, delays odd 16th steps. */
@@ -109,6 +114,10 @@ export const defaultMelodyState = (): MelodyState => ({
   mixer: emptyMixer(),
   octaves: { chord: 0, bass: 0, lead: 0 },
   rangeSpans: { bass: 1, lead: 1 },
+  bassDensity: 'medium',
+  leadDensity: 'medium',
+  bassIdea: 1,
+  leadIdea: 1,
   sections: [],
   swing: 0,
   humanize: false,

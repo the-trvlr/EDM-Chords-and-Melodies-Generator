@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { ChordInfo } from '../utils/musicTheory';
 import { SYNTH_PRESETS, type SynthPresetId } from '../utils/audioEngine';
-import { fitNotesToSpan, generateMelody, getGenreMelodyStyles, melodySpanLabel, type GeneratedMelody, type MelodyNote, type MelodyStyle } from '../utils/melodyGenerator';
+import { fitNotesToSpan, generateMelody, getGenreMelodyStyles, melodySpanLabel, type GeneratedMelody, type MelodyDensity, type MelodyNote, type MelodyStyle } from '../utils/melodyGenerator';
 import type { RhythmPattern } from '../data/genres';
 import { DRUM_KITS, type DrumKitId } from '../data/drumKits';
 import {
@@ -255,16 +255,16 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     : leadStyles[0]?.id ?? '';
 
   const generatedBass = useMemo(
-    () => generateMelody(progression, 'bass', bassStyleId, rootKey, scaleType, melody.bassSeed, melody.rangeSpans.bass),
+    () => generateMelody(progression, 'bass', bassStyleId, rootKey, scaleType, melody.bassSeed, melody.rangeSpans.bass, { density: melody.bassDensity, idea: melody.bassIdea }),
     // Melodies are pure functions of these values; memoisation keeps the
     // playhead (16 updates per bar) from regenerating them on every tick.
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
-    [progression, bassStyleId, rootKey, scaleType, melody.bassSeed, melody.rangeSpans.bass],
+    [progression, bassStyleId, rootKey, scaleType, melody.bassSeed, melody.rangeSpans.bass, melody.bassDensity, melody.bassIdea],
   );
   const generatedLead = useMemo(
-    () => generateMelody(progression, 'lead', leadStyleId, rootKey, scaleType, melody.leadSeed, melody.rangeSpans.lead),
+    () => generateMelody(progression, 'lead', leadStyleId, rootKey, scaleType, melody.leadSeed, melody.rangeSpans.lead, { density: melody.leadDensity, idea: melody.leadIdea }),
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
-    [progression, leadStyleId, rootKey, scaleType, melody.leadSeed, melody.rangeSpans.lead],
+    [progression, leadStyleId, rootKey, scaleType, melody.leadSeed, melody.rangeSpans.lead, melody.leadDensity, melody.leadIdea],
   );
   const bassMelody: GeneratedMelody = useMemo(() => (
     melody.bassNotes
@@ -465,6 +465,10 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
   const spanOptions = [1, 2, 3].map(span => (
     <option key={span} value={span}>{melodySpanLabel(span)}</option>
+  ));
+
+  const densityOptions = (['sparse', 'medium', 'busy'] as MelodyDensity[]).map(density => (
+    <option key={density} value={density}>{density[0].toUpperCase() + density.slice(1)}</option>
   ));
 
   const handleExportStems = useCallback(async () => {
@@ -898,6 +902,37 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
             label="Bass"
             color="bg-orange-400/80"
           />
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wide text-gray-400">Density</span>
+              <select
+                value={melody.bassDensity}
+                onChange={event => apply({ bassDensity: event.target.value as MelodyDensity, bassNotes: null })}
+                aria-label="Bass density"
+                className="h-9 rounded-md border border-gray-700 bg-gray-900 px-1.5 text-[11px] text-gray-200 sm:h-7"
+              >
+                {densityOptions}
+              </select>
+            </label>
+            <div className="flex items-center gap-1" role="group" aria-label="Bass idea">
+              <span className="text-[10px] uppercase tracking-wide text-gray-400">Idea</span>
+              {[1, 2, 3].map(idea => (
+                <button
+                  key={idea}
+                  type="button"
+                  onClick={() => apply({ bassIdea: idea, bassNotes: null })}
+                  aria-pressed={melody.bassIdea === idea}
+                  className={`h-9 w-7 rounded-md text-[11px] font-medium transition-colors sm:h-7 ${
+                    melody.bassIdea === idea
+                      ? 'bg-orange-500/20 text-orange-200 ring-1 ring-orange-500/60'
+                      : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                  }`}
+                >
+                  {idea}
+                </button>
+              ))}
+            </div>
+          </div>
           <p className="mt-1 hidden text-[11px] text-gray-400 sm:block">
             Click a note to delete · drag to move · drag the right edge to resize
           </p>
@@ -976,6 +1011,37 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
             label="Lead"
             color="bg-cyan-400/80"
           />
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wide text-gray-400">Density</span>
+              <select
+                value={melody.leadDensity}
+                onChange={event => apply({ leadDensity: event.target.value as MelodyDensity, leadNotes: null })}
+                aria-label="Lead density"
+                className="h-9 rounded-md border border-gray-700 bg-gray-900 px-1.5 text-[11px] text-gray-200 sm:h-7"
+              >
+                {densityOptions}
+              </select>
+            </label>
+            <div className="flex items-center gap-1" role="group" aria-label="Lead idea">
+              <span className="text-[10px] uppercase tracking-wide text-gray-400">Idea</span>
+              {[1, 2, 3].map(idea => (
+                <button
+                  key={idea}
+                  type="button"
+                  onClick={() => apply({ leadIdea: idea, leadNotes: null })}
+                  aria-pressed={melody.leadIdea === idea}
+                  className={`h-9 w-7 rounded-md text-[11px] font-medium transition-colors sm:h-7 ${
+                    melody.leadIdea === idea
+                      ? 'bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-500/60'
+                      : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                  }`}
+                >
+                  {idea}
+                </button>
+              ))}
+            </div>
+          </div>
           <p className="mt-1 hidden text-[11px] text-gray-400 sm:block">
             Click a note to delete · drag to move · drag the right edge to resize
           </p>

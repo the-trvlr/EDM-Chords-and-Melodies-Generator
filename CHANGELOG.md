@@ -3,6 +3,21 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [0.13.0] — 2026-11-04
+
+### Added
+
+- **Melody generator 2.0 controls** for bass and lead:
+  - **Density**: Sparse / Medium / Busy filters the generated line to quarter, eighth or full sixteenth resolution while keeping at least one note per bar.
+  - **Three ideas**: quick 1 / 2 / 3 alternatives for the same seed and style, without losing the current range/density.
+  - **Chord-tone snapping**: every note on a strong beat is forced to a chord tone; leap limiting then picks the chord tone closest to the previous note, so the line stays smooth.
+- Density and idea are stored in the project (`bd/ld/bi/li` in share links) and remembered across reloads.
+- The generator still respects the 1–3 octave range width and the 7/9-semitone leap limits.
+
+### Tests
+
+- 59 unit tests: strong beats are chord tones across all genres/styles/seeds, density is monotonic and never empties a bar, ideas are deterministic and distinct.
+- Muted browser: medium 20 notes → sparse 16 → busy 20; Idea 2 changes the line; mobile page has no horizontal overflow.
 ## [0.12.0] — 2026-11-04
 
 ### Added

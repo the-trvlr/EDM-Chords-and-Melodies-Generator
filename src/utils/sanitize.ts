@@ -4,7 +4,7 @@ import { isDrumPattern } from './drumGenerator';
 import { defaultMelodyState, emptyMixer, type MelodyState, type MixerState, type SongSection, type TrackMix } from '../types';
 import type { SynthPresetId } from './audioEngine';
 import type { TrackId } from './schedule';
-import type { MelodyNote } from './melodyGenerator';
+import type { MelodyDensity, MelodyNote } from './melodyGenerator';
 
 export const SYNTH_IDS: SynthPresetId[] = ['piano', 'pad', 'organ', 'supersaw', 'pluck', 'dark', 'bell'];
 export const TRACK_IDS: TrackId[] = ['chord', 'bass', 'lead', 'drums'];
@@ -13,6 +13,7 @@ export const COMPLEXITIES: ChordComplexity[] = ['basic', '7ths', '9ths', 'jazzy'
 export const DRUM_KIT_IDS: DrumKitId[] = DRUM_KITS.map(kit => kit.id);
 export const ARP_PATTERNS = ['up', 'down', 'up-down', 'random'] as const;
 export const ARP_RATES = ['eighth', 'sixteenth'] as const;
+export const MELODY_DENSITIES: MelodyDensity[] = ['sparse', 'medium', 'busy'];
 export const SECTION_KINDS = ['intro', 'build', 'drop', 'break', 'outro'] as const;
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -70,6 +71,10 @@ export function sanitizeNotes(value: unknown): MelodyNote[] | null {
     const duration = clampIn(raw.duration, 1, 64, 1);
     return [{ step, midi, duration, velocity: clampNum(raw.velocity, 0.05, 1, 0.8) }];
   });
+}
+
+function sanitizeDensity(value: unknown): MelodyDensity {
+  return (MELODY_DENSITIES as string[]).includes(String(value)) ? (value as MelodyDensity) : 'medium';
 }
 
 function sanitizeRangeSpans(value: unknown): MelodyState['rangeSpans'] {
@@ -174,6 +179,10 @@ export function sanitizeMelody(value: unknown): MelodyState {
       ? sanitizeOctaves({ chord: octaveTuple[0], bass: octaveTuple[1], lead: octaveTuple[2] })
       : sanitizeOctaves(value.octaves),
     rangeSpans: sanitizeRangeSpans(value.rangeSpans ?? value.rs),
+    bassDensity: sanitizeDensity(value.bassDensity ?? value.bd),
+    leadDensity: sanitizeDensity(value.leadDensity ?? value.ld),
+    bassIdea: clampIn(value.bassIdea ?? value.bi, 1, 3, 1),
+    leadIdea: clampIn(value.leadIdea ?? value.li, 1, 3, 1),
     sections: sanitizeSections(value.sections ?? value.sc),
     swing: clampNum(value.swing ?? value.sw, 0, 0.6, 0),
     humanize: boolOr(value.humanize ?? value.hu, false),
