@@ -52,6 +52,10 @@ interface SharePayloadV2 {
     si: { chord: string; bass: string; lead: string; drums: string };
     oc?: [number, number, number];
     rs?: [number, number];
+    bd?: string;
+    ld?: string;
+    bi?: number;
+    li?: number;
     sc?: [string, number, string][];
     sw?: number;
     hu?: boolean;
@@ -167,6 +171,10 @@ export function encodeShare(snapshot: ProjectSnapshot): string {
       si: { ...melody.synthIds },
       oc: [melody.octaves.chord, melody.octaves.bass, melody.octaves.lead],
       rs: [melody.rangeSpans.bass, melody.rangeSpans.lead],
+      bd: melody.bassDensity,
+      ld: melody.leadDensity,
+      bi: melody.bassIdea,
+      li: melody.leadIdea,
       sc: melody.sections.map(section => [section.kind, section.bars, section.tracks.join(',')]),
       sw: melody.swing,
       hu: melody.humanize,
