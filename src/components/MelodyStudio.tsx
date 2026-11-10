@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { ChordInfo } from '../utils/musicTheory';
 import { SYNTH_PRESETS, type SynthPresetId } from '../utils/audioEngine';
-import { fitNotesToSpan, generateMelody, getGenreMelodyStyles, melodySpanLabel, type GeneratedMelody, type MelodyDensity, type MelodyNote, type MelodyStyle } from '../utils/melodyGenerator';
+import { fitNotesToSpan, generateMelody, getGenreMelodyStyles, melodySpanLabel, type GeneratedMelody, type MelodyContour, type MelodyDensity, type MelodyNote, type MelodyStyle, type MelodyVariation } from '../utils/melodyGenerator';
 import type { RhythmPattern } from '../data/genres';
 import { DRUM_KITS, type DrumKitId } from '../data/drumKits';
 import {
@@ -283,16 +283,16 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     : leadStyles[0]?.id ?? '';
 
   const generatedBass = useMemo(
-    () => generateMelody(progression, 'bass', bassStyleId, rootKey, scaleType, melody.bassSeed, melody.rangeSpans.bass, { density: melody.bassDensity, idea: melody.bassIdea }),
+    () => generateMelody(progression, 'bass', bassStyleId, rootKey, scaleType, melody.bassSeed, melody.rangeSpans.bass, { density: melody.bassDensity, idea: melody.bassIdea, contour: melody.bassContour, variation: melody.bassVariation, barFilter: melody.callResponse ? 0 : undefined }),
     // Melodies are pure functions of these values; memoisation keeps the
     // playhead (16 updates per bar) from regenerating them on every tick.
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
-    [progression, bassStyleId, rootKey, scaleType, melody.bassSeed, melody.rangeSpans.bass, melody.bassDensity, melody.bassIdea],
+    [progression, bassStyleId, rootKey, scaleType, melody.bassSeed, melody.rangeSpans.bass, melody.bassDensity, melody.bassIdea, melody.bassContour, melody.bassVariation, melody.callResponse],
   );
   const generatedLead = useMemo(
-    () => generateMelody(progression, 'lead', leadStyleId, rootKey, scaleType, melody.leadSeed, melody.rangeSpans.lead, { density: melody.leadDensity, idea: melody.leadIdea }),
+    () => generateMelody(progression, 'lead', leadStyleId, rootKey, scaleType, melody.leadSeed, melody.rangeSpans.lead, { density: melody.leadDensity, idea: melody.leadIdea, contour: melody.leadContour, variation: melody.leadVariation, barFilter: melody.callResponse ? 1 : undefined }),
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
-    [progression, leadStyleId, rootKey, scaleType, melody.leadSeed, melody.rangeSpans.lead, melody.leadDensity, melody.leadIdea],
+    [progression, leadStyleId, rootKey, scaleType, melody.leadSeed, melody.rangeSpans.lead, melody.leadDensity, melody.leadIdea, melody.leadContour, melody.leadVariation, melody.callResponse],
   );
   const bassMelody: GeneratedMelody = useMemo(() => (
     melody.bassNotes
@@ -361,6 +361,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       swing: melody.swing,
       humanize: melody.humanize,
       timeScales: melody.timeScales,
+      bassGlide: melody.bassGlide,
       onStop: () => {
         setActiveStep(null);
         onStepChange?.(null);
@@ -369,7 +370,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     });
   // Restart when the sounding configuration changes (structure, octaves, groove),
   // but not when unrelated melody state (e.g. preview dialogs) changes.
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, onPlayingChange, onStepChange, onStopOtherPlayback]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, onPlayingChange, onStepChange, onStopOtherPlayback]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -453,6 +454,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       swing: melody.swing,
       humanize: melody.humanize,
       timeScales: melody.timeScales,
+      bassGlide: melody.bassGlide,
       trackId,
       onStop: () => {
         setPreviewingTrack(null);
@@ -460,7 +462,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         onStepChange?.(null);
       },
     });
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, bpm, onStepChange, onStopOtherPlayback]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, bpm, onStepChange, onStopOtherPlayback]);
 
   const handleToggleDrumNote = useCallback((instrument: keyof DrumPattern, step: number) => {
     const base = melody.customDrumPattern ?? generateDrums(genreId, melody.drumSeed);
@@ -500,6 +502,12 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const densityOptions = (['sparse', 'medium', 'busy'] as MelodyDensity[]).map(density => (
     <option key={density} value={density}>{density[0].toUpperCase() + density.slice(1)}</option>
   ));
+  const contourOptions = (['low', 'mid', 'high'] as MelodyContour[]).map(contour => (
+    <option key={contour} value={contour}>{contour[0].toUpperCase() + contour.slice(1)}</option>
+  ));
+  const variationOptions = (['off', 'repeat', 'transpose', 'invert'] as MelodyVariation[]).map(variation => (
+    <option key={variation} value={variation}>{variation[0].toUpperCase() + variation.slice(1)}</option>
+  ));
 
   const handleExportStems = useCallback(async () => {
     setRenderingStems(true);
@@ -527,6 +535,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           swing: melody.swing,
           humanize: melody.humanize,
           timeScales: melody.timeScales,
+          bassGlide: melody.bassGlide,
         });
         files[`${track}.wav`] = new Uint8Array(await blob.arrayBuffer());
       }
@@ -545,15 +554,15 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, bpm, rootKey, scaleType, masterVolume, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, bpm, rootKey, scaleType, masterVolume, toast]);
 
   const handleExportMidi = useCallback(() => {
     exportArrangementToMidi(
       progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales },
+      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide },
     );
     toast.show('Arrangement MIDI exported', 'success');
-  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, toast]);
 
   const handleExportWav = useCallback(async () => {
     setRendering(true);
@@ -575,6 +584,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         swing: melody.swing,
         humanize: melody.humanize,
         timeScales: melody.timeScales,
+        bassGlide: melody.bassGlide,
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -589,7 +599,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRendering(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, bpm, rootKey, scaleType, masterVolume, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, bpm, rootKey, scaleType, masterVolume, toast]);
 
   const handleSaveArrangement = useCallback(() => {
     const saved = saveArrangement(saveName, project);
@@ -713,6 +723,19 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           }`}
         >
           Humanize
+        </button>
+        <button
+          type="button"
+          onClick={() => apply({ callResponse: !melody.callResponse })}
+          aria-pressed={melody.callResponse}
+          title="Bass answers on even bars, lead on odd bars"
+          className={`h-11 rounded-md px-2 text-[11px] font-medium transition-colors sm:h-8 ${
+            melody.callResponse
+              ? 'bg-purple-500/20 text-purple-200 ring-1 ring-purple-500/60'
+              : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+          }`}
+        >
+          Call &amp; response
         </button>
         <span className="hidden text-[11px] text-gray-400 sm:inline">Groove applies to playback, WAV, stems and MIDI</span>
       </div>
@@ -949,6 +972,41 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
                 </button>
               ))}
             </div>
+            <label className="flex items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wide text-gray-400">Contour</span>
+              <select
+                value={melody.bassContour}
+                onChange={event => apply({ bassContour: event.target.value as MelodyContour, bassNotes: null })}
+                aria-label="Bass contour"
+                className="h-9 rounded-md border border-gray-700 bg-gray-900 px-1.5 text-[11px] text-gray-200 sm:h-7"
+              >
+                {contourOptions}
+              </select>
+            </label>
+            <label className="flex items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wide text-gray-400">Variation</span>
+              <select
+                value={melody.bassVariation}
+                onChange={event => apply({ bassVariation: event.target.value as MelodyVariation, bassNotes: null })}
+                aria-label="Bass variation"
+                className="h-9 rounded-md border border-gray-700 bg-gray-900 px-1.5 text-[11px] text-gray-200 sm:h-7"
+              >
+                {variationOptions}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={() => apply({ bassGlide: !melody.bassGlide })}
+              aria-pressed={melody.bassGlide}
+              title="Portamento bass / 808 glide"
+              className={`h-9 rounded-md px-2 text-[11px] font-medium transition-colors sm:h-7 ${
+                melody.bassGlide
+                  ? 'bg-amber-400/20 text-amber-200 ring-1 ring-amber-400/60'
+                  : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+              }`}
+            >
+              Glide
+            </button>
           </div>
           <p className="mt-1 hidden text-[11px] text-gray-400 sm:block">
             Click a note to delete · drag to move · drag the right edge to resize
@@ -1060,6 +1118,28 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
                 </button>
               ))}
             </div>
+            <label className="flex items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wide text-gray-400">Contour</span>
+              <select
+                value={melody.leadContour}
+                onChange={event => apply({ leadContour: event.target.value as MelodyContour, leadNotes: null })}
+                aria-label="Lead contour"
+                className="h-9 rounded-md border border-gray-700 bg-gray-900 px-1.5 text-[11px] text-gray-200 sm:h-7"
+              >
+                {contourOptions}
+              </select>
+            </label>
+            <label className="flex items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wide text-gray-400">Variation</span>
+              <select
+                value={melody.leadVariation}
+                onChange={event => apply({ leadVariation: event.target.value as MelodyVariation, leadNotes: null })}
+                aria-label="Lead variation"
+                className="h-9 rounded-md border border-gray-700 bg-gray-900 px-1.5 text-[11px] text-gray-200 sm:h-7"
+              >
+                {variationOptions}
+              </select>
+            </label>
           </div>
           <p className="mt-1 hidden text-[11px] text-gray-400 sm:block">
             Click a note to delete · drag to move · drag the right edge to resize

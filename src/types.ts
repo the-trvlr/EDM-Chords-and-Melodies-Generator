@@ -4,7 +4,7 @@ import type { DrumKitId } from './data/drumKits';
 import type { DrumPattern } from './utils/drumGenerator';
 import type { SynthPresetId } from './utils/audioEngine';
 import type { TrackId } from './utils/schedule';
-import type { MelodyDensity, MelodyNote } from './utils/melodyGenerator';
+import type { MelodyContour, MelodyDensity, MelodyNote, MelodyVariation } from './utils/melodyGenerator';
 
 export interface TrackMix {
   volume: number;
@@ -67,6 +67,14 @@ export interface MelodyState {
   leadIdea: number;
   /** Per-track time feel: 0.5 = half time, 1 = normal, 2 = double time. */
   timeScales: Record<TrackId, number>;
+  bassContour: MelodyContour;
+  leadContour: MelodyContour;
+  bassVariation: MelodyVariation;
+  leadVariation: MelodyVariation;
+  /** Bass and lead alternate bars. */
+  callResponse: boolean;
+  /** Portamento bass for 808-style glides. */
+  bassGlide: boolean;
   /** Song structure; empty means "loop the progression". */
   sections: SongSection[];
   /** 0..0.6, delays odd 16th steps. */
@@ -121,6 +129,12 @@ export const defaultMelodyState = (): MelodyState => ({
   bassIdea: 1,
   leadIdea: 1,
   timeScales: { chord: 1, bass: 1, lead: 1, drums: 1 },
+  bassContour: 'mid',
+  leadContour: 'mid',
+  bassVariation: 'off',
+  leadVariation: 'off',
+  callResponse: false,
+  bassGlide: false,
   sections: [],
   swing: 0,
   humanize: false,

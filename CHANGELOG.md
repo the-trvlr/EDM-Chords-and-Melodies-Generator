@@ -3,6 +3,29 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.2.0] — 2026-11-10
+
+### Generator 2.0 (1.1) — motif, contour, call-response, glide
+
+- **Motif variations** for bass and lead: `Off / Repeat / Transpose / Invert`. The first bar's rhythm becomes a motif; later bars keep that rhythm and re-pitch it to the current chord. Repeat reharmonises to chord tones, Transpose follows the root movement, Invert mirrors the motif around its first note.
+- **Contour** `Low / Mid / High` biases the line inside the selected 1–3 octave range without touching the rhythm.
+- **Call & response**: bass answers on even bars and lead on odd bars.
+- **808 Glide** for bass: a monophonic portamento synth plus legato bass durations; the same legato durations go into WAV, stems and MIDI.
+- All generator settings persist in the project and share links.
+
+### Harmony 2.0 (1.2) — suggestions, borrowed chords, key detection
+
+- **Suggest next** in the Progression Strip: three ranked candidates using root motion, voice-leading cost, common tones, scale fit and tonic/dominant pull. Each can be auditioned or added.
+- The pool includes **borrowed chords** (bVI, bVII, iv in major) and **secondary dominants** (V/ii, V/iii, V/IV, V/V, V/vi), in addition to diatonic chords.
+- **Detect** key and scale from the current progression; the result is applied to the project and shown with confidence.
+- **Pin** a chord in the Inspector to keep its voicing when Voice lead is applied.
+- Suggestion/detection logic lives in `src/utils/harmony.ts` (pure, deterministic, tested).
+
+### Verification
+
+- 83 unit tests (12 harmony + generator matrix + inversion/glide tests), lint/tsc/build clean.
+- Muted browser: contour/variation/glide/call-response controls render; 3 suggestions; adding one grows the progression; Detect reports A minor at 79%; bass plays even bars and lead odd bars; Pin toggles; mobile page has no horizontal overflow.
+
 ## [1.0.2] — 2026-11-10
 
 ### Fixed

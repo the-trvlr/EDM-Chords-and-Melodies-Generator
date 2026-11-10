@@ -9,8 +9,10 @@ A fully offline Progressive Web App (PWA) for turning an EDM idea into a playabl
 
 ---
 
-## What's new in 1.0
+## What's new in 1.2
 
+- **Generator 2.0:** motif variations (repeat/transpose/invert), contour, call & response, 808 glide.
+- **Harmony 2.0:** suggest next (diatonic/borrowed/secondary), key detection, pin a chord.
 - **Chord changes re-pitch the generated bass/lead without changing their rhythm.**
 - **Inversions** switch between root/1st/2nd cleanly; Root restores the original voicing.
 - **One Studio, no tabs**: progression, sections and tracks share a single screen. Project Bar, Progression Strip and an Inspector panel replace the old Harmony/Arrangement split.
@@ -30,6 +32,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 - 5 curated progression templates per genre, with genre defaults for BPM, scale, rhythm and synth.
 - **All 12 keys and 9 scales/modes** (major, minor, Dorian, Phrygian, Lydian, Mixolydian, Locrian, harmonic/melodic minor), spelled conventionally (flats for flat keys).
 - **4 chord complexity levels:** simple triads, 7ths, 9ths, jazzy voicings.
+- **Harmony 2.0:** next-chord suggestions (diatonic, borrowed, secondary dominants), key detection and pinned voicings.
 - **Chord editing:** add via the progression strip, reorder/remove in the inspector, inversions and auto voice-leading, undo/redo in the header.
 - **Visual feedback:** active chord highlighting, piano keyboard, optional VexFlow staff notation in the inspector.
 - Chord edits **transpose with the key**. Changing genre performs a full project reset, undoable from the toast or the header.
@@ -42,7 +45,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 - **Swing and humanize** applied consistently to playback and all exports.
 - Per-track instrument, volume, mute, solo and time feel (`½ / 1× / 2×`); solo preview per track.
 - **Arpeggiator:** up/down/up-down/random, 1/8 or 1/16, 1–3 octaves, gate.
-- **Bass and lead generators** with genre-specific styles, seeded and regenerable; density (sparse/medium/busy), three ideas, chord-tone snapping and a selectable 1/2/3-octave range.
+- **Bass and lead generators** with genre-specific styles, seeded and regenerable; density, three ideas, contour, motif variations, call & response, 808 glide, chord-tone snapping and a selectable 1/2/3-octave range.
 - **Drum machine:** genre-accurate one-bar patterns (two-step DnB, half-time dubstep, trap hats, four-on-the-floor house), 5 kits, click-to-edit steps.
 - Piano-roll lanes with bar ruler, grid and synced playhead.
 
@@ -145,7 +148,7 @@ src/
 | `npm run build` | Type-check and build for production |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Unit tests (Vitest, 67) |
+| `npm test` | Unit tests (Vitest, 83) |
 | `npm run test:watch` | Unit tests in watch mode |
 
 ## Testing

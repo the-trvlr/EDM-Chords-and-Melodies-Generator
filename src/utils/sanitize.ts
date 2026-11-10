@@ -4,7 +4,7 @@ import { isDrumPattern } from './drumGenerator';
 import { defaultMelodyState, emptyMixer, type MelodyState, type MixerState, type SongSection, type TrackMix } from '../types';
 import type { SynthPresetId } from './audioEngine';
 import type { TrackId } from './schedule';
-import type { MelodyDensity, MelodyNote } from './melodyGenerator';
+import type { MelodyContour, MelodyDensity, MelodyNote, MelodyVariation } from './melodyGenerator';
 
 export const SYNTH_IDS: SynthPresetId[] = ['piano', 'pad', 'organ', 'supersaw', 'pluck', 'dark', 'bell'];
 export const TRACK_IDS: TrackId[] = ['chord', 'bass', 'lead', 'drums'];
@@ -14,6 +14,8 @@ export const DRUM_KIT_IDS: DrumKitId[] = DRUM_KITS.map(kit => kit.id);
 export const ARP_PATTERNS = ['up', 'down', 'up-down', 'random'] as const;
 export const ARP_RATES = ['eighth', 'sixteenth'] as const;
 export const MELODY_DENSITIES: MelodyDensity[] = ['sparse', 'medium', 'busy'];
+export const MELODY_CONTOURS: MelodyContour[] = ['low', 'mid', 'high'];
+export const MELODY_VARIATIONS: MelodyVariation[] = ['off', 'repeat', 'transpose', 'invert'];
 export const SECTION_KINDS = ['intro', 'build', 'drop', 'break', 'outro'] as const;
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -85,6 +87,14 @@ function sanitizeTimeScales(value: unknown): MelodyState['timeScales'] {
     lead: read('lead'),
     drums: read('drums'),
   };
+}
+
+function sanitizeContour(value: unknown): MelodyContour {
+  return (MELODY_CONTOURS as string[]).includes(String(value)) ? (value as MelodyContour) : 'mid';
+}
+
+function sanitizeVariation(value: unknown): MelodyVariation {
+  return (MELODY_VARIATIONS as string[]).includes(String(value)) ? (value as MelodyVariation) : 'off';
 }
 
 function sanitizeDensity(value: unknown): MelodyDensity {
@@ -198,6 +208,12 @@ export function sanitizeMelody(value: unknown): MelodyState {
     bassIdea: clampIn(value.bassIdea ?? value.bi, 1, 3, 1),
     leadIdea: clampIn(value.leadIdea ?? value.li, 1, 3, 1),
     timeScales: sanitizeTimeScales(value.timeScales ?? value.ts),
+    bassContour: sanitizeContour(value.bassContour ?? value.bc),
+    leadContour: sanitizeContour(value.leadContour ?? value.lc),
+    bassVariation: sanitizeVariation(value.bassVariation ?? value.bv),
+    leadVariation: sanitizeVariation(value.leadVariation ?? value.lv),
+    callResponse: value.callResponse === true || value.cr === true,
+    bassGlide: value.bassGlide === true || value.bg === true,
     sections: sanitizeSections(value.sections ?? value.sc),
     swing: clampNum(value.swing ?? value.sw, 0, 0.6, 0),
     humanize: boolOr(value.humanize ?? value.hu, false),

@@ -77,6 +77,22 @@ describe('buildSchedule', () => {
     expect(eventsForTrack(mixed, 'bass')[0].durationSteps).toBe(8);
   });
 
+  it('extends bass notes into the next onset when glide is enabled', () => {
+    const bass = {
+      notes: [
+        { midi: 40, step: 0, duration: 2, velocity: 0.8 },
+        { midi: 43, step: 8, duration: 2, velocity: 0.8 },
+      ],
+      type: 'bass' as const,
+      styleId: 't',
+      stepsPerChord: 16,
+    };
+    const events = buildSchedule({ chords, rhythm, bass, bassGlide: true });
+    const bassEvents = eventsForTrack(events, 'bass');
+    expect(bassEvents[0].durationSteps).toBe(9);
+    expect(bassEvents[1].durationSteps).toBe(2);
+  });
+
   it('carries note velocity into schedule events', () => {
     const bass = {
       notes: [{ midi: 40, step: 0, duration: 2, velocity: 0.35 }],
