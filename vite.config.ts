@@ -44,6 +44,16 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            urlPattern: /\/samples\/.*\.mp3$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'instrument-samples',
+              expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+        ],
       },
     }),
   ],

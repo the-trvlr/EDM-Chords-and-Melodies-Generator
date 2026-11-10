@@ -22,6 +22,7 @@ import { loadPersistedState, parseProjectFile, savePersistedState, serializeProj
 import { chordTypeKey, decodeShare, encodeShare, expandChord } from './utils/share';
 import { exportProgressionToMidi } from './utils/midiExport';
 import { detectKey, suggestNextChords, type HarmonySuggestion } from './utils/harmony';
+import { preloadTrackSamplers } from './utils/sampleLibrary';
 import { songBars } from './utils/schedule';
 import { defaultMelodyState, type MelodyState, type ProjectSnapshot } from './types';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -102,6 +103,7 @@ function downloadText(filename: string, text: string): void {
 function Studio() {
   const toast = useToast();
   const [audioReady, setAudioReady] = useState(false);
+  const [loadingInstruments, setLoadingInstruments] = useState(false);
   const [selectedKey, setSelectedKey] = useState(initialKey);
   const [selectedScale, setSelectedScale] = useState(initialScale);
   const [selectedGenre, setSelectedGenre] = useState<Genre>(initialGenre);
@@ -289,13 +291,30 @@ function Studio() {
   }, [chordsPlaying, arrangementPlaying, handleStopChords]);
 
   const handleInitAudio = useCallback(async () => {
+    setLoadingInstruments(true);
     try {
       await initAudio();
+      await preloadTrackSamplers([
+        ['chord', melody.synthIds.chord],
+        ['bass', melody.synthIds.bass],
+        ['lead', melody.synthIds.lead],
+      ]);
       setAudioReady(true);
     } catch {
       toast.show('Audio could not start. Check your browser sound permissions.', 'error');
+    } finally {
+      setLoadingInstruments(false);
     }
-  }, [toast]);
+  }, [toast, melody.synthIds]);
+
+  useEffect(() => {
+    if (!audioReady) return;
+    void preloadTrackSamplers([
+      ['chord', melody.synthIds.chord],
+      ['bass', melody.synthIds.bass],
+      ['lead', melody.synthIds.lead],
+    ]);
+  }, [audioReady, melody.synthIds, melody.soundVariant]);
 
   useEffect(() => { setVolume(volume); }, [volume]);
   useEffect(() => { setPlaybackBpm(bpm); setArrangementBpm(bpm); }, [bpm]);
@@ -574,9 +593,10 @@ function Studio() {
           <button
             type="button"
             onClick={handleInitAudio}
-            className="mt-8 min-h-12 rounded-xl bg-purple-600 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-purple-500/30 transition-colors hover:bg-purple-500"
+            disabled={loadingInstruments}
+            className="mt-8 min-h-12 rounded-xl bg-purple-600 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-purple-500/30 transition-colors hover:bg-purple-500 disabled:cursor-wait disabled:opacity-60"
           >
-            Start making music
+            {loadingInstruments ? 'Loading instruments…' : 'Start making music'}
           </button>
           <p className="mt-4 text-xs text-gray-400">Click once to enable the audio engine · works offline</p>
         </div>
@@ -691,6 +711,8 @@ function Studio() {
           selectedScale={selectedScale}
           selectedGenre={selectedGenre}
           chordComplexity={chordComplexity}
+          soundVariant={melody.soundVariant}
+          onSoundVariantChange={variant => setMelody(previous => ({ ...previous, soundVariant: variant }))}
           onKeyChange={handleKeyChange}
           onScaleChange={handleScaleChange}
           onGenreChange={handleGenreChange}

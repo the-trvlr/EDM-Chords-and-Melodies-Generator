@@ -5,6 +5,7 @@ import { defaultMelodyState, emptyMixer, type MelodyState, type MixerState, type
 import type { SynthPresetId } from './audioEngine';
 import type { TrackId } from './schedule';
 import type { MelodyContour, MelodyDensity, MelodyNote, MelodyVariation } from './melodyGenerator';
+import type { SoundVariant } from './sampleLibrary';
 
 export const SYNTH_IDS: SynthPresetId[] = ['piano', 'pad', 'organ', 'supersaw', 'pluck', 'dark', 'bell'];
 export const TRACK_IDS: TrackId[] = ['chord', 'bass', 'lead', 'drums'];
@@ -87,6 +88,10 @@ function sanitizeTimeScales(value: unknown): MelodyState['timeScales'] {
     lead: read('lead'),
     drums: read('drums'),
   };
+}
+
+function sanitizeSoundVariant(value: unknown): SoundVariant {
+  return value === 'acoustic' ? 'acoustic' : 'edm';
 }
 
 function sanitizeContour(value: unknown): MelodyContour {
@@ -214,6 +219,7 @@ export function sanitizeMelody(value: unknown): MelodyState {
     leadVariation: sanitizeVariation(value.leadVariation ?? value.lv),
     callResponse: value.callResponse === true || value.cr === true,
     bassGlide: value.bassGlide === true || value.bg === true,
+    soundVariant: sanitizeSoundVariant(value.soundVariant ?? value.sv),
     sections: sanitizeSections(value.sections ?? value.sc),
     swing: clampNum(value.swing ?? value.sw, 0, 0.6, 0),
     humanize: boolOr(value.humanize ?? value.hu, false),

@@ -8,6 +8,7 @@ import { createSynth, getChordEnvelope, type SynthPresetId } from './audioEngine
 import type { DrumKitId } from '../data/drumKits';
 import type { SongSection, TrackOctaves } from '../types';
 import { prepareCountIn, startMetronome, stopMetronome } from './metronome';
+import { getTrackSampler, type SoundVariant } from './sampleLibrary';
 import {
   buildSchedule,
   eventsForTrack,
@@ -31,7 +32,7 @@ interface DrumSynths {
   hat: Tone.MetalSynth;
 }
 
-type MelodicSynth = Tone.PolySynth | Tone.MonoSynth;
+type MelodicSynth = Tone.PolySynth | Tone.MonoSynth | Tone.Sampler;
 
 interface MixerNodes {
   reverb: Tone.Freeverb;
@@ -144,7 +145,8 @@ function disposeMelodicSynths(m: MixerNodes): void {
     const synth = m.synths[id];
     if (synth) {
       synth.disconnect();
-      synth.dispose();
+      // Shared samplers stay loaded for the next playback; synths are disposable.
+      if (!(synth instanceof Tone.Sampler)) synth.dispose();
       m.synths[id] = null;
     }
   }
@@ -268,6 +270,7 @@ interface ArrangementInput {
   humanize?: boolean;
   timeScales?: Record<TrackId, number>;
   bassGlide?: boolean;
+  soundVariant?: SoundVariant;
   metronome?: boolean;
   countInBars?: number;
 }
@@ -290,8 +293,12 @@ function prepareMixer(input: ArrangementInput): { mixer: MixerNodes; byStep: Map
   if (typeof input.masterVolume === 'number') Tone.getDestination().volume.value = input.masterVolume;
 
   disposeMelodicSynths(m);
+  m.reverb.wet.value = input.soundVariant === 'acoustic' ? 0.32 : 0.22;
   for (const id of ['chord', 'bass', 'lead'] as const) {
-    const synth = createTrackSynth(
+    const sample = id === 'bass' && input.bassGlide === true
+      ? null
+      : getTrackSampler(id, input.synthIds[id], input.soundVariant ?? 'edm');
+    const synth = sample ?? createTrackSynth(
       input.synthIds[id],
       id === 'chord' ? getChordEnvelope(input.rhythm.name, input.bpm, input.rhythm.pattern) : undefined,
       id === 'bass' && input.bassGlide === true,
@@ -481,6 +488,7 @@ export interface RenderOptions {
   humanize?: boolean;
   timeScales?: Record<TrackId, number>;
   bassGlide?: boolean;
+  soundVariant?: SoundVariant;
 }
 
 function audioBufferToWav(buffer: AudioBuffer): Blob {

@@ -362,6 +362,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       humanize: melody.humanize,
       timeScales: melody.timeScales,
       bassGlide: melody.bassGlide,
+      soundVariant: melody.soundVariant,
       onStop: () => {
         setActiveStep(null);
         onStepChange?.(null);
@@ -370,7 +371,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     });
   // Restart when the sounding configuration changes (structure, octaves, groove),
   // but not when unrelated melody state (e.g. preview dialogs) changes.
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, onPlayingChange, onStepChange, onStopOtherPlayback]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, onPlayingChange, onStepChange, onStopOtherPlayback]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -455,6 +456,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       humanize: melody.humanize,
       timeScales: melody.timeScales,
       bassGlide: melody.bassGlide,
+      soundVariant: melody.soundVariant,
       trackId,
       onStop: () => {
         setPreviewingTrack(null);
@@ -462,7 +464,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         onStepChange?.(null);
       },
     });
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, bpm, onStepChange, onStopOtherPlayback]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, bpm, onStepChange, onStopOtherPlayback]);
 
   const handleToggleDrumNote = useCallback((instrument: keyof DrumPattern, step: number) => {
     const base = melody.customDrumPattern ?? generateDrums(genreId, melody.drumSeed);
@@ -536,6 +538,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           humanize: melody.humanize,
           timeScales: melody.timeScales,
           bassGlide: melody.bassGlide,
+          soundVariant: melody.soundVariant,
         });
         files[`${track}.wav`] = new Uint8Array(await blob.arrayBuffer());
       }
@@ -554,7 +557,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, bpm, rootKey, scaleType, masterVolume, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, toast]);
 
   const handleExportMidi = useCallback(() => {
     exportArrangementToMidi(
@@ -562,7 +565,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide },
     );
     toast.show('Arrangement MIDI exported', 'success');
-  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, toast]);
 
   const handleExportWav = useCallback(async () => {
     setRendering(true);
@@ -585,6 +588,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         humanize: melody.humanize,
         timeScales: melody.timeScales,
         bassGlide: melody.bassGlide,
+        soundVariant: melody.soundVariant,
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -599,7 +603,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRendering(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, bpm, rootKey, scaleType, masterVolume, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, toast]);
 
   const handleSaveArrangement = useCallback(() => {
     const saved = saveArrangement(saveName, project);

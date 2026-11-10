@@ -5,6 +5,7 @@ import type { DrumPattern } from './utils/drumGenerator';
 import type { SynthPresetId } from './utils/audioEngine';
 import type { TrackId } from './utils/schedule';
 import type { MelodyContour, MelodyDensity, MelodyNote, MelodyVariation } from './utils/melodyGenerator';
+import type { SoundVariant } from './utils/sampleLibrary';
 
 export interface TrackMix {
   volume: number;
@@ -75,6 +76,8 @@ export interface MelodyState {
   callResponse: boolean;
   /** Portamento bass for 808-style glides. */
   bassGlide: boolean;
+  /** Sound character: sampled/acoustic or electronic. */
+  soundVariant: SoundVariant;
   /** Song structure; empty means "loop the progression". */
   sections: SongSection[];
   /** 0..0.6, delays odd 16th steps. */
@@ -135,6 +138,7 @@ export const defaultMelodyState = (): MelodyState => ({
   leadVariation: 'off',
   callResponse: false,
   bassGlide: false,
+  soundVariant: 'edm',
   sections: [],
   swing: 0,
   humanize: false,
