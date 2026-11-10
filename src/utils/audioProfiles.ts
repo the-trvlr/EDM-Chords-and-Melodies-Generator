@@ -12,6 +12,15 @@ export const PRESET_ENVELOPES: Record<SynthPresetId, Envelope> = {
   pluck: { attack: 0.001, decay: 0.2, sustain: 0.1, release: 0.3 },
   dark: { attack: 0.08, decay: 0.35, sustain: 0.45, release: 0.7 },
   bell: { attack: 0.002, decay: 0.5, sustain: 0.2, release: 1.2 },
+  strings: { attack: 0.25, decay: 0.4, sustain: 0.7, release: 1.8 },
+  violin: { attack: 0.15, decay: 0.3, sustain: 0.7, release: 1.2 },
+  flute: { attack: 0.05, decay: 0.2, sustain: 0.75, release: 0.8 },
+  upright: { attack: 0.01, decay: 0.2, sustain: 0.35, release: 0.5 },
+  sub: { attack: 0.005, decay: 0.3, sustain: 0.8, release: 0.3 },
+  reese: { attack: 0.02, decay: 0.2, sustain: 0.7, release: 0.4 },
+  acid: { attack: 0.005, decay: 0.15, sustain: 0.3, release: 0.2 },
+  bass808: { attack: 0.005, decay: 0.8, sustain: 0.5, release: 0.6 },
+  ebass: { attack: 0.005, decay: 0.25, sustain: 0.5, release: 0.5 },
 };
 
 /** Maximum simultaneous voices per preset. Dense 16th patterns need headroom
@@ -25,6 +34,15 @@ export const PRESET_VOICES: Record<SynthPresetId, number> = {
   pluck: 6,
   dark: 10,
   bell: 8,
+  strings: 12,
+  violin: 8,
+  flute: 6,
+  upright: 6,
+  sub: 4,
+  reese: 8,
+  acid: 6,
+  bass808: 4,
+  ebass: 6,
 };
 
 export function getVoiceBudget(presetId: SynthPresetId): number {

@@ -2,32 +2,40 @@ import * as Tone from 'tone';
 import type { SynthPresetId } from './audioEngine';
 import type { TrackId } from './schedule';
 
-type SampleInstrumentId = 'piano' | 'organ' | 'guitar' | 'bass' | 'harmonium' | 'cello' | 'xylophone';
+type SampleInstrumentId = 'piano' | 'organ' | 'guitar' | 'bass' | 'harmonium' | 'cello' | 'xylophone' | 'violin' | 'flute' | 'contrabass';
 export type SoundVariant = 'acoustic' | 'edm';
 
-const SAMPLE_SETS: Record<SampleInstrumentId, { folder: string; notes: string[] }> = {
-  piano: { folder: 'piano', notes: ['C2', 'C3', 'C4', 'C5', 'C6', 'C7'] },
-  organ: { folder: 'organ', notes: ['C2', 'C3', 'C4', 'C5', 'C6'] },
-  guitar: { folder: 'guitar-nylon', notes: ['A2', 'A3', 'A4', 'A5', 'Cs3', 'Cs4'] },
-  bass: { folder: 'bass-electric', notes: ['As1', 'Cs2', 'E2', 'As2', 'Cs3', 'E3'] },
-  harmonium: { folder: 'harmonium', notes: ['C3', 'C4', 'C5'] },
-  cello: { folder: 'cello', notes: ['C3', 'C4', 'C5'] },
-  xylophone: { folder: 'xylophone', notes: ['C5', 'C6', 'C7'] },
+const SAMPLE_SETS: Record<SampleInstrumentId, { folder: string; notes: string[]; release: number }> = {
+  piano: { folder: 'piano', notes: ['C2', 'C3', 'C4', 'C5', 'C6', 'C7'], release: 2.2 },
+  organ: { folder: 'organ', notes: ['C2', 'C3', 'C4', 'C5', 'C6'], release: 0.6 },
+  guitar: { folder: 'guitar-nylon', notes: ['A2', 'A3', 'A4', 'A5', 'Cs3', 'Cs4'], release: 1.0 },
+  bass: { folder: 'bass-electric', notes: ['As1', 'Cs2', 'E2', 'As2', 'Cs3', 'E3'], release: 0.5 },
+  harmonium: { folder: 'harmonium', notes: ['C3', 'C4', 'C5'], release: 1.2 },
+  cello: { folder: 'cello', notes: ['C3', 'C4', 'C5'], release: 1.2 },
+  xylophone: { folder: 'xylophone', notes: ['C5', 'C6', 'C7'], release: 1.2 },
+  violin: { folder: 'violin', notes: ['C4', 'E4', 'G4', 'C5', 'E5'], release: 1.2 },
+  flute: { folder: 'flute', notes: ['C4', 'E4', 'C5', 'E5', 'C6'], release: 0.7 },
+  contrabass: { folder: 'contrabass', notes: ['C2', 'E2', 'A2'], release: 0.6 },
 };
 
-const PRESET_SAMPLE: Record<SynthPresetId, SampleInstrumentId> = {
+const PRESET_SAMPLE: Partial<Record<SynthPresetId, SampleInstrumentId>> = {
   piano: 'piano',
   organ: 'organ',
   pluck: 'guitar',
   pad: 'harmonium',
+  strings: 'cello',
+  violin: 'violin',
+  flute: 'flute',
+  upright: 'contrabass',
+  ebass: 'bass',
   supersaw: 'cello',
   dark: 'cello',
   bell: 'xylophone',
 };
 
-// EDM keeps its electronic identity for synth presets; acoustic instruments
-// are sampled in both variants. Acoustic mode samples everything.
-const EDM_SAMPLED_PRESETS = new Set<SynthPresetId>(['piano', 'organ', 'pluck']);
+// EDM keeps its electronic identity for bass/supersaw/pad/bell; the acoustic
+// instrument presets stay sampled in both variants.
+const EDM_SAMPLED_PRESETS = new Set<SynthPresetId>(['piano', 'organ', 'pluck', 'strings', 'violin', 'flute', 'ebass']);
 
 const samplers = new Map<string, Tone.Sampler>();
 const loading = new Map<string, Promise<Tone.Sampler | null>>();
@@ -38,7 +46,7 @@ function keyOf(track: TrackId, preset: SynthPresetId): string {
 
 export function sampleFor(preset: SynthPresetId, variant: SoundVariant): SampleInstrumentId | null {
   if (variant === 'edm' && !EDM_SAMPLED_PRESETS.has(preset)) return null;
-  return PRESET_SAMPLE[preset];
+  return PRESET_SAMPLE[preset] ?? null;
 }
 
 export function loadTrackSampler(
@@ -52,6 +60,7 @@ export function loadTrackSampler(
   if (pending) return pending;
 
   const sampleId = PRESET_SAMPLE[preset];
+  if (!sampleId) return Promise.resolve(null);
   const set = SAMPLE_SETS[sampleId];
   const toneName = (file: string) => file.length > 1 && file[1] === 's'
     ? `${file[0]}#${file.slice(2)}`
@@ -64,7 +73,7 @@ export function loadTrackSampler(
       const sampler = new Tone.Sampler({
         urls,
         baseUrl,
-        release: 0.8,
+        release: set.release,
         onload: () => {
           samplers.set(key, sampler);
           resolve(sampler);

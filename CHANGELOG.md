@@ -3,6 +3,24 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.3.1] — 2026-11-10
+
+### Sound pack refinements
+
+- **EDM piano is no longer clipped short.** Sample instruments now have per-instrument release times; piano gets a 2.2 s natural release, so off-beat chord patterns ring instead of stopping abruptly.
+- **Six track-specific instrument slots** instead of one shared list:
+  - Chords: Piano, Organ, Warm Pad, Strings, Nylon Pluck, Bells.
+  - Bass: Sub, Reese, Acid, 808, Electric Bass, Upright Bass.
+  - Lead: Supersaw, Dark Lead, Nylon Pluck, Violin, Flute, Bells.
+- Added local samples for **violin, flute, contrabass and electric bass** (CC-BY, VSCO 2 / Karoryfer); sample pack is now ~9.5 MB.
+- Release times are calibrated per sample set: piano 2.2 s, organ 0.6 s, guitar 1.0 s, harmonium/cello/violin 1.2 s, flute 0.7 s, bass 0.5–0.6 s.
+- Track instrument selectors expose only the six sounds for that track.
+
+### Verification
+
+- 87 unit tests (catalog shape, sample mapping, local assets).
+- Muted browser: six options per track, 9 samples loaded for defaults, EDM ↔ Acoustic, no console errors, mobile 390 without overflow.
+
 ## [1.3.0] — 2026-11-10
 
 ### Sound — hybrid sample pack + Acoustic/EDM

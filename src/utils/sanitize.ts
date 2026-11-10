@@ -7,7 +7,11 @@ import type { TrackId } from './schedule';
 import type { MelodyContour, MelodyDensity, MelodyNote, MelodyVariation } from './melodyGenerator';
 import type { SoundVariant } from './sampleLibrary';
 
-export const SYNTH_IDS: SynthPresetId[] = ['piano', 'pad', 'organ', 'supersaw', 'pluck', 'dark', 'bell'];
+export const SYNTH_IDS: SynthPresetId[] = [
+  'piano', 'organ', 'pad', 'strings', 'pluck', 'bell',
+  'supersaw', 'dark', 'violin', 'flute',
+  'sub', 'reese', 'acid', 'bass808', 'ebass', 'upright',
+];
 export const TRACK_IDS: TrackId[] = ['chord', 'bass', 'lead', 'drums'];
 export const SCALES = Object.keys(SCALE_INTERVALS);
 export const COMPLEXITIES: ChordComplexity[] = ['basic', '7ths', '9ths', 'jazzy'];

@@ -6,8 +6,8 @@ licensed **CC-BY 3.0**.
 
 Sources listed by that project:
 
-- piano, organ, harmonium, cello, xylophone — VSCO 2 Community Edition
-  (Versilian Studios), CC0.
+- piano, organ, harmonium, cello, violin, flute, contrabass, xylophone — VSCO 2
+  Community Edition (Versilian Studios), CC0.
 - guitar-nylon — Freesound, “classical guitar multisampled” by quartertone.
 - bass-electric — Karoryfer Samples.
 
