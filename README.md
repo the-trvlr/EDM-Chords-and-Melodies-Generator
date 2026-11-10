@@ -11,7 +11,8 @@ A fully offline Progressive Web App (PWA) for turning an EDM idea into a playabl
 
 ## What's new in 1.3
 
-- **Hybrid instrument samples:** local CC-BY piano, organ, nylon guitar, electric bass, harmonium, cello and xylophone; lazy-loaded and cached for offline use.
+- **Hybrid instrument samples:** local CC-BY piano, organ, nylon guitar, electric bass, upright bass, harmonium, cello, violin, flute and xylophone; lazy-loaded and cached for offline use.
+- **Six track-specific instruments** for Chords, Bass and Lead; piano has a natural 2.2 s release so EDM chords ring instead of clipping.
 - **Acoustic / EDM sound selector** in the Project Bar.
 - **Generator 2.0:** motif variations, contour, call & response, 808 glide.
 - **Harmony 2.0:** suggest next, key detection, pin a chord.
@@ -153,7 +154,7 @@ src/
 | `npm run build` | Type-check and build for production |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Unit tests (Vitest, 86) |
+| `npm test` | Unit tests (Vitest, 87) |
 | `npm run test:watch` | Unit tests in watch mode |
 
 ## Testing

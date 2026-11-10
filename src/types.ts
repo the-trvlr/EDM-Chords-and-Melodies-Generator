@@ -123,7 +123,7 @@ export const defaultMelodyState = (): MelodyState => ({
   drumKitId: 'acoustic',
   drumSeed: 1,
   customDrumPattern: null,
-  synthIds: { chord: 'pad', bass: 'pluck', lead: 'supersaw', drums: 'piano' },
+  synthIds: { chord: 'piano', bass: 'sub', lead: 'supersaw', drums: 'piano' },
   mixer: emptyMixer(),
   octaves: { chord: 0, bass: 0, lead: 0 },
   rangeSpans: { bass: 1, lead: 1 },

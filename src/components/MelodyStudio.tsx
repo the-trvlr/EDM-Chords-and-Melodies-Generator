@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { ChordInfo } from '../utils/musicTheory';
-import { SYNTH_PRESETS, type SynthPresetId } from '../utils/audioEngine';
+import { SYNTH_PRESETS, TRACK_SYNTH_IDS, type SynthPresetId } from '../utils/audioEngine';
 import { fitNotesToSpan, generateMelody, getGenreMelodyStyles, melodySpanLabel, type GeneratedMelody, type MelodyContour, type MelodyDensity, type MelodyNote, type MelodyStyle, type MelodyVariation } from '../utils/melodyGenerator';
 import type { RhythmPattern } from '../data/genres';
 import { DRUM_KITS, type DrumKitId } from '../data/drumKits';
@@ -164,9 +164,14 @@ function TrackHeader({
           <select
             value={synthId}
             onChange={event => onSynthChange(event.target.value as SynthPresetId)}
+            aria-label={`${label} instrument`}
             className="h-11 max-w-[9rem] rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-200 focus:border-purple-500 focus:outline-none sm:h-8"
           >
-            {SYNTH_PRESETS.map(preset => (
+            {SYNTH_PRESETS.filter(preset =>
+              trackId === 'drums'
+                ? true
+                : (TRACK_SYNTH_IDS[trackId].includes(preset.id) || preset.id === synthId),
+            ).map(preset => (
               <option key={preset.id} value={preset.id}>{preset.name}</option>
             ))}
           </select>

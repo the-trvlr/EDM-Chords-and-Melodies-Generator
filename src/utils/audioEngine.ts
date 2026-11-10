@@ -5,7 +5,10 @@ import { PRESET_ENVELOPES, PRESET_VOICES, getChordEnvelope, type Envelope } from
 import { prepareCountIn, startMetronome, stopMetronome } from './metronome';
 export { getChordEnvelope, getVoiceBudget } from './audioProfiles';
 
-export type SynthPresetId = 'piano' | 'pad' | 'supersaw' | 'pluck' | 'dark' | 'bell' | 'organ';
+export type SynthPresetId =
+  | 'piano' | 'organ' | 'pad' | 'strings' | 'pluck' | 'bell'
+  | 'supersaw' | 'dark' | 'violin' | 'flute'
+  | 'sub' | 'reese' | 'acid' | 'bass808' | 'ebass' | 'upright';
 
 export interface SynthPreset {
   id: SynthPresetId;
@@ -21,8 +24,23 @@ export const SYNTH_PRESETS: SynthPreset[] = [
   { id: 'supersaw', name: 'Supersaw', description: 'Trance/Future Bass supersaw', category: 'genre' },
   { id: 'pluck', name: 'Pluck', description: 'Short plucky synth', category: 'genre' },
   { id: 'dark', name: 'Dark Lead', description: 'Dark techno/dubstep lead', category: 'genre' },
-  { id: 'bell', name: 'Bell', description: 'FM bell sound', category: 'genre' },
+  { id: 'bell', name: 'Bells', description: 'Bell/xylophone', category: 'genre' },
+  { id: 'strings', name: 'Strings', description: 'Cello/string ensemble', category: 'genre' },
+  { id: 'violin', name: 'Violin', description: 'Solo violin', category: 'genre' },
+  { id: 'flute', name: 'Flute', description: 'Airy flute', category: 'genre' },
+  { id: 'upright', name: 'Upright Bass', description: 'Acoustic upright bass', category: 'genre' },
+  { id: 'sub', name: 'Sub Bass', description: 'Clean sine sub', category: 'genre' },
+  { id: 'reese', name: 'Reese', description: 'Detuned reese bass', category: 'genre' },
+  { id: 'acid', name: 'Acid', description: '303-style acid bass', category: 'genre' },
+  { id: 'bass808', name: '808', description: '808 sub with long tail', category: 'genre' },
+  { id: 'ebass', name: 'Electric Bass', description: 'Sampled electric bass', category: 'genre' },
 ];
+
+export const TRACK_SYNTH_IDS: Record<'chord' | 'bass' | 'lead', SynthPresetId[]> = {
+  chord: ['piano', 'organ', 'pad', 'strings', 'pluck', 'bell'],
+  bass: ['sub', 'reese', 'acid', 'bass808', 'ebass', 'upright'],
+  lead: ['supersaw', 'dark', 'pluck', 'violin', 'flute', 'bell'],
+};
 
 function buildSynthOptions(presetId: SynthPresetId, envelope: Envelope): Record<string, unknown> {
   switch (presetId) {
@@ -51,6 +69,24 @@ function buildSynthOptions(presetId: SynthPresetId, envelope: Envelope): Record<
         modulationEnvelope: { attack: 0.002, decay: 0.2, sustain: 0, release: 0.5 },
         volume: -12,
       };
+    case 'strings':
+      return { oscillator: { type: 'fatsawtooth', spread: 14, count: 3 }, envelope, volume: -16 };
+    case 'violin':
+      return { oscillator: { type: 'sawtooth4' }, envelope, volume: -13 };
+    case 'flute':
+      return { oscillator: { type: 'sine' }, envelope, volume: -12 };
+    case 'upright':
+      return { oscillator: { type: 'triangle' }, envelope, volume: -10 };
+    case 'sub':
+      return { oscillator: { type: 'sine' }, envelope, volume: -9 };
+    case 'reese':
+      return { oscillator: { type: 'fatsawtooth', spread: 12, count: 2 }, envelope, volume: -14 };
+    case 'acid':
+      return { oscillator: { type: 'square8' }, envelope, volume: -14 };
+    case 'bass808':
+      return { oscillator: { type: 'sine' }, envelope, volume: -8 };
+    case 'ebass':
+      return { oscillator: { type: 'triangle' }, envelope, volume: -9 };
     default:
       return { envelope, volume: -12 };
   }
