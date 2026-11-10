@@ -3,6 +3,25 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.3.0] — 2026-11-10
+
+### Sound — hybrid sample pack + Acoustic/EDM
+
+- **Local CC-BY sample pack** (6.2 MB) for piano, organ, nylon guitar/pluck, electric bass, harmonium pad, cello lead and xylophone bell. No CDN at runtime; works offline after first load via Workbox CacheFirst.
+- **Sound selector: EDM / Acoustic** in the Project Bar.
+  - EDM: piano, organ and pluck use samples; pad, supersaw, dark and bell keep their electronic synths.
+  - Acoustic: every preset uses its sampled counterpart (harmonium pad, cello lead/dark, xylophone bell).
+- **Startup preload** for the current chord/bass/lead instruments with a “Loading instruments…” state; changing an instrument loads its samples in the background.
+- Synth remains the **fallback** if samples fail or are not cached yet.
+- **808 Glide** always uses the mono synth, even in Acoustic mode, so portamento is preserved.
+- Samples are preview/live playback only for now: offline WAV/stems still render with synths. Sample-based offline rendering is the next audio task.
+- Attribution: `docs/SAMPLES.md` (CC-BY 3.0, VSCO 2, Karoryfer, Freesound via tonejs-instruments).
+
+### Verification
+
+- 86 unit tests (sample mapping, local asset presence, generator/harmony/glide/inversion).
+- Muted browser: 12 sample files loaded for the default three tracks, no network failures; Sound switches EDM ↔ Acoustic; playback has no console errors; mobile remains within viewport.
+
 ## [1.2.0] — 2026-11-10
 
 ### Generator 2.0 (1.1) — motif, contour, call-response, glide

@@ -1,5 +1,6 @@
 import { GENRES, type Genre } from '../data/genres';
 import { getKeyNamesForScale, type ChordComplexity } from '../utils/musicTheory';
+import type { SoundVariant } from '../utils/sampleLibrary';
 
 const SCALES = [
   { id: 'major', name: 'Major' },
@@ -25,6 +26,8 @@ interface ProjectBarProps {
   selectedScale: string;
   selectedGenre: Genre;
   chordComplexity: ChordComplexity;
+  soundVariant: SoundVariant;
+  onSoundVariantChange: (variant: SoundVariant) => void;
   onKeyChange: (key: string) => void;
   onScaleChange: (scale: string) => void;
   onGenreChange: (genre: Genre) => void;
@@ -36,6 +39,8 @@ export function ProjectBar({
   selectedScale,
   selectedGenre,
   chordComplexity,
+  soundVariant,
+  onSoundVariantChange,
   onKeyChange,
   onScaleChange,
   onGenreChange,
@@ -95,6 +100,19 @@ export function ProjectBar({
           className="h-9 rounded-md border border-gray-700 bg-gray-900 px-1.5 text-xs text-gray-100 focus:border-purple-500 focus:outline-none sm:h-8"
         >
           {COMPLEXITY.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}
+        </select>
+      </label>
+
+      <label className="flex items-center gap-1">
+        <span className="text-[10px] uppercase tracking-wide text-gray-400">Sound</span>
+        <select
+          value={soundVariant}
+          onChange={event => onSoundVariantChange(event.target.value as SoundVariant)}
+          aria-label="Sound character"
+          className="h-9 rounded-md border border-gray-700 bg-gray-900 px-1.5 text-xs text-gray-100 focus:border-purple-500 focus:outline-none sm:h-8"
+        >
+          <option value="edm">EDM</option>
+          <option value="acoustic">Acoustic</option>
         </select>
       </label>
 
