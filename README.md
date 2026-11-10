@@ -11,6 +11,7 @@ A fully offline Progressive Web App (PWA) for turning an EDM idea into a playabl
 
 ## What's new in 1.0
 
+- **Chord changes re-pitch the generated bass/lead without changing their rhythm.**
 - **One Studio, no tabs**: progression, sections and tracks share a single screen. Project Bar, Progression Strip and an Inspector panel replace the old Harmony/Arrangement split.
 - **Optional staff notation**: off by default in the inspector; VexFlow loads only when you enable it.
 - **Per-track time feel**: `½ / 1× / 2×` on every track, applied to playback, WAV, stems and MIDI.
@@ -143,7 +144,7 @@ src/
 | `npm run build` | Type-check and build for production |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Unit tests (Vitest, 60) |
+| `npm test` | Unit tests (Vitest, 63) |
 | `npm run test:watch` | Unit tests in watch mode |
 
 ## Testing
