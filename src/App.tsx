@@ -21,6 +21,7 @@ import { setArrangementBpm, setArrangementLoop, stopArrangement } from './utils/
 import { loadPersistedState, parseProjectFile, savePersistedState, serializeProject } from './utils/persistence';
 import { chordTypeKey, decodeShare, encodeShare, expandChord } from './utils/share';
 import { exportProgressionToMidi } from './utils/midiExport';
+import { detectKey, suggestNextChords, type HarmonySuggestion } from './utils/harmony';
 import { songBars } from './utils/schedule';
 import { defaultMelodyState, type MelodyState, type ProjectSnapshot } from './types';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -124,6 +125,7 @@ function Studio() {
   const [history, setHistory] = useState<{ list: ChordInfo[][]; index: number }>(initialCustomProgression ? { list: [initialCustomProgression], index: 0 } : { list: [], index: -1 });
   const [melody, setMelody] = useState<MelodyState>(initialMelodyState);
   const [lastEdit, setLastEdit] = useState<'chord' | 'melody' | 'reset' | null>(null);
+  const [pinnedChords, setPinnedChords] = useState<Set<number>>(() => new Set());
   const [resetSnapshot, setResetSnapshot] = useState<ProjectSnapshot | null>(null);
 
   const studioRef = useRef<MelodyStudioHandle>(null);
@@ -138,6 +140,10 @@ function Studio() {
     [selectedGenre, selectedProgressionIdx, selectedKey, selectedScale, chordComplexity],
   );
   const progression = customProgression ?? templateProgression;
+  const harmonySuggestions = useMemo(
+    () => suggestNextChords(progression, selectedKey, selectedScale, chordComplexity, 3),
+    [progression, selectedKey, selectedScale, chordComplexity],
+  );
   const viewedChord = selectedChordForView !== null ? progression[selectedChordForView] ?? null : null;
 
   const snapshot = useMemo<ProjectSnapshot>(() => ({
@@ -190,6 +196,7 @@ function Studio() {
     setActiveChordIndex(0);
     setLastEdit(null);
     setResetSnapshot(null);
+    setPinnedChords(new Set());
   }, [stopAll]);
 
   const commitProgression = useCallback((next: ChordInfo[]) => {
@@ -378,6 +385,7 @@ function Studio() {
     setSelectedRhythm(genre.rhythmPatterns[0]);
     setBpm(genre.defaultBpm);
     setSelectedScale(genre.preferredScale);
+    setPinnedChords(new Set());
     setSelectedKey(current => getPreferredKeyName(noteNameToPc(current), genre.preferredScale));
     setSelectedSynth(genre.synthPreset as typeof selectedSynth);
     setChordComplexity('basic');
@@ -485,19 +493,39 @@ function Studio() {
   const handleSelectTemplate = useCallback((index: number) => {
     if (chordsPlaying) handleStopChords();
     setSelectedProgressionIdx(index);
+    setPinnedChords(new Set());
     setCustomProgression(null);
     setHistory({ list: [], index: -1 });
     setSelectedChordForView(null);
     setLastEdit(null);
+    setPinnedChords(new Set());
   }, [chordsPlaying, handleStopChords]);
 
   const handleAddChord = useCallback((chord: ChordInfo) => {
+    setPinnedChords(new Set());
     const next = [...progression, chord];
     commitProgression(next);
     setSelectedChordForView(next.length - 1);
   }, [progression, commitProgression]);
 
+  const handleAddSuggestion = useCallback((suggestion: HarmonySuggestion) => {
+    handleAddChord(suggestion.chord);
+    toast.show(`Added ${suggestion.chord.display} · ${suggestion.kind}`, 'success');
+  }, [handleAddChord, toast]);
+
+  const handleDetectKey = useCallback(() => {
+    const detected = detectKey(progression);
+    if (!detected) {
+      toast.show('Add a few chords first — nothing to detect yet.', 'error');
+      return;
+    }
+    setSelectedKey(getPreferredKeyName(noteNameToPc(detected.key), detected.scale));
+    setSelectedScale(detected.scale);
+    toast.show(`Detected ${detected.key} ${detected.scale} · ${Math.round(detected.confidence * 100)}%`, 'success');
+  }, [progression, toast]);
+
   const handleRemoveChord = useCallback((index: number) => {
+    setPinnedChords(new Set());
     const next = progression.filter((_, i) => i !== index);
     commitProgression(next);
     setSelectedChordForView(next.length === 0 ? null : Math.min(index, next.length - 1));
@@ -506,6 +534,7 @@ function Studio() {
   const handleMoveChord = useCallback((index: number, direction: -1 | 1) => {
     const target = index + direction;
     if (target < 0 || target >= progression.length) return;
+    setPinnedChords(new Set());
     const next = [...progression];
     [next[index], next[target]] = [next[target], next[index]];
     commitProgression(next);
@@ -517,10 +546,12 @@ function Studio() {
   }, [progression, commitProgression]);
 
   const handleVoiceLead = useCallback(() => {
-    commitProgression(voiceLeading(progression));
-  }, [progression, commitProgression]);
+    const voiced = voiceLeading(progression);
+    commitProgression(voiced.map((chord, index) => pinnedChords.has(index) ? progression[index] : chord));
+  }, [progression, pinnedChords, commitProgression]);
 
   const handleResetToTemplate = useCallback(() => {
+    setPinnedChords(new Set());
     setCustomProgression(null);
     setHistory({ list: [], index: -1 });
     setSelectedChordForView(null);
@@ -691,6 +722,9 @@ function Studio() {
               else handlePlayChords();
             }}
             onResetToTemplate={handleResetToTemplate}
+            suggestions={harmonySuggestions}
+            onAddSuggestion={handleAddSuggestion}
+            onDetectKey={handleDetectKey}
           />
         </div>
 
@@ -738,6 +772,16 @@ function Studio() {
             onRemove={handleRemoveChord}
             onVoiceLead={handleVoiceLead}
             onPreview={previewChord}
+            pinned={selectedChordForView !== null && pinnedChords.has(selectedChordForView)}
+            onTogglePin={() => {
+              if (selectedChordForView === null) return;
+              setPinnedChords(prev => {
+                const next = new Set(prev);
+                if (next.has(selectedChordForView)) next.delete(selectedChordForView);
+                else next.add(selectedChordForView);
+                return next;
+              });
+            }}
           />
         </div>
       </main>

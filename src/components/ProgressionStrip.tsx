@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import type { ChordInfo } from '../utils/musicTheory';
+import type { HarmonySuggestion } from '../utils/harmony';
 import { getRomanNumeral } from '../utils/musicTheory';
 import { Menu } from './Menu';
 
@@ -20,6 +22,9 @@ interface ProgressionStripProps {
   onTemplateSelect: (index: number) => void;
   onTogglePreview: () => void;
   onResetToTemplate: () => void;
+  suggestions: HarmonySuggestion[];
+  onAddSuggestion: (suggestion: HarmonySuggestion) => void;
+  onDetectKey: () => void;
 }
 
 export function ProgressionStrip({
@@ -40,7 +45,11 @@ export function ProgressionStrip({
   onTemplateSelect,
   onTogglePreview,
   onResetToTemplate,
+  suggestions,
+  onAddSuggestion,
+  onDetectKey,
 }: ProgressionStripProps) {
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const degreeOf = (chord: ChordInfo): string => {
     const index = scaleChords.findIndex(item => item.root === chord.root && item.type.name === chord.type.name);
     return index >= 0 ? getRomanNumeral(index, scaleName) : '?';
@@ -50,7 +59,7 @@ export function ProgressionStrip({
     <section className="rounded-xl border border-gray-800 bg-gray-900/50 p-2" aria-label="Chord progression">
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Progression</span>
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
           <button
             type="button"
             onClick={onTogglePreview}
@@ -61,6 +70,22 @@ export function ProgressionStrip({
             }`}
           >
             {isPreviewing ? 'Stop' : 'Preview'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSuggestions(value => !value)}
+            aria-expanded={showSuggestions}
+            className="h-9 rounded-md border border-cyan-700/60 px-2 text-[11px] font-medium text-cyan-200 transition-colors hover:border-cyan-500 sm:h-8"
+          >
+            Suggest
+          </button>
+          <button
+            type="button"
+            onClick={onDetectKey}
+            title="Detect key and scale from the progression"
+            className="h-9 rounded-md border border-gray-700 px-2 text-[11px] text-gray-300 transition-colors hover:border-gray-500 sm:h-8"
+          >
+            Detect
           </button>
           <Menu
             label="Template"
@@ -82,6 +107,43 @@ export function ProgressionStrip({
           />
         </div>
       </div>
+
+      {showSuggestions && (
+        <div className="mt-1.5 rounded-lg border border-cyan-800/50 bg-cyan-950/20 p-1.5">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-cyan-300">Next chord ideas</span>
+            <button type="button" onClick={() => setShowSuggestions(false)} className="text-[10px] text-gray-400 hover:text-gray-200">Close</button>
+          </div>
+          {suggestions.length === 0 && <p className="px-1 py-1 text-[11px] text-gray-400">No suggestions.</p>}
+          {suggestions.map((suggestion, index) => (
+            <div key={`${suggestion.chord.display}-${index}`} className="mt-1 flex items-center gap-1 rounded-md bg-gray-900/70 px-1.5 py-1">
+              <button
+                type="button"
+                onClick={() => onAddSuggestion(suggestion)}
+                className="flex min-w-0 flex-1 items-center gap-2 text-left"
+              >
+                <span className="text-sm font-semibold text-white">{suggestion.chord.display}</span>
+                <span className="truncate text-[10px] text-gray-400">{suggestion.kind} · {suggestion.reason}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onPreviewChord(suggestion.chord)}
+                aria-label={`Audition ${suggestion.chord.display}`}
+                className="h-7 rounded border border-gray-700 px-1.5 text-[10px] text-gray-300 hover:border-gray-500"
+              >
+                ▶
+              </button>
+              <button
+                type="button"
+                onClick={() => onAddSuggestion(suggestion)}
+                className="h-7 rounded bg-cyan-500/15 px-1.5 text-[10px] font-medium text-cyan-200 hover:bg-cyan-500/25"
+              >
+                Add
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="mt-1.5 flex gap-1.5 overflow-x-auto pb-1" role="list">
         {progression.map((chord, index) => {

@@ -31,11 +31,13 @@ interface DrumSynths {
   hat: Tone.MetalSynth;
 }
 
+type MelodicSynth = Tone.PolySynth | Tone.MonoSynth;
+
 interface MixerNodes {
   reverb: Tone.Freeverb;
   limiter: Tone.Limiter;
   channels: Record<TrackId, Tone.Channel>;
-  synths: Record<'chord' | 'bass' | 'lead', Tone.PolySynth | null>;
+  synths: { chord: Tone.PolySynth | null; bass: MelodicSynth | null; lead: Tone.PolySynth | null };
   drumSynths: DrumSynths | null;
 }
 
@@ -148,7 +150,27 @@ function disposeMelodicSynths(m: MixerNodes): void {
   }
 }
 
-function createTrackSynth(synthId: SynthPresetId, envelope?: Parameters<typeof createSynth>[1]): Tone.PolySynth {
+function createTrackSynth(
+  synthId: SynthPresetId,
+  envelope?: Parameters<typeof createSynth>[1],
+  glide = false,
+): MelodicSynth {
+  if (glide) {
+    return new Tone.MonoSynth({
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.01, decay: 0.2, sustain: 0.7, release: 0.3 },
+      filterEnvelope: {
+        attack: 0.001,
+        decay: 0.2,
+        sustain: 0.4,
+        release: 0.3,
+        baseFrequency: 140,
+        octaves: 2.5,
+      },
+      portamento: 0.09,
+      volume: -10,
+    });
+  }
   return createSynth(synthId, envelope);
 }
 
@@ -245,6 +267,7 @@ interface ArrangementInput {
   swing?: number;
   humanize?: boolean;
   timeScales?: Record<TrackId, number>;
+  bassGlide?: boolean;
   metronome?: boolean;
   countInBars?: number;
 }
@@ -271,9 +294,11 @@ function prepareMixer(input: ArrangementInput): { mixer: MixerNodes; byStep: Map
     const synth = createTrackSynth(
       input.synthIds[id],
       id === 'chord' ? getChordEnvelope(input.rhythm.name, input.bpm, input.rhythm.pattern) : undefined,
+      id === 'bass' && input.bassGlide === true,
     );
     synth.connect(m.channels[id]);
-    m.synths[id] = synth;
+    if (id === 'bass') m.synths.bass = synth;
+    else m.synths[id] = synth as Tone.PolySynth;
   }
   ensureDrumKit(m, input.drumKitId ?? currentKitId);
 
@@ -455,6 +480,7 @@ export interface RenderOptions {
   swing?: number;
   humanize?: boolean;
   timeScales?: Record<TrackId, number>;
+  bassGlide?: boolean;
 }
 
 function audioBufferToWav(buffer: AudioBuffer): Blob {
@@ -520,9 +546,9 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
       drums: new Tone.Channel({ volume: opts.tracks.drums.volume }).connect(reverb),
     };
     const synths = {
-      chord: createTrackSynth(opts.synthIds.chord, getChordEnvelope(opts.rhythm.name, opts.bpm, opts.rhythm.pattern)).connect(channels.chord),
-      bass: createTrackSynth(opts.synthIds.bass).connect(channels.bass),
-      lead: createTrackSynth(opts.synthIds.lead).connect(channels.lead),
+      chord: (createTrackSynth(opts.synthIds.chord, getChordEnvelope(opts.rhythm.name, opts.bpm, opts.rhythm.pattern)) as Tone.PolySynth).connect(channels.chord),
+      bass: createTrackSynth(opts.synthIds.bass, undefined, opts.bassGlide === true).connect(channels.bass),
+      lead: (createTrackSynth(opts.synthIds.lead) as Tone.PolySynth).connect(channels.lead),
     };
     const drums = createDrumSynths(opts.drumKitId ?? currentKitId, channels.drums);
 

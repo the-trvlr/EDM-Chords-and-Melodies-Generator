@@ -179,6 +179,7 @@ export interface ArrangementMidiOptions {
   swing?: number;
   humanize?: boolean;
   timeScales?: Record<'chord' | 'bass' | 'lead' | 'drums', number>;
+  bassGlide?: boolean;
 }
 
 /**
@@ -212,6 +213,7 @@ export function exportArrangementToMidi(
     swing: options.swing,
     humanize: options.humanize,
     timeScales: options.timeScales,
+    bassGlide: options.bassGlide,
   });
   if (events.length === 0) return;
 

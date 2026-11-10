@@ -33,6 +33,8 @@ export interface ScheduleInput {
   humanize?: boolean;
   /** Per-track time feel: 0.5 = half time, 1 = normal, 2 = double time. */
   timeScales?: Record<TrackId, number>;
+  /** Legato/portamento bass: holds each bass note until the next onset. */
+  bassGlide?: boolean;
 }
 
 const ALL_TRACKS: TrackId[] = ['chord', 'bass', 'lead', 'drums'];
@@ -222,6 +224,16 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
     const local = localStep * 2;
     if (local >= STEPS_PER_CHORD) continue;
     scaled.push({ ...event, step: barBase + local, durationSteps: event.durationSteps * 2 });
+  }
+
+  if (input.bassGlide) {
+    const bassEvents = (scaled.filter(event => event.track === 'bass') as Array<ScheduleEvent & { track: 'bass' }>)
+      .sort((a, b) => a.step - b.step);
+    for (let i = 0; i < bassEvents.length - 1; i++) {
+      const current = bassEvents[i];
+      const next = bassEvents[i + 1];
+      current.durationSteps = Math.max(1, next.step - current.step + 1);
+    }
   }
 
   for (const event of scaled) {

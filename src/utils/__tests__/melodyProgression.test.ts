@@ -84,6 +84,36 @@ describe('melody follows the chord progression', () => {
     }
   });
 
+  it('keeps a motif rhythm across bars for every variation', () => {
+    for (const variation of ['repeat', 'transpose', 'invert'] as const) {
+      const notes = generateMelody(triads, 'bass', 'house-groove', 'A', 'minor', 4, 1, { density: 'busy', variation }).notes;
+      const bar = (index: number) => notes
+        .filter(note => Math.floor(note.step / 16) === index)
+        .map(note => `${note.step % 16}:${note.duration}`)
+        .join(',');
+      expect(bar(1), variation).toBe(bar(0));
+      expect(bar(2), variation).toBe(bar(0));
+      expect(bar(3), variation).toBe(bar(0));
+      expect(new Set(notes.map(note => note.midi)).size, variation).toBeGreaterThan(1);
+    }
+  });
+
+  it('moves the register with contour without changing rhythm', () => {
+    const options = { density: 'busy' as const, idea: 1 };
+    const low = generateMelody(triads, 'lead', 'house-soulful', 'A', 'minor', 2, 3, { ...options, contour: 'low' }).notes;
+    const high = generateMelody(triads, 'lead', 'house-soulful', 'A', 'minor', 2, 3, { ...options, contour: 'high' }).notes;
+    const average = (notes: MelodyNote[]) => notes.reduce((sum, note) => sum + note.midi, 0) / notes.length;
+    expect(rhythmOf(low)).toEqual(rhythmOf(high));
+    expect(average(high)).toBeGreaterThan(average(low));
+  });
+
+  it('can split call and response across bars', () => {
+    const call = generateMelody(triads, 'bass', 'house-groove', 'A', 'minor', 1, 1, { barFilter: 0 }).notes;
+    const response = generateMelody(triads, 'lead', 'house-soulful', 'A', 'minor', 1, 1, { barFilter: 1 }).notes;
+    expect(call.every(note => Math.floor(note.step / 16) % 2 === 0)).toBe(true);
+    expect(response.every(note => Math.floor(note.step / 16) % 2 === 1)).toBe(true);
+  });
+
   it('changes pitches, not steps or durations, when a chord is replaced', () => {
     const base = generateMelody(triads, 'bass', 'house-groove', 'A', 'minor', 2, 1, { density: 'busy' }).notes;
     const sub = generateMelody(substitution, 'bass', 'house-groove', 'A', 'minor', 2, 1, { density: 'busy' }).notes;

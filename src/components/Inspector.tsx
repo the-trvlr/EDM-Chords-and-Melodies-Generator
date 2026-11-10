@@ -18,6 +18,8 @@ interface InspectorProps {
   onRemove: (index: number) => void;
   onVoiceLead: () => void;
   onPreview: (chord: ChordInfo) => void;
+  pinned: boolean;
+  onTogglePin: () => void;
 }
 
 export function Inspector({
@@ -33,6 +35,8 @@ export function Inspector({
   onRemove,
   onVoiceLead,
   onPreview,
+  pinned,
+  onTogglePin,
 }: InspectorProps) {
   const [showNotation, setShowNotation] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -140,6 +144,19 @@ export function Inspector({
               className="h-8 rounded-md border border-gray-700 px-2 text-[11px] text-gray-300 hover:border-gray-500"
             >
               Voice lead
+            </button>
+            <button
+              type="button"
+              onClick={onTogglePin}
+              aria-pressed={pinned}
+              title="Keep this chord's voicing when using Voice lead"
+              className={`h-8 rounded-md border px-2 text-[11px] transition-colors ${
+                pinned
+                  ? 'border-amber-500/60 bg-amber-400/15 text-amber-200'
+                  : 'border-gray-700 text-gray-300 hover:border-gray-500'
+              }`}
+            >
+              Pin
             </button>
             <button
               type="button"

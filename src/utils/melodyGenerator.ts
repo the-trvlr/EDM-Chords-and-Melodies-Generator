@@ -3,10 +3,16 @@ import { SCALE_INTERVALS, noteNameToPc } from './musicTheory';
 
 export type MelodyType = 'bass' | 'lead';
 export type MelodyDensity = 'sparse' | 'medium' | 'busy';
+export type MelodyContour = 'low' | 'mid' | 'high';
+export type MelodyVariation = 'off' | 'repeat' | 'transpose' | 'invert';
 
 export interface MelodyOptions {
   density?: MelodyDensity;
   idea?: number;
+  contour?: MelodyContour;
+  variation?: MelodyVariation;
+  /** Keep only even (0) or odd (1) bars for call-and-response. */
+  barFilter?: 0 | 1;
 }
 
 export interface MelodyNote {
@@ -558,6 +564,79 @@ export function fitMelodyToRange(
   });
 }
 
+function rootMidiOf(chord: ChordInfo): number {
+  const pc = noteNameToPc(chord.root);
+  const base = chord.midiNotes.length > 0 ? Math.min(...chord.midiNotes) : 60;
+  let root = base - (((base - pc) % 12) + 12) % 12;
+  while (root < 0) root += 12;
+  return root;
+}
+
+function nearestChordTone(midi: number, chord: ChordInfo): number {
+  const pcs = chord.midiNotes.map(note => note % 12);
+  const base = midi - (midi % 12);
+  let best = midi;
+  let distance = Infinity;
+  for (const pc of pcs) {
+    for (const octave of [-1, 0, 1]) {
+      const candidate = base + pc + octave * 12;
+      const nextDistance = Math.abs(candidate - midi);
+      if (nextDistance < distance) {
+        best = candidate;
+        distance = nextDistance;
+      }
+    }
+  }
+  return best;
+}
+
+function applyMotif(notes: MelodyNote[], chords: ChordInfo[], variation: MelodyVariation): MelodyNote[] {
+  if (variation === 'off' || chords.length < 2) return notes;
+  const motif = notes.filter(note => note.step < STEPS_PER_MOTIF);
+  if (motif.length === 0) return notes;
+
+  const firstRoot = rootMidiOf(chords[0]);
+  const firstNote = motif[0].midi;
+  const result = [...motif];
+
+  for (let bar = 1; bar < chords.length; bar++) {
+    const chord = chords[bar];
+    const delta = rootMidiOf(chord) - firstRoot;
+    for (const note of motif) {
+      let midi = note.midi;
+      if (variation === 'repeat') midi = nearestChordTone(note.midi, chord);
+      else if (variation === 'transpose') midi += delta;
+      else if (variation === 'invert') midi = 2 * firstNote - note.midi + delta;
+      result.push({ ...note, step: bar * STEPS_PER_MOTIF + (note.step % STEPS_PER_MOTIF), midi });
+    }
+  }
+  return result.sort((a, b) => a.step - b.step);
+}
+
+function applyContour(
+  notes: MelodyNote[],
+  type: MelodyType,
+  spanOctaves: number,
+  contour: MelodyContour,
+): MelodyNote[] {
+  if (contour === 'mid') return notes;
+  const { start, end } = melodySpanBounds(type, spanOctaves);
+  const third = (spanOctaves * 12) / 3;
+  return notes.map(note => {
+    let midi = note.midi;
+    if (contour === 'low' && midi > start + third * 2) {
+      const lower = midi - 12;
+      if (lower >= start) midi = lower;
+    } else if (contour === 'high' && midi < start + third) {
+      const higher = midi + 12;
+      if (higher <= end) midi = higher;
+    }
+    return midi === note.midi ? note : { ...note, midi };
+  });
+}
+
+const STEPS_PER_MOTIF = 16;
+
 function snapStrongBeatsToChordTones(
   notes: MelodyNote[],
   chords: ChordInfo[],
@@ -686,7 +765,8 @@ export function generateMelody(
     }
   });
 
-  const dense = applyDensity(allNotes, stepsPerChord, options.density ?? 'medium');
+  const variation = applyMotif(allNotes, chords, options.variation ?? 'off');
+  const dense = applyDensity(variation, stepsPerChord, options.density ?? 'medium');
   const ranged = fitMelodyToRange(dense, type, rangeSpan, scale);
   // Strong beats must land on chord tones; fold back into the chosen span
   // afterwards (octave folding keeps the pitch class).
@@ -695,10 +775,18 @@ export function generateMelody(
     type,
     rangeSpan,
   );
-  const rangedNotes = limitLeaps(snapped, type, rangeSpan, scale, chords, stepsPerChord);
+  const contoured = fitNotesToSpan(
+    applyContour(snapped, type, rangeSpan, options.contour ?? 'mid'),
+    type,
+    rangeSpan,
+  );
+  const rangedNotes = limitLeaps(contoured, type, rangeSpan, scale, chords, stepsPerChord);
+  const filteredNotes = options.barFilter === undefined
+    ? rangedNotes
+    : rangedNotes.filter(note => Math.floor(note.step / stepsPerChord) % 2 === options.barFilter);
 
   return {
-    notes: rangedNotes,
+    notes: filteredNotes,
     type,
     styleId,
     stepsPerChord,

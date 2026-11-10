@@ -450,6 +450,10 @@ footer 40
 
 ## 13. После 1.0 (backlog)
 
+**Сделано в 1.2.0:** мотив/вариации, contour, call-response, 808 glide, suggest next (diatonic/borrowed/secondary), detect key, pin chord.
+
+**Осталось:** MIDI-in, loop region, DAW pack, project library, e2e/axe, Safari delay, MusicXML/PDF.
+
 - **Generator 2.0+:** мотивы/вариации, call-response, contour, 808 glide.
 - **Harmony 2.0:** подсказки следующего аккорда, borrowed, secondary dominants, key detection.
 - **Practice:** tap tempo, Web MIDI input, computer keyboard as piano, loop region.
