@@ -201,7 +201,8 @@ export function getGenreMelodyStyles(genreId: string, type: MelodyType): MelodyS
 type PatternFn = (
   chord: ChordInfo,
   scale: number[],
-  rng: SeededRandom,
+  rhythm: SeededRandom,
+  pitch: SeededRandom,
   chordIdx: number,
 ) => MelodyNote[];
 
@@ -215,24 +216,24 @@ function chordTonesAt(chord: ChordInfo, targetOctave: number): number[] {
 
 // ── BASS PATTERNS ──
 
-const bassGroove: PatternFn = (chord, scale, rng) => {
+const bassGroove: PatternFn = (chord, scale, rhythm, pitch) => {
   const tones = chordTonesAt(chord, 2);
   const root = tones[0];
   const notes: MelodyNote[] = [];
   const positions = [0, 4, 8, 12];
   for (const p of positions) {
-    const note = rng.chance(0.7) ? root : rng.pick(tones);
-    const dur = rng.chance(0.3) ? 2 : 4;
+    const note = pitch.chance(0.7) ? root : pitch.pick(tones);
+    const dur = rhythm.chance(0.3) ? 2 : 4;
     notes.push({ midi: note, step: p, duration: dur });
     if (dur === 2) {
-      const pass = nearestInScale(note + (rng.chance(0.5) ? 2 : -2), scale);
+      const pass = nearestInScale(note + (pitch.chance(0.5) ? 2 : -2), scale);
       notes.push({ midi: pass, step: p + 2, duration: 2 });
     }
   }
   return notes;
 };
 
-const bassWalking: PatternFn = (chord, scale, rng) => {
+const bassWalking: PatternFn = (chord, scale, rhythm, pitch) => {
   const tones = chordTonesAt(chord, 2);
   const notes: MelodyNote[] = [];
   let prev = tones[0];
@@ -241,44 +242,44 @@ const bassWalking: PatternFn = (chord, scale, rng) => {
     let note: number;
     if (beat === 0) {
       note = tones[0];
-    } else if (beat === 3 && rng.chance(0.5)) {
-      // chromatic approach to next chord root
-      note = prev + (rng.chance(0.5) ? 1 : -1);
+    } else if (beat === 3 && pitch.chance(0.5)) {
+      // Chromatic approach to the next chord root: pitch only.
+      note = prev + (pitch.chance(0.5) ? 1 : -1);
     } else {
-      note = rng.pick(tones);
-      if (rng.chance(0.3)) note = nearestInScale(prev + rng.intRange(-4, 4), scale);
+      note = pitch.pick(tones);
+      if (pitch.chance(0.3)) note = nearestInScale(prev + pitch.intRange(-4, 4), scale);
     }
-    notes.push({ midi: note, step, duration: rng.chance(0.2) ? 3 : 4 });
+    notes.push({ midi: note, step, duration: rhythm.chance(0.2) ? 3 : 4 });
     prev = note;
   }
   return notes;
 };
 
-const bassPump: PatternFn = (chord, _scale, rng) => {
+const bassPump: PatternFn = (chord, _scale, rhythm, pitch) => {
   const root = chordTonesAt(chord, 2)[0];
   const notes: MelodyNote[] = [];
   for (let i = 0; i < 16; i += 2) {
-    if (rng.chance(0.85)) {
-      const oct = rng.chance(0.2) ? 12 : 0;
+    if (rhythm.chance(0.85)) {
+      const oct = pitch.chance(0.2) ? 12 : 0;
       notes.push({ midi: root + oct, step: i, duration: 2 });
     }
   }
   return notes;
 };
 
-const bassRolling: PatternFn = (chord, _scale, rng) => {
+const bassRolling: PatternFn = (chord, _scale, rhythm, pitch) => {
   const tones = chordTonesAt(chord, 2);
   const notes: MelodyNote[] = [];
   for (let i = 0; i < 16; i++) {
-    if (rng.chance(0.6)) {
-      const note = rng.chance(0.7) ? tones[0] : rng.pick(tones);
+    if (rhythm.chance(0.6)) {
+      const note = pitch.chance(0.7) ? tones[0] : pitch.pick(tones);
       notes.push({ midi: note, step: i, duration: 1 });
     }
   }
   return notes;
 };
 
-const bassOctaveBounce: PatternFn = (chord, _scale, rng) => {
+const bassOctaveBounce: PatternFn = (chord, _scale, _rhythm, pitch) => {
   const root = chordTonesAt(chord, 2)[0];
   const tones = chordTonesAt(chord, 2);
   const notes: MelodyNote[] = [];
@@ -286,35 +287,35 @@ const bassOctaveBounce: PatternFn = (chord, _scale, rng) => {
     const step = i * 2;
     const high = i % 2 === 1;
     let note = high ? root + 12 : root;
-    if (rng.chance(0.2)) note = rng.pick(tones) + (high ? 12 : 0);
+    if (pitch.chance(0.2)) note = pitch.pick(tones) + (high ? 12 : 0);
     notes.push({ midi: note, step, duration: 2 });
   }
   return notes;
 };
 
-const bassHalftime: PatternFn = (chord, _scale, rng) => {
+const bassHalftime: PatternFn = (chord, _scale, rhythm, pitch) => {
   const tones = chordTonesAt(chord, 1);
   const root = tones[0];
   const notes: MelodyNote[] = [
-    { midi: root, step: 0, duration: rng.intRange(6, 10) },
+    { midi: root, step: 0, duration: rhythm.intRange(6, 10) },
   ];
-  if (rng.chance(0.5)) {
-    const second = rng.pick(tones);
-    notes.push({ midi: second, step: rng.intRange(8, 12), duration: rng.intRange(3, 6) });
+  if (rhythm.chance(0.5)) {
+    const second = pitch.pick(tones);
+    notes.push({ midi: second, step: rhythm.intRange(8, 12), duration: rhythm.intRange(3, 6) });
   }
   return notes;
 };
 
-const bass808: PatternFn = (chord, scale, rng) => {
+const bass808: PatternFn = (chord, scale, rhythm, pitch) => {
   const tones = chordTonesAt(chord, 1);
   const notes: MelodyNote[] = [];
   const hitPositions = [0];
-  if (rng.chance(0.6)) hitPositions.push(rng.pick([6, 8, 10]));
-  if (rng.chance(0.3)) hitPositions.push(rng.pick([3, 4, 12, 14]));
+  if (rhythm.chance(0.6)) hitPositions.push(rhythm.pick([6, 8, 10]));
+  if (rhythm.chance(0.3)) hitPositions.push(rhythm.pick([3, 4, 12, 14]));
   for (const p of hitPositions) {
-    let note = rng.chance(0.6) ? tones[0] : rng.pick(tones);
-    if (rng.chance(0.2)) note = nearestInScale(note + rng.intRange(-3, 3), scale);
-    const dur = rng.intRange(2, Math.min(6, 16 - p));
+    let note = pitch.chance(0.6) ? tones[0] : pitch.pick(tones);
+    if (pitch.chance(0.2)) note = nearestInScale(note + pitch.intRange(-3, 3), scale);
+    const dur = rhythm.intRange(2, Math.min(6, 16 - p));
     notes.push({ midi: note, step: p, duration: dur });
   }
   return notes;
@@ -322,43 +323,39 @@ const bass808: PatternFn = (chord, scale, rng) => {
 
 // ── LEAD PATTERNS ──
 
-const leadArpeggio: PatternFn = (chord, scale, rng) => {
+const leadArpeggio: PatternFn = (chord, scale, _rhythm, pitch) => {
   const tones = chordTonesAt(chord, 5);
-  const notes: MelodyNote[] = [];
-  const dir = rng.chance(0.5) ? 1 : -1;
+  const dir = pitch.chance(0.5) ? 1 : -1;
   const seq = dir === 1 ? [...tones] : [...tones].reverse();
-  const stepSize = Math.max(1, Math.floor(16 / (seq.length * 2)));
-  let cursor = 0;
-  for (let rep = 0; rep < 2 && cursor < 16; rep++) {
-    for (const tone of seq) {
-      if (cursor >= 16) break;
-      let note = tone;
-      if (rng.chance(0.15)) note = nearestInScale(tone + rng.intRange(-2, 2), scale);
-      notes.push({ midi: note, step: cursor, duration: stepSize });
-      cursor += stepSize;
-    }
+  const notes: MelodyNote[] = [];
+  // Always fill the bar with 8 eighth notes; the chord size only changes the
+  // pitch cycle, never the rhythm.
+  for (let i = 0; i < 8; i++) {
+    let note = seq[i % seq.length];
+    if (pitch.chance(0.15)) note = nearestInScale(note + pitch.intRange(-2, 2), scale);
+    notes.push({ midi: note, step: i * 2, duration: 2 });
   }
   return notes;
 };
 
-const leadMelodic: PatternFn = (chord, scale, rng) => {
+const leadMelodic: PatternFn = (chord, scale, rhythm, pitch) => {
   const tones = chordTonesAt(chord, 5);
   const notes: MelodyNote[] = [];
-  let prev = rng.pick(tones);
+  let prev = pitch.pick(tones);
   let cursor = 0;
   while (cursor < 16) {
-    const dur = rng.pick([2, 3, 4]);
+    const dur = rhythm.pick([2, 3, 4]);
     if (cursor + dur > 16) break;
     let next: number;
-    if (rng.chance(0.5)) {
-      next = rng.pick(tones);
+    if (pitch.chance(0.5)) {
+      next = pitch.pick(tones);
     } else {
-      const steps = rng.intRange(-3, 3);
+      const steps = pitch.intRange(-3, 3);
       next = scaleStepFrom(prev, steps, scale);
     }
-    // Avoid big jumps most of the time
-    if (Math.abs(next - prev) > 7 && rng.chance(0.7)) {
-      next = nearestInScale(prev + rng.intRange(-4, 4), scale);
+    // Avoid big jumps most of the time; this consumes only the pitch stream.
+    if (Math.abs(next - prev) > 7 && pitch.chance(0.7)) {
+      next = nearestInScale(prev + pitch.intRange(-4, 4), scale);
     }
     notes.push({ midi: next, step: cursor, duration: dur });
     prev = next;
@@ -367,14 +364,14 @@ const leadMelodic: PatternFn = (chord, scale, rng) => {
   return notes;
 };
 
-const leadScaleRun: PatternFn = (chord, scale, rng) => {
+const leadScaleRun: PatternFn = (chord, scale, rhythm, pitch) => {
   const start = nearestInScale(chordTonesAt(chord, 5)[0], scale);
   const startIdx = scale.indexOf(start);
-  const dir = rng.chance(0.6) ? 1 : -1;
+  const dir = pitch.chance(0.6) ? 1 : -1;
   const notes: MelodyNote[] = [];
   for (let i = 0; i < 8; i++) {
     const idx = Math.max(0, Math.min(scale.length - 1, startIdx + i * dir));
-    const skip = rng.chance(0.1);
+    const skip = rhythm.chance(0.1);
     if (!skip) {
       notes.push({ midi: scale[idx], step: i * 2, duration: 2 });
     }
@@ -382,15 +379,15 @@ const leadScaleRun: PatternFn = (chord, scale, rng) => {
   return notes;
 };
 
-const leadSyncopated: PatternFn = (chord, scale, rng) => {
+const leadSyncopated: PatternFn = (chord, scale, rhythm, pitch) => {
   const tones = chordTonesAt(chord, 5);
   const positions = [0, 3, 6, 8, 11, 14];
   const notes: MelodyNote[] = [];
   for (const p of positions) {
-    if (rng.chance(0.8)) {
-      let note = rng.pick(tones);
-      if (rng.chance(0.25)) note = nearestInScale(note + rng.intRange(-3, 3), scale);
-      const dur = rng.pick([2, 3]);
+    if (rhythm.chance(0.8)) {
+      let note = pitch.pick(tones);
+      if (pitch.chance(0.25)) note = nearestInScale(note + pitch.intRange(-3, 3), scale);
+      const dur = rhythm.pick([2, 3]);
       if (p + dur <= 16) {
         notes.push({ midi: note, step: p, duration: dur });
       }
@@ -399,19 +396,19 @@ const leadSyncopated: PatternFn = (chord, scale, rng) => {
   return notes;
 };
 
-const leadStab: PatternFn = (chord, _scale, rng) => {
+const leadStab: PatternFn = (chord, _scale, rhythm, pitch) => {
   const tones = chordTonesAt(chord, 5);
   const notes: MelodyNote[] = [];
   const offbeats = [2, 6, 10, 14];
   for (const p of offbeats) {
-    if (rng.chance(0.7)) {
-      notes.push({ midi: rng.pick(tones), step: p, duration: rng.pick([1, 2]) });
+    if (rhythm.chance(0.7)) {
+      notes.push({ midi: pitch.pick(tones), step: p, duration: rhythm.pick([1, 2]) });
     }
   }
   return notes;
 };
 
-const leadEuphoric: PatternFn = (chord, scale, rng) => {
+const leadEuphoric: PatternFn = (chord, scale, _rhythm, pitch) => {
   const tones = chordTonesAt(chord, 5);
   const notes: MelodyNote[] = [];
   let prev = tones[0];
@@ -420,10 +417,10 @@ const leadEuphoric: PatternFn = (chord, scale, rng) => {
   for (const dur of durations) {
     if (cursor >= 16) break;
     let note: number;
-    if (rng.chance(0.4)) {
-      note = rng.pick(tones);
+    if (pitch.chance(0.4)) {
+      note = pitch.pick(tones);
     } else {
-      note = scaleStepFrom(prev, rng.intRange(-2, 3), scale);
+      note = scaleStepFrom(prev, pitch.intRange(-2, 3), scale);
     }
     notes.push({ midi: note, step: cursor, duration: Math.min(dur, 16 - cursor) });
     prev = note;
@@ -432,13 +429,13 @@ const leadEuphoric: PatternFn = (chord, scale, rng) => {
   return notes;
 };
 
-const leadChopped: PatternFn = (chord, scale, rng) => {
+const leadChopped: PatternFn = (chord, scale, rhythm, pitch) => {
   const tones = chordTonesAt(chord, 5);
   const notes: MelodyNote[] = [];
   for (let i = 0; i < 16; i++) {
-    if (rng.chance(0.5)) {
-      let note = rng.pick(tones);
-      if (rng.chance(0.3)) note = nearestInScale(note + rng.intRange(-2, 2), scale);
+    if (rhythm.chance(0.5)) {
+      let note = pitch.pick(tones);
+      if (pitch.chance(0.3)) note = nearestInScale(note + pitch.intRange(-2, 2), scale);
       notes.push({ midi: note, step: i, duration: 1 });
     }
   }
@@ -662,7 +659,11 @@ export function generateMelody(
   options: MelodyOptions = {},
 ): GeneratedMelody {
   const ideaOffset = ((options.idea ?? 1) - 1) * 7919;
-  const rng = new SeededRandom(seed * 31337 + styleId.length * 7 + (type === 'bass' ? 1 : 2) + ideaOffset);
+  const baseSeed = seed * 31337 + styleId.length * 7 + (type === 'bass' ? 1 : 2) + ideaOffset;
+  // Rhythm and pitch use independent streams: changing the progression can
+  // only change pitch, never the groove.
+  const rhythm = new SeededRandom(baseSeed + 17);
+  const pitch = new SeededRandom(baseSeed + 29);
   const scale = buildFullScale(rootKey, scaleType, 0, 7);
 
   const patternMap = type === 'bass' ? BASS_PATTERN_MAP : LEAD_PATTERN_MAP;
@@ -672,7 +673,7 @@ export function generateMelody(
   const stepsPerChord = 16;
 
   chords.forEach((chord, chordIdx) => {
-    const chordNotes = patternFn(chord, scale, rng, chordIdx);
+    const chordNotes = patternFn(chord, scale, rhythm, pitch, chordIdx);
     for (const note of chordNotes) {
       if (note.step >= 0 && note.step < stepsPerChord) {
         allNotes.push({

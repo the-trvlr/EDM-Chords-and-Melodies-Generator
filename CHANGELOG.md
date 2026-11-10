@@ -3,6 +3,19 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.0.1] — 2026-11-10
+
+### Fixed
+
+- **Generated bass and lead now follow chord changes without changing their rhythm.** Rhythm and pitch used one RNG stream, so replacing chords — especially triad → 7th chords — could change note positions and durations. They now use independent `rhythm` and `pitch` streams.
+- The lead arpeggio always fills the bar with eight eighth notes, independent of chord size; chord quality changes only the pitch cycle.
+- Progression changes (key, complexity, template, reorder) now update MIDI pitches while keeping the exact `step`/`duration` grid for both bass and lead.
+
+### Tests
+
+- 63 unit tests, including a cross-genre/style/seed matrix: rhythm is identical for substitutions, 7th chords and transposition; strong beats are chord tones of the new progression; pitches change.
+- Muted browser: A → C key, triads → 7ths and Classic → Deep House template all kept the rhythm and changed the pitches for both tracks.
+
 ## [1.0.0] — 2026-11-04
 
 ### Studio 1.0 — one workspace instead of tabs
