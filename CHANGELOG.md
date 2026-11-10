@@ -3,6 +3,20 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.3.2] — 2026-11-10
+
+### Sample-based offline rendering
+
+- **WAV mix and stems now use the same sample instruments as live playback** (when the selected variant maps them to samples). `renderArrangementToWav` creates the samplers inside the offline Tone context and awaits their buffers before scheduling.
+- Acoustic/EDM selection and per-track release times are respected in renders, so exported audio matches the preview.
+- If a sample cannot be loaded, rendering gracefully falls back to the synth for that track.
+- Sample files come from the local bundle and are served by the service-worker cache, so offline export works after the first load.
+
+### Verification
+
+- 87 unit tests, lint/tsc/build clean.
+- Muted browser: “Export → WAV mix” produced `edm-mix-A-minor-124bpm.wav` with no console errors; sample-based render path executed.
+
 ## [1.3.1] — 2026-11-10
 
 ### Sound pack refinements

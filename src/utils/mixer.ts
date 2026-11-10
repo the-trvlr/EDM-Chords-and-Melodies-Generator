@@ -8,7 +8,7 @@ import { createSynth, getChordEnvelope, type SynthPresetId } from './audioEngine
 import type { DrumKitId } from '../data/drumKits';
 import type { SongSection, TrackOctaves } from '../types';
 import { prepareCountIn, startMetronome, stopMetronome } from './metronome';
-import { getTrackSampler, type SoundVariant } from './sampleLibrary';
+import { createSamplerForPreset, getTrackSampler, sampleFor, type SoundVariant } from './sampleLibrary';
 import {
   buildSchedule,
   eventsForTrack,
@@ -537,13 +537,52 @@ function trackIsAudible(
   return anySolo ? tracks[id].solo : !tracks[id].mute;
 }
 
+type RenderSynth = Tone.PolySynth | Tone.MonoSynth | Tone.Sampler;
+
+async function createRenderSynth(
+  id: 'chord' | 'bass' | 'lead',
+  opts: RenderOptions,
+): Promise<RenderSynth> {
+  const preset = opts.synthIds[id];
+  if (sampleFor(preset, opts.soundVariant ?? 'edm')) {
+    const sampler = await createSamplerForPreset(preset);
+    if (sampler) return sampler;
+  }
+  return createTrackSynth(
+    preset,
+    id === 'chord' ? getChordEnvelope(opts.rhythm.name, opts.bpm, opts.rhythm.pattern) : undefined,
+    id === 'bass' && opts.bassGlide === true,
+  );
+}
+
+function triggerSingle(
+  synth: RenderSynth,
+  note: string,
+  duration: number,
+  time: number,
+  velocity: number,
+): void {
+  synth.triggerAttackRelease(note, duration, time, velocity);
+}
+
+function triggerChord(
+  synth: RenderSynth,
+  notes: string[],
+  duration: number,
+  time: number,
+  velocity: number,
+): void {
+  if (synth instanceof Tone.Sampler) synth.triggerAttackRelease(notes, duration, time, velocity);
+  else (synth as Tone.PolySynth).triggerAttackRelease(notes, duration, time, velocity);
+}
+
 export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob> {
   const steps = songSteps(opts);
   const secPer16 = 60 / opts.bpm / 4;
   const duration = steps * secPer16 + 2.5;
   const events = buildSchedule(opts);
 
-  const rendered = await Tone.Offline(() => {
+  const rendered = await Tone.Offline(async () => {
     if (typeof opts.masterVolume === 'number') Tone.getDestination().volume.value = opts.masterVolume;
     const limiter = new Tone.Limiter(-1).toDestination();
     const reverb = new Tone.Freeverb({ roomSize: 0.7, dampening: 3000, wet: 0.25 }).connect(limiter);
@@ -554,9 +593,9 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
       drums: new Tone.Channel({ volume: opts.tracks.drums.volume }).connect(reverb),
     };
     const synths = {
-      chord: (createTrackSynth(opts.synthIds.chord, getChordEnvelope(opts.rhythm.name, opts.bpm, opts.rhythm.pattern)) as Tone.PolySynth).connect(channels.chord),
-      bass: createTrackSynth(opts.synthIds.bass, undefined, opts.bassGlide === true).connect(channels.bass),
-      lead: (createTrackSynth(opts.synthIds.lead) as Tone.PolySynth).connect(channels.lead),
+      chord: (await createRenderSynth('chord', opts)).connect(channels.chord),
+      bass: (await createRenderSynth('bass', opts)).connect(channels.bass),
+      lead: (await createRenderSynth('lead', opts)).connect(channels.lead),
     };
     const drums = createDrumSynths(opts.drumKitId ?? currentKitId, channels.drums);
 
@@ -565,36 +604,16 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
       const time = (event.step + event.offset) * secPer16;
       switch (event.track) {
         case 'chord':
-          synths.chord.triggerAttackRelease(
-            event.midis.map(midiNoteToToneName),
-            secPer16 * event.durationSteps * GATE,
-            time,
-            event.velocity,
-          );
+          triggerChord(synths.chord, event.midis.map(midiNoteToToneName), secPer16 * event.durationSteps * GATE, time, event.velocity);
           break;
         case 'arp':
-          synths.chord.triggerAttackRelease(
-            midiNoteToToneName(event.midi),
-            secPer16 * event.durationSteps * GATE,
-            time,
-            event.velocity,
-          );
+          triggerSingle(synths.chord, midiNoteToToneName(event.midi), secPer16 * event.durationSteps * GATE, time, event.velocity);
           break;
         case 'bass':
-          synths.bass.triggerAttackRelease(
-            midiNoteToToneName(event.midi),
-            secPer16 * event.durationSteps * GATE,
-            time,
-            event.velocity,
-          );
+          triggerSingle(synths.bass, midiNoteToToneName(event.midi), secPer16 * event.durationSteps * GATE, time, event.velocity);
           break;
         case 'lead':
-          synths.lead.triggerAttackRelease(
-            midiNoteToToneName(event.midi),
-            secPer16 * event.durationSteps * GATE,
-            time,
-            event.velocity,
-          );
+          triggerSingle(synths.lead, midiNoteToToneName(event.midi), secPer16 * event.durationSteps * GATE, time, event.velocity);
           break;
         case 'drums':
           triggerDrum(drums, event.instrument, secPer16, time, event.velocity);

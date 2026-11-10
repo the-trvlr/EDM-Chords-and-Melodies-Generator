@@ -570,7 +570,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide },
     );
     toast.show('Arrangement MIDI exported', 'success');
-  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, toast]);
 
   const handleExportWav = useCallback(async () => {
     setRendering(true);

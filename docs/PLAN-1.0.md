@@ -452,9 +452,9 @@ footer 40
 
 **Сделано в 1.2.0:** мотив/вариации, contour, call-response, 808 glide, suggest next (diatonic/borrowed/secondary), detect key, pin chord.
 
-**Сделано в 1.3.0:** гибридный сэмпл-пак, Acoustic/EDM, офлайн-кэш сэмплов.
+**Сделано в 1.3.0–1.3.2:** гибридный сэмпл-пак, Acoustic/EDM, офлайн-кэш сэмплов, sample-based WAV/stems, 6 инструментов на дорожку.
 
-**Осталось:** MIDI-in, loop region, DAW pack, project library, e2e/axe, Safari delay, MusicXML/PDF, sample-based offline rendering.
+**Осталось:** MIDI-in, loop region, DAW pack, project library, e2e/axe, Safari delay, MusicXML/PDF, velocity-слои.
 
 - **Generator 2.0+:** мотивы/вариации, call-response, contour, 808 glide.
 - **Harmony 2.0:** подсказки следующего аккорда, borrowed, secondary dominants, key detection.

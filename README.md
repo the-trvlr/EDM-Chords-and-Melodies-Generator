@@ -11,7 +11,7 @@ A fully offline Progressive Web App (PWA) for turning an EDM idea into a playabl
 
 ## What's new in 1.3
 
-- **Hybrid instrument samples:** local CC-BY piano, organ, nylon guitar, electric bass, upright bass, harmonium, cello, violin, flute and xylophone; lazy-loaded and cached for offline use.
+- **Hybrid instrument samples:** local CC-BY piano, organ, nylon guitar, electric bass, upright bass, harmonium, cello, violin, flute and xylophone; lazy-loaded, cached offline and used in WAV/stems renders.
 - **Six track-specific instruments** for Chords, Bass and Lead; piano has a natural 2.2 s release so EDM chords ring instead of clipping.
 - **Acoustic / EDM sound selector** in the Project Bar.
 - **Generator 2.0:** motif variations, contour, call & response, 808 glide.
@@ -53,6 +53,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 ### Sound & samples
 
 - **Acoustic / EDM** character; acoustic instruments are sampled and cached offline, electronic presets stay synthesised in EDM mode.
+- **Sample-based WAV/stems** match the preview; synth fallback if a sample is unavailable.
 - Sample pack attribution: [`docs/SAMPLES.md`](docs/SAMPLES.md).
 
 ### Transport & export

@@ -49,6 +49,34 @@ export function sampleFor(preset: SynthPresetId, variant: SoundVariant): SampleI
   return PRESET_SAMPLE[preset] ?? null;
 }
 
+function buildSampler(sampleId: SampleInstrumentId): Promise<Tone.Sampler | null> {
+  const set = SAMPLE_SETS[sampleId];
+  const toneName = (file: string) => file.length > 1 && file[1] === 's'
+    ? `${file[0]}#${file.slice(2)}`
+    : file;
+  const urls = Object.fromEntries(set.notes.map(file => [toneName(file), `${file}.mp3`]));
+  const baseUrl = `${import.meta.env.BASE_URL}samples/${set.folder}/`;
+
+  return new Promise<Tone.Sampler | null>((resolve) => {
+    try {
+      const sampler = new Tone.Sampler({
+        urls,
+        baseUrl,
+        release: set.release,
+        onload: () => resolve(sampler),
+        onerror: () => resolve(null),
+      });
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+export function createSamplerForPreset(preset: SynthPresetId): Promise<Tone.Sampler | null> {
+  const sampleId = PRESET_SAMPLE[preset];
+  return sampleId ? buildSampler(sampleId) : Promise.resolve(null);
+}
+
 export function loadTrackSampler(
   track: Extract<TrackId, 'chord' | 'bass' | 'lead'>,
   preset: SynthPresetId,
@@ -61,28 +89,10 @@ export function loadTrackSampler(
 
   const sampleId = PRESET_SAMPLE[preset];
   if (!sampleId) return Promise.resolve(null);
-  const set = SAMPLE_SETS[sampleId];
-  const toneName = (file: string) => file.length > 1 && file[1] === 's'
-    ? `${file[0]}#${file.slice(2)}`
-    : file;
-  const urls = Object.fromEntries(set.notes.map(file => [toneName(file), `${file}.mp3`]));
-  const baseUrl = `${import.meta.env.BASE_URL}samples/${set.folder}/`;
 
-  const promise = new Promise<Tone.Sampler | null>((resolve) => {
-    try {
-      const sampler = new Tone.Sampler({
-        urls,
-        baseUrl,
-        release: set.release,
-        onload: () => {
-          samplers.set(key, sampler);
-          resolve(sampler);
-        },
-        onerror: () => resolve(null),
-      });
-    } catch {
-      resolve(null);
-    }
+  const promise = buildSampler(sampleId).then(sampler => {
+    if (sampler) samplers.set(key, sampler);
+    return sampler;
   });
   loading.set(key, promise);
   void promise.finally(() => loading.delete(key));
