@@ -3,6 +3,20 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.0.2] — 2026-11-10
+
+### Fixed
+
+- **Chord inversion buttons now switch between the actual inversions instead of stacking them.** `invertChord` was applied to the current voicing, so pressing 1st and 2nd repeatedly kept raising the chord. It now rebuilds the root-position voicing from the chord root and intervals, then applies the requested inversion.
+- **Root restores the original chord** (notes, MIDI, display), not just the `inversion` flag.
+- Repeated clicks on the same inversion are idempotent; moving 2nd → 1st works without accumulating octaves.
+- The fix applies to the Inspector, voice leading and share links.
+
+### Tests
+
+- 67 unit tests: root → 1st → 2nd → root, repeated clicks, switching between ready-made inversions, and seventh chords.
+- Muted browser: Am → Am/C → Am/E → Am, with MIDI `[69,72,76]` restored after Root.
+
 ## [1.0.1] — 2026-11-10
 
 ### Fixed

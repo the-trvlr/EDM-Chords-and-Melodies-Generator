@@ -213,46 +213,44 @@ export function midiNoteToToneName(midi: number): string {
 }
 
 export function invertChord(chord: ChordInfo, inversion: number): ChordInfo {
-  const maxInversion = chord.midiNotes.length - 1;
-  const safeInversion = Math.max(0, Math.min(inversion, maxInversion));
-  
+  const intervals = chord.type.intervals;
+  const rootPc = noteNameToPc(chord.root);
+  const names = chord.root.includes('b') ? FLAT_NAMES : NOTE_NAMES;
+
+  // Rebuild the root-position voicing every time. Inversions are choices of
+  // the same chord, not cumulative transpositions of the current voicing.
+  const currentMin = chord.midiNotes.length > 0 ? Math.min(...chord.midiNotes) : 60;
+  let rootMidi = currentMin - (((currentMin - rootPc) % 12) + 12) % 12;
+  while (rootMidi < 0) rootMidi += 12;
+
+  const baseMidiNotes = intervals.map(interval => rootMidi + interval);
+  const safeInversion = Math.max(0, Math.min(inversion, baseMidiNotes.length - 1));
+  const baseDisplay = `${chord.root}${chord.type.symbol}`;
+
   if (safeInversion === 0) {
-    return { ...chord, inversion: 0 };
+    return {
+      ...chord,
+      notes: baseMidiNotes.map(midi => names[midi % 12]),
+      midiNotes: baseMidiNotes,
+      display: baseDisplay,
+      inversion: 0,
+    };
   }
-  
-  const invertedMidiNotes = [...chord.midiNotes];
-  const invertedNotes = [...chord.notes];
-  
-  // Move the first n notes up an octave
+
+  const invertedMidiNotes = [...baseMidiNotes];
   for (let i = 0; i < safeInversion; i++) {
     invertedMidiNotes[i] += 12;
   }
-  
-  // Sort the MIDI notes to maintain ascending order
   invertedMidiNotes.sort((a, b) => a - b);
-  
-  // Update note names based on new MIDI notes
-  const names = chord.root.includes('b') ? FLAT_NAMES : NOTE_NAMES;
-  
-  for (let i = 0; i < invertedMidiNotes.length; i++) {
-    const pc = invertedMidiNotes[i] % 12;
-    invertedNotes[i] = names[pc];
-  }
-  
-  // Update display to show inversion (e.g., C/G for first inversion)
+
+  const invertedNotes = invertedMidiNotes.map(midi => names[midi % 12]);
   const bassNote = invertedNotes[0];
-  let display = chord.display;
-  if (safeInversion === 1) {
-    display = `${chord.root}${chord.type.symbol}/${bassNote}`;
-  } else if (safeInversion === 2) {
-    display = `${chord.root}${chord.type.symbol}/${bassNote}`;
-  }
-  
+
   return {
     ...chord,
     notes: invertedNotes,
     midiNotes: invertedMidiNotes,
-    display,
+    display: `${baseDisplay}/${bassNote}`,
     inversion: safeInversion,
   };
 }
