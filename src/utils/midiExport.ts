@@ -193,7 +193,7 @@ export interface ArrangementMidiOptions {
  * lead and one track per drum instrument. Explicit ticks keep every part on
  * the grid, including sections, octave shifts, swing and humanize.
  */
-export function exportArrangementToMidi(
+export function buildArrangementMidiTracks(
   chords: ChordInfo[],
   rhythm: RhythmPattern,
   bass: GeneratedMelody,
@@ -205,8 +205,10 @@ export function exportArrangementToMidi(
   arpMelody?: GeneratedMelody | null,
   drums?: DrumPattern | null,
   options: ArrangementMidiOptions = {},
-): void {
+): MidiWriter.Track[] {
   void doubleTime;
+  void keyName;
+  void scaleName;
   const events = buildSchedule({
     chords,
     rhythm,
@@ -221,7 +223,7 @@ export function exportArrangementToMidi(
     timeScales: options.timeScales,
     bassGlide: options.bassGlide,
   });
-  if (events.length === 0) return;
+  if (events.length === 0) return [];
 
   const chordEvents = events.filter(event => event.track === 'chord' || event.track === 'arp');
   const bassEvents = events.filter(event => event.track === 'bass');
@@ -258,7 +260,10 @@ export function exportArrangementToMidi(
       { id: 'kick', name: 'Kick', velocity: 100 },
       { id: 'snare', name: 'Snare', velocity: 90 },
       { id: 'clap', name: 'Clap', velocity: 85 },
-      { id: 'hat', name: 'Hat', velocity: 70 },
+      { id: 'hat', name: 'Hi-Hat', velocity: 70 },
+      { id: 'lowHat', name: 'Low Hat', velocity: 65 },
+      { id: 'crash', name: 'Crash', velocity: 80 },
+      { id: 'ride', name: 'Ride', velocity: 60 },
     ];
     for (const instrument of instruments) {
       const drumTrack = newTrack(instrument.name, bpm);
@@ -278,7 +283,7 @@ export function exportArrangementToMidi(
     }
   }
 
-  if (tracks.length === 0) return;
+  if (tracks.length === 0) return [];
 
   if (options.sections && options.sections.length > 0) {
     const markerTrack = newTrack('Sections', bpm);
@@ -293,5 +298,45 @@ export function exportArrangementToMidi(
     tracks.push(markerTrack);
   }
 
+  return tracks;
+}
+
+export function exportArrangementToMidi(
+  chords: ChordInfo[],
+  rhythm: RhythmPattern,
+  bass: GeneratedMelody,
+  lead: GeneratedMelody,
+  bpm: number,
+  keyName: string,
+  scaleName: string,
+  doubleTime = false,
+  arpMelody?: GeneratedMelody | null,
+  drums?: DrumPattern | null,
+  options: ArrangementMidiOptions = {},
+): void {
+  const tracks = buildArrangementMidiTracks(
+    chords, rhythm, bass, lead, bpm, keyName, scaleName, doubleTime, arpMelody, drums, options,
+  );
+  if (tracks.length === 0) return;
   download(tracks, `edm-arrangement-${keyName}-${scaleName}-${bpm}bpm.mid`);
+}
+
+export function buildArrangementMidiBytes(
+  chords: ChordInfo[],
+  rhythm: RhythmPattern,
+  bass: GeneratedMelody,
+  lead: GeneratedMelody,
+  bpm: number,
+  keyName: string,
+  scaleName: string,
+  doubleTime = false,
+  arpMelody?: GeneratedMelody | null,
+  drums?: DrumPattern | null,
+  options: ArrangementMidiOptions = {},
+): Uint8Array | null {
+  const tracks = buildArrangementMidiTracks(
+    chords, rhythm, bass, lead, bpm, keyName, scaleName, doubleTime, arpMelody, drums, options,
+  );
+  if (tracks.length === 0) return null;
+  return new MidiWriter.Writer(tracks).buildFile();
 }
