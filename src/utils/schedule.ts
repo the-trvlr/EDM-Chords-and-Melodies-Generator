@@ -12,7 +12,7 @@ import type { SongSection, TrackOctaves } from '../types';
 export const STEPS_PER_CHORD = 16;
 
 export type TrackId = 'chord' | 'bass' | 'lead' | 'drums';
-export type DrumInstrument = 'kick' | 'snare' | 'clap' | 'hat';
+export type DrumInstrument = 'kick' | 'snare' | 'clap' | 'hat' | 'lowHat' | 'crash' | 'ride';
 
 export type ScheduleEvent =
   | { track: 'chord'; step: number; durationSteps: number; midis: number[]; offset: number; velocity: number }
@@ -159,7 +159,7 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
     pushMelody(input.lead, 'lead', octaves.lead);
 
     if (input.drums && tracks.has('drums')) {
-      const instruments: DrumInstrument[] = ['kick', 'snare', 'clap', 'hat'];
+      const instruments: DrumInstrument[] = ['kick', 'snare', 'clap', 'hat', 'lowHat', 'crash', 'ride'];
       for (let sic = 0; sic < STEPS_PER_CHORD; sic++) {
         for (const instrument of instruments) {
           if (!input.drums[instrument][sic]) continue;
@@ -169,7 +169,13 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
             durationSteps: 1,
             instrument,
             offset: 0,
-            velocity: instrument === 'kick' ? 0.95 : instrument === 'snare' ? 0.85 : instrument === 'clap' ? 0.8 : 0.6,
+            velocity: instrument === 'kick' ? 0.95
+              : instrument === 'snare' ? 0.85
+              : instrument === 'clap' ? 0.8
+              : instrument === 'crash' ? 0.7
+              : instrument === 'ride' ? 0.55
+              : instrument === 'lowHat' ? 0.62
+              : 0.6,
           });
         }
       }
@@ -207,6 +213,15 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
 
     const barBase = Math.floor(event.step / STEPS_PER_CHORD) * STEPS_PER_CHORD;
     const localStep = event.step % STEPS_PER_CHORD;
+    const drumCore = event.track === 'drums'
+      && ['kick', 'snare', 'clap', 'crash'].includes(event.instrument);
+
+    // A drum machine's 2x means double-time hats/ride, not a machine-gun kick.
+    // Kick, snare, clap and crash keep the genre backbone.
+    if (drumCore) {
+      scaled.push(event);
+      continue;
+    }
 
     if (scale === 2) {
       // Double time within each bar: compress the pattern to the first half

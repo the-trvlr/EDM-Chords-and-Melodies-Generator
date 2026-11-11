@@ -30,6 +30,9 @@ interface DrumSynths {
   snare: Tone.NoiseSynth;
   clap: Tone.NoiseSynth;
   hat: Tone.MetalSynth;
+  lowHat: Tone.MetalSynth;
+  crash: Tone.MetalSynth;
+  ride: Tone.MetalSynth;
 }
 
 type MelodicSynth = Tone.PolySynth | Tone.MonoSynth | Tone.Sampler;
@@ -117,17 +120,41 @@ function ensureMixer(): MixerNodes {
 
 function createDrumSynths(kitId: DrumKitId, destination: Tone.InputNode): DrumSynths {
   const params = getDrumSynthParams(kitId);
+  const hat = params.hat;
   return {
     kick: new Tone.MembraneSynth(params.kick).connect(destination),
     snare: new Tone.NoiseSynth(params.snare).connect(destination),
     clap: new Tone.NoiseSynth(params.clap).connect(destination),
-    hat: new Tone.MetalSynth(params.hat).connect(destination),
+    hat: new Tone.MetalSynth(hat).connect(destination),
+    lowHat: new Tone.MetalSynth({
+      ...hat,
+      envelope: { ...hat.envelope, decay: 0.14, release: 0.03 },
+      harmonicity: Math.max(2, (hat.harmonicity ?? 5) - 1.2),
+      resonance: Math.max(2000, (hat.resonance ?? 6000) - 1800),
+      octaves: 1.1,
+    }).connect(destination),
+    crash: new Tone.MetalSynth({
+      envelope: { attack: 0.001, decay: 1.0, release: 1.4 },
+      harmonicity: 5.1,
+      modulationIndex: 32,
+      resonance: 5200,
+      octaves: 1.8,
+      volume: -8,
+    }).connect(destination),
+    ride: new Tone.MetalSynth({
+      envelope: { attack: 0.001, decay: 1.4, release: 1.8 },
+      harmonicity: 4.2,
+      modulationIndex: 26,
+      resonance: 7600,
+      octaves: 1.4,
+      volume: -10,
+    }).connect(destination),
   };
 }
 
 function disposeDrums(drums: DrumSynths | null): void {
   if (!drums) return;
-  for (const node of [drums.kick, drums.snare, drums.clap, drums.hat]) {
+  for (const node of [drums.kick, drums.snare, drums.clap, drums.hat, drums.lowHat, drums.crash, drums.ride]) {
     node.disconnect();
     node.dispose();
   }
@@ -204,6 +231,15 @@ function triggerDrum(
       break;
     case 'hat':
       drums.hat.triggerAttackRelease('32n', sixteenth * 0.3, time, velocity);
+      break;
+    case 'lowHat':
+      drums.lowHat.triggerAttackRelease('32n', sixteenth * 0.45, time, velocity);
+      break;
+    case 'crash':
+      drums.crash.triggerAttackRelease('2n', sixteenth * 1.2, time, velocity);
+      break;
+    case 'ride':
+      drums.ride.triggerAttackRelease('4n', sixteenth * 0.8, time, velocity);
       break;
   }
 }

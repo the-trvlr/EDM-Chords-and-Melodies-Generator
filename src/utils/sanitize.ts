@@ -1,6 +1,6 @@
 import { CHORD_TYPES, SCALE_INTERVALS, type ChordComplexity, type ChordInfo } from './musicTheory';
 import { DRUM_KITS, type DrumKitId } from '../data/drumKits';
-import { isDrumPattern } from './drumGenerator';
+import { normalizeDrumPattern } from './drumGenerator';
 import { defaultMelodyState, emptyMixer, type MelodyState, type MixerState, type SongSection, type TrackMix } from '../types';
 import type { SynthPresetId } from './audioEngine';
 import type { TrackId } from './schedule';
@@ -190,8 +190,7 @@ export function sanitizeMelody(value: unknown): MelodyState {
       ? ((value.dk ?? value.drumKitId) as DrumKitId)
       : melody.drumKitId,
     drumSeed: Math.round(numIn(value.dsd ?? value.drumSeed, 1, 1_000_000, melody.drumSeed)),
-    customDrumPattern: isDrumPattern(value.dp) ? value.dp
-      : isDrumPattern(value.customDrumPattern) ? value.customDrumPattern : null,
+    customDrumPattern: normalizeDrumPattern(value.dp ?? value.customDrumPattern),
     synthIds: isRecord(value.si)
       ? {
           chord: sanitizeSynthId(value.si.chord, melody.synthIds.chord),

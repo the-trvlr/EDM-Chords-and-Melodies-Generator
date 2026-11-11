@@ -3,6 +3,25 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.4.0] — 2026-11-11
+
+### Drum sequencer 2.0
+
+- **Seven drum lanes:** Kick, Snare, Clap, Hi-Hat, Low Hat, Crash, Ride (previously only four). Hi-hat is split into high and low; crash and ride have their own tracks, synths and MIDI channels.
+- **Classic DnB and Dubstep patterns:**
+  - DnB two-step kick on 1 and 3.5, snare on 2 and 4, 16th hats, ride and crash;
+  - Neurofunk adds the extra kick and pickup;
+  - Dubstep half-time snare on 3, kick 1/3.5, sparse 8th hats, crash/ride accents.
+- **Meaningful Regenerate:** four variation profiles (ghost pocket, hat fill, open-hat/ride accents, busy hats) plus seed-driven ghost snares, low-hat accents, kick pickups, crash/ride hits and clap changes. Kick/backbeat backbone is preserved.
+- **`2×` no longer machine-guns the kick.** For drums, `2×` doubles hats/ride only; kick, snare, clap and crash keep the genre backbone. `½` similarly leaves the core intact.
+- MIDI exports separate GM tracks: Hi-Hat 42, Low Hat 44, Crash 49, Ride 51, in addition to kick/snare/clap.
+- Old 4-lane saved patterns are migrated automatically; missing lanes start empty.
+
+### Verification
+
+- 90 unit tests, including new lanes, seed variation, drum `2×` backbone and MIDI fixtures.
+- Muted browser: seven lanes render, Regenerate changes the pattern, `2×` arms correctly, Play/Stop clean, mobile 390 without overflow.
+
 ## [1.3.2] — 2026-11-10
 
 ### Sample-based offline rendering

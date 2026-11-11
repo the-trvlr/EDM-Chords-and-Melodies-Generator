@@ -48,6 +48,9 @@ describe('buildSchedule', () => {
       snare: [0, 0, 0, 0, 1, ...new Array(11).fill(0)],
       clap: new Array(16).fill(0),
       hat: new Array(16).fill(0),
+      lowHat: new Array(16).fill(0),
+      crash: new Array(16).fill(0),
+      ride: new Array(16).fill(0),
     };
     const events = buildSchedule({ chords, rhythm, drums });
     const kick = events.filter(event => event.track === 'drums' && event.instrument === 'kick');
@@ -91,6 +94,26 @@ describe('buildSchedule', () => {
     const bassEvents = eventsForTrack(events, 'bass');
     expect(bassEvents[0].durationSteps).toBe(9);
     expect(bassEvents[1].durationSteps).toBe(2);
+  });
+
+  it('keeps the kick/snare backbone when drums are set to 2x', () => {
+    const drums = {
+      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      clap: new Array(16).fill(0),
+      hat: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+      lowHat: new Array(16).fill(0),
+      crash: new Array(16).fill(0),
+      ride: new Array(16).fill(0),
+    };
+    const normal = buildSchedule({ chords, rhythm, drums });
+    const fast = buildSchedule({ chords, rhythm, drums, timeScales: { chord: 1, bass: 1, lead: 1, drums: 2 } });
+    const steps = (events: typeof normal, instrument: string) => events
+      .filter(event => event.track === 'drums' && event.instrument === instrument)
+      .map(event => event.step);
+    expect(steps(fast, 'kick')).toEqual(steps(normal, 'kick'));
+    expect(steps(fast, 'snare')).toEqual(steps(normal, 'snare'));
+    expect(steps(fast, 'hat').length).toBeGreaterThan(steps(normal, 'hat').length);
   });
 
   it('carries note velocity into schedule events', () => {
@@ -150,6 +173,9 @@ describe('buildSchedule', () => {
       snare: new Array(16).fill(0),
       clap: new Array(16).fill(0),
       hat: new Array(16).fill(0),
+      lowHat: new Array(16).fill(0),
+      crash: new Array(16).fill(0),
+      ride: new Array(16).fill(0),
     };
     const sections = [
       { id: 'intro', kind: 'intro' as const, bars: 1, tracks: ['chord' as const] },
@@ -178,6 +204,9 @@ describe('buildSchedule', () => {
       snare: new Array(16).fill(0),
       clap: new Array(16).fill(0),
       hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+      lowHat: new Array(16).fill(0),
+      crash: new Array(16).fill(0),
+      ride: new Array(16).fill(0),
     };
     const swung = buildSchedule({ chords, rhythm, drums, swing: 0.5 });
     const hatOnOdd = swung.find(event => event.track === 'drums' && event.step === 1);

@@ -454,6 +454,8 @@ footer 40
 
 **Сделано в 1.3.0–1.3.2:** гибридный сэмпл-пак, Acoustic/EDM, офлайн-кэш сэмплов, sample-based WAV/stems, 6 инструментов на дорожку.
 
+**Сделано в 1.4.0:** 7 барабанных дорожек, классические DnB/Dubstep паттерны, осмысленный Regenerate, drum-safe `2×`.
+
 **Осталось:** MIDI-in, loop region, DAW pack, project library, e2e/axe, Safari delay, MusicXML/PDF, velocity-слои.
 
 - **Generator 2.0+:** мотивы/вариации, call-response, contour, 808 glide.
