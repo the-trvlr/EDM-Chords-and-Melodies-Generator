@@ -15,7 +15,7 @@ import {
   type ChordComplexity,
   type ChordInfo,
 } from './utils/musicTheory';
-import { initAudio, playChord, playProgression, setPlaybackBpm, setVolume, stopPlayback } from './utils/audioEngine';
+import { initAudio, playChord, playMidiNote, playProgression, setPlaybackBpm, setVolume, stopPlayback } from './utils/audioEngine';
 import { setMetronomeEnabled } from './utils/metronome';
 import { setArrangementBpm, setArrangementLoop, stopArrangement } from './utils/mixer';
 import { loadPersistedState, parseProjectFile, savePersistedState, serializeProject } from './utils/persistence';
@@ -100,10 +100,26 @@ function downloadText(filename: string, text: string): void {
   URL.revokeObjectURL(url);
 }
 
+const KEYBOARD_NOTES: Record<string, number> = {
+  KeyA: 0, KeyW: 1, KeyS: 2, KeyE: 3, KeyD: 4, KeyF: 5,
+  KeyT: 6, KeyG: 7, KeyY: 8, KeyH: 9, KeyU: 10, KeyJ: 11, KeyK: 12,
+};
+
+interface MidiInputLike {
+  onmidimessage: ((event: { data: Uint8Array }) => void) | null;
+}
+
+interface MidiAccessLike {
+  inputs: Map<string, MidiInputLike>;
+  onstatechange: (() => void) | null;
+}
+
 function Studio() {
   const toast = useToast();
   const [audioReady, setAudioReady] = useState(false);
   const [loadingInstruments, setLoadingInstruments] = useState(false);
+  const [midiEnabled, setMidiEnabled] = useState(false);
+  const midiSupported = typeof navigator !== 'undefined' && 'requestMIDIAccess' in navigator;
   const [selectedKey, setSelectedKey] = useState(initialKey);
   const [selectedScale, setSelectedScale] = useState(initialScale);
   const [selectedGenre, setSelectedGenre] = useState<Genre>(initialGenre);
@@ -131,6 +147,8 @@ function Studio() {
   const [resetSnapshot, setResetSnapshot] = useState<ProjectSnapshot | null>(null);
 
   const studioRef = useRef<MelodyStudioHandle>(null);
+  const midiAccessRef = useRef<MidiAccessLike | null>(null);
+  const midiNoteRef = useRef<(event: { data: Uint8Array }) => void>(() => {});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const availableChords = useMemo(
@@ -306,6 +324,57 @@ function Studio() {
       setLoadingInstruments(false);
     }
   }, [toast, melody.synthIds]);
+
+  const handleMidiNote = useCallback((event: { data: Uint8Array }) => {
+    if (!audioReady) return;
+    const [status, note, velocity] = event.data;
+    if ((status & 0xf0) === 0x90 && velocity > 0) {
+      playMidiNote(note, melody.synthIds.lead);
+    }
+  }, [audioReady, melody.synthIds.lead]);
+
+  useEffect(() => {
+    midiNoteRef.current = handleMidiNote;
+  }, [handleMidiNote]);
+
+  const detachMidi = useCallback(() => {
+    const access = midiAccessRef.current;
+    if (!access) return;
+    access.inputs.forEach(input => { input.onmidimessage = null; });
+    access.onstatechange = null;
+    midiAccessRef.current = null;
+    setMidiEnabled(false);
+  }, []);
+
+  const handleMidiToggle = useCallback(async () => {
+    if (midiEnabled) {
+      detachMidi();
+      toast.show('MIDI input disconnected');
+      return;
+    }
+    const request = (navigator as Navigator & { requestMIDIAccess?: () => Promise<MidiAccessLike> }).requestMIDIAccess;
+    if (!request) {
+      toast.show('Web MIDI is not available in this browser.', 'error');
+      return;
+    }
+    try {
+      const access = await request.call(navigator);
+      const attach = () => {
+        access.inputs.forEach(input => {
+          input.onmidimessage = event => midiNoteRef.current(event);
+        });
+      };
+      attach();
+      access.onstatechange = attach;
+      midiAccessRef.current = access;
+      setMidiEnabled(true);
+      toast.show('MIDI input connected', 'success');
+    } catch {
+      toast.show('MIDI access was blocked. Allow it in the browser settings.', 'error');
+    }
+  }, [midiEnabled, detachMidi, toast]);
+
+  useEffect(() => () => detachMidi(), [detachMidi]);
 
   useEffect(() => {
     if (!audioReady) return;
@@ -484,6 +553,11 @@ function Studio() {
         togglePlayback();
         return;
       }
+      if (!mod && !event.repeat && KEYBOARD_NOTES[event.code] !== undefined) {
+        event.preventDefault();
+        if (audioReady) playMidiNote(60 + KEYBOARD_NOTES[event.code], melody.synthIds.lead);
+        return;
+      }
       if (mod && event.code === 'KeyZ' && !event.shiftKey) {
         event.preventDefault();
         handleUndo();
@@ -507,7 +581,7 @@ function Studio() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [togglePlayback, handleUndo, handleRedo, handleSaveProjectFile]);
+  }, [togglePlayback, handleUndo, handleRedo, handleSaveProjectFile, audioReady, melody.synthIds.lead]);
 
   const handleSelectTemplate = useCallback((index: number) => {
     if (chordsPlaying) handleStopChords();
@@ -701,6 +775,9 @@ function Studio() {
             countIn={countIn}
             onCountInChange={setCountIn}
             position={position}
+            midiEnabled={midiEnabled}
+            onMidiToggle={handleMidiToggle}
+            midiSupported={midiSupported}
           />
         </div>
       </header>
@@ -809,7 +886,7 @@ function Studio() {
       </main>
 
       <footer className="mt-8 border-t border-gray-800 py-4 text-center text-xs text-gray-400">
-        ∞ Melodies · works fully offline · PWA
+        ∞ Melodies · works fully offline · PWA · A–K plays notes
       </footer>
     </div>
   );

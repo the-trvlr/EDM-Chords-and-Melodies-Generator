@@ -3,6 +3,24 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.5.0] — 2026-11-11
+
+### Practice & MIDI
+
+- **Tap tempo** in the transport: tap up to four times and the BPM follows the average interval (3 s reset window).
+- **Computer keyboard as piano:** A W S E D F T G Y H U J K play semitones from C4; modifier shortcuts (save/undo) still work.
+- **Web MIDI input:** the MIDI button requests MIDI access and plays incoming note-on messages with the lead instrument. Devices connected later are picked up via `statechange`; clicking again disconnects.
+- Footer hint for the keyboard mapping; no new screens or tabs.
+
+### Verification
+
+- 90 unit tests, lint/tsc/build clean.
+- Muted browser: Tap changed 124 → 96 BPM with 600 ms taps; A key triggered a note without errors; MIDI permission denial produced a clear toast; mobile 390 without overflow.
+
+### Still open for 1.5.x
+
+- Loop region (2/4/8 bars) and quantize/duplicate-bar tools; these remain on the practice backlog.
+
 ## [1.4.0] — 2026-11-11
 
 ### Drum sequencer 2.0
