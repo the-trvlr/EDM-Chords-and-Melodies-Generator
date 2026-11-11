@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 1.7
+- **Version:** 1.8
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -252,6 +252,7 @@ The DAW pack is the recommended hand-off: import the MIDI at bar 1, 4/4, route d
 - **Samples:** piano, organ, nylon guitar, electric bass, upright bass, harmonium, cello, violin, flute and xylophone. CC-BY 3.0; see [`docs/SAMPLES.md`](docs/SAMPLES.md).
 - **Synths:** pad, supersaw, dark, bells, sub, reese, acid, 808 and synth fallbacks.
 - **Effects:** master limiter, shared reverb, per-track level/mute/solo; acoustic mode uses a slightly longer reverb.
+- **Velocity layers:** each sample instrument has soft and hard samplers; quiet notes use a low-passed soft layer, so velocity changes timbre, not just level.
 - **WAV/stems** use the same sample/synth selection as live playback.
 - **808 Glide** uses a monophonic portamento synth and legato bass durations.
 
@@ -288,6 +289,7 @@ Attribution is required if you redistribute the sample files; the code and app a
 npm install
 npm run dev       # local dev server
 npm test          # Vitest unit tests
+npm run test:e2e  # Playwright smoke + axe (system Chrome)
 npm run lint      # ESLint
 npx tsc -b        # typecheck
 npm run build     # production build
@@ -314,7 +316,7 @@ All generation, editing and export happen locally. The app has no accounts, anal
 
 ## Roadmap
 
-- **1.7.x:** Playwright/axe checks, Safari timing, velocity layers and round-robin samples.
+- **1.8.x:** Safari timing, colour-contrast token pass, round-robin samples.
 - **2.0:** song-level arrangement automation, fills/transitions and section-level generator settings.
 
 See [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md) for the full backlog.
