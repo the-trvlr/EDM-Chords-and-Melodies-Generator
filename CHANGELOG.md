@@ -3,6 +3,17 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.8.1] — 2026-11-11
+
+### Faster layered-sample loading
+
+- The soft and hard velocity samplers now share one decoded `AudioBuffer` per sample instead of loading and decoding the same MP3 twice. First load requests nine files (not eighteen) and cached load measured at ~0.6 s in the development browser.
+- No audible change: velocity still selects the low-passed soft layer or the hard layer.
+
+### Verification
+
+- 90 unit tests, 2 Playwright tests, lint/tsc/build clean.
+
 ## [1.8.0] — 2026-11-11
 
 ### Velocity layers + browser quality gate

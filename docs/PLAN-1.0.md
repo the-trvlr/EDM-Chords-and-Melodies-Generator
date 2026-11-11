@@ -458,7 +458,7 @@ footer 40
 
 **Сделано в 1.5.0–1.5.1:** tap tempo, компьютерная клавиатура, Web MIDI, loop-регион 2/4/8.
 
-**Сделано в 1.7.0–1.8.0:** project name, quantize 1/8, repeat bar, Playwright/axe, velocity-слои.
+**Сделано в 1.7.0–1.8.1:** project name, quantize 1/8, repeat bar, Playwright/axe, velocity-слои, общий буфер слоёв.
 
 **Осталось:** Safari delay, colour-contrast, round-robin, MusicXML/PDF.
 
