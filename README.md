@@ -59,7 +59,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 
 ### Transport & export
 
-- Sticky transport: play/stop, bar counter, BPM (slider + input + tap), loop, master volume, metronome, count-in and MIDI input.
+- Sticky transport: play/stop, bar counter, BPM (slider + input + tap), full-song loop, 2/4/8-bar region, master volume, metronome, count-in and MIDI input.
 - `Cmd/Ctrl+Space`/`Space` play-stop, `Cmd/Ctrl+Z`/`Shift+Z` undo-redo, `Cmd/Ctrl+S` save, `Cmd/Ctrl+O` open.
 - **MIDI:** chord progression, full arrangement, per-track files, and separate drum tracks (Kick/Snare/Clap/Hat) on GM notes; section markers included.
 - **WAV mix** and **stems** (4-track zip) rendered offline with the same instruments, kit and effects as playback.

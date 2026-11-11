@@ -11,6 +11,7 @@ import { prepareCountIn, startMetronome, stopMetronome } from './metronome';
 import { createSamplerForPreset, getTrackSampler, sampleFor, type SoundVariant } from './sampleLibrary';
 import {
   buildSchedule,
+  STEPS_PER_CHORD,
   eventsForTrack,
   groupByStep,
   songSteps,
@@ -309,6 +310,7 @@ interface ArrangementInput {
   soundVariant?: SoundVariant;
   metronome?: boolean;
   countInBars?: number;
+  loopBars?: number;
 }
 
 export interface ArrangementOptions extends ArrangementInput {
@@ -352,9 +354,12 @@ function prepareMixer(input: ArrangementInput): { mixer: MixerNodes; byStep: Map
 export function playArrangement(opts: ArrangementOptions): void {
   stopArrangement();
   const { mixer: m, byStep, steps } = prepareMixer(opts);
+  const regionSteps = opts.loopBars && opts.loopBars > 0
+    ? Math.min(steps, Math.round(opts.loopBars) * STEPS_PER_CHORD)
+    : steps;
 
-  arrLoopEnabled = opts.loop;
-  arrTotalSteps = steps;
+  arrLoopEnabled = opts.loop || regionSteps < steps;
+  arrTotalSteps = regionSteps;
 
   let step = 0;
   arrLoop = new Tone.Loop((time) => {

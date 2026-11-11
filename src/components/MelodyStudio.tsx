@@ -15,6 +15,7 @@ import {
   setTrackVolume,
   stopArrangement,
   stopTrackPreview,
+  getArrangementTotalSteps,
   getTransportStep,
   updateDrumKit,
   type TrackId,
@@ -56,6 +57,7 @@ interface MelodyStudioProps {
   masterVolume: number;
   metronome: boolean;
   countInBars: number;
+  loopBars: number;
   isPlaying: boolean;
   onPlayingChange: (playing: boolean) => void;
   melody: MelodyState;
@@ -256,6 +258,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   masterVolume,
   metronome,
   countInBars,
+  loopBars,
   isPlaying,
   onPlayingChange,
   melody,
@@ -365,6 +368,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       drumKitId: liveRef.current.drumKitId,
       metronome: liveRef.current.metronome,
       countInBars: liveRef.current.countInBars,
+      loopBars,
       sections: melody.sections,
       octaves: melody.octaves,
       swing: melody.swing,
@@ -380,7 +384,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     });
   // Restart when the sounding configuration changes (structure, octaves, groove),
   // but not when unrelated melody state (e.g. preview dialogs) changes.
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, onPlayingChange, onStepChange, onStopOtherPlayback]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, loopBars, onPlayingChange, onStepChange, onStopOtherPlayback]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -403,7 +407,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     let frame = 0;
     let last = -1;
     const tick = () => {
-      const step = getTransportStep(bpm) % songLengthSteps;
+      const step = getTransportStep(bpm) % (isPlaying ? Math.max(1, getArrangementTotalSteps()) : songLengthSteps);
       if (step !== last) {
         last = step;
         setActiveStep(step);

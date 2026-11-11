@@ -3,6 +3,20 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.5.1] — 2026-11-11
+
+### Loop region
+
+- Transport now has **Region: off / 2 / 4 / 8 bars**. The selected region loops the first N bars regardless of whether the full-song Loop button is on.
+- The playhead and bar counter wrap inside the region; the arrangement, metronome and count-in start at bar 1 as before.
+- WAV/MIDI exports still render the full song; the region is a playback-only practice tool.
+- The region choice persists in the session (localStorage).
+
+### Verification
+
+- 90 unit tests, lint/tsc/build clean.
+- Muted browser: Region 2 → `2/2` after 2.5 s and wraps to `1/2` at 5.5 s; mobile 390 without overflow; no console errors.
+
 ## [1.5.0] — 2026-11-11
 
 ### Practice & MIDI

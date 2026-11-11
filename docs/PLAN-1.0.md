@@ -456,9 +456,9 @@ footer 40
 
 **Сделано в 1.4.0:** 7 барабанных дорожек, классические DnB/Dubstep паттерны, осмысленный Regenerate, drum-safe `2×`.
 
-**Сделано в 1.5.0:** tap tempo, компьютерная клавиатура как пиано, Web MIDI input.
+**Сделано в 1.5.0–1.5.1:** tap tempo, компьютерная клавиатура, Web MIDI, loop-регион 2/4/8.
 
-**Осталось:** loop region, quantize/duplicate bar, DAW pack, project library, e2e/axe, Safari delay, MusicXML/PDF, velocity-слои.
+**Осталось:** quantize/duplicate bar, DAW pack, project library, e2e/axe, Safari delay, MusicXML/PDF, velocity-слои.
 
 - **Generator 2.0+:** мотивы/вариации, call-response, contour, 808 glide.
 - **Harmony 2.0:** подсказки следующего аккорда, borrowed, secondary dominants, key detection.
