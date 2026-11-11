@@ -8,6 +8,8 @@ interface TransportBarProps {
   onBpmChange: (bpm: number) => void;
   loop: boolean;
   onLoopChange: (loop: boolean) => void;
+  loopBars: number;
+  onLoopBarsChange: (bars: number) => void;
   volume: number;
   onVolumeChange: (volume: number) => void;
   metronome: boolean;
@@ -28,6 +30,8 @@ export function TransportBar({
   onBpmChange,
   loop,
   onLoopChange,
+  loopBars,
+  onLoopBarsChange,
   volume,
   onVolumeChange,
   metronome,
@@ -149,6 +153,22 @@ export function TransportBar({
       >
         Loop
       </button>
+
+      <label className="flex items-center gap-1">
+        <span className="sr-only">Loop region</span>
+        <select
+          value={loopBars}
+          onChange={event => onLoopBarsChange(Number(event.target.value))}
+          aria-label="Loop region"
+          title="Loop the first 2, 4 or 8 bars"
+          className="h-11 rounded-md border border-gray-700 bg-gray-900 px-1.5 text-[11px] text-gray-200 sm:h-8"
+        >
+          <option value={0}>Region: off</option>
+          <option value={2}>Region: 2 bars</option>
+          <option value={4}>Region: 4 bars</option>
+          <option value={8}>Region: 8 bars</option>
+        </select>
+      </label>
 
       <button
         type="button"

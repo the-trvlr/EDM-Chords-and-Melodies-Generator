@@ -32,6 +32,7 @@ export interface PersistedState {
   customProgression?: ChordInfo[] | null;
   metronome?: boolean;
   countInBars?: number;
+  loopBars?: number;
 }
 
 export interface SavedArrangement {
@@ -116,6 +117,7 @@ export function loadPersistedState(): Partial<PersistedState> {
       customProgression: sanitizeChords(parsed.customProgression),
       metronome: parsed.metronome === true,
       countInBars: Math.round(numIn(parsed.countInBars, 0, 2, 0)),
+      loopBars: [0, 2, 4, 8].includes(Math.round(numIn(parsed.loopBars, 0, 8, 0))) ? Math.round(numIn(parsed.loopBars, 0, 8, 0)) : 0,
     };
   } catch {
     return {};

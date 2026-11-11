@@ -136,6 +136,7 @@ function Studio() {
   const [loop, setLoop] = useState(sharedProject?.loop ?? persisted.loop ?? true);
   const [metronome, setMetronome] = useState(persisted.metronome ?? false);
   const [countIn, setCountIn] = useState(persisted.countInBars ?? 0);
+  const [loopBars, setLoopBars] = useState(persisted.loopBars ?? 0);
   const [doubleTime, setDoubleTime] = useState(sharedProject?.doubleTime ?? persisted.doubleTime ?? false);
   const [chordComplexity, setChordComplexity] = useState<ChordComplexity>(sharedProject?.chordComplexity ?? persisted.chordComplexity ?? 'basic');
   const initialCustomProgression = sharedProject?.customProgression ?? persisted.customProgression ?? null;
@@ -408,10 +409,11 @@ function Studio() {
       customProgression,
       metronome,
       countInBars: countIn,
+      loopBars,
     });
   }, [
     selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth,
-    bpm, volume, loop, doubleTime, chordComplexity, melody, customProgression, metronome, countIn,
+    bpm, volume, loop, doubleTime, chordComplexity, melody, customProgression, metronome, countIn, loopBars,
   ]);
 
   const chordsPlayingRef = useRef(chordsPlaying);
@@ -680,11 +682,12 @@ function Studio() {
 
   const playing = chordsPlaying || arrangementPlaying;
   const totalBars = Math.max(1, songBars({ chords: progression, sections: melody.sections }));
+  const visibleTotalBars = loopBars > 0 ? Math.min(loopBars, totalBars) : totalBars;
   const position = chordsPlaying
     ? { bar: Math.min(activeChordIndex + 1, totalBars), totalBars }
     : arrangementPlaying
-      ? { bar: Math.floor((arrangementStep ?? 0) / 16) + 1, totalBars }
-      : { bar: 1, totalBars };
+      ? { bar: Math.floor((arrangementStep ?? 0) / 16) + 1, totalBars: visibleTotalBars }
+      : { bar: 1, totalBars: visibleTotalBars };
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -774,6 +777,8 @@ function Studio() {
             onMetronomeChange={setMetronome}
             countIn={countIn}
             onCountInChange={setCountIn}
+            loopBars={loopBars}
+            onLoopBarsChange={setLoopBars}
             position={position}
             midiEnabled={midiEnabled}
             onMidiToggle={handleMidiToggle}
@@ -847,6 +852,7 @@ function Studio() {
               masterVolume={volume}
               metronome={metronome}
               countInBars={countIn}
+              loopBars={loopBars}
               isPlaying={arrangementPlaying}
               onPlayingChange={handleArrangementPlayingChange}
               onStepChange={setArrangementStep}
