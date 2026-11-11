@@ -33,6 +33,28 @@ import { SectionsTimeline } from './SectionsTimeline';
 import { songBars } from '../utils/schedule';
 import { zipSync } from 'fflate';
 
+function quantizeNotes(notes: MelodyNote[], grid = 2): MelodyNote[] {
+  const byKey = new Map<string, MelodyNote>();
+  for (const note of notes) {
+    const step = Math.max(0, Math.round(note.step / grid) * grid);
+    const duration = Math.max(grid, Math.round(note.duration / grid) * grid);
+    byKey.set(`${step}-${note.midi}`, { ...note, step, duration });
+  }
+  return [...byKey.values()].sort((a, b) => a.step - b.step);
+}
+
+function repeatFirstBar(notes: MelodyNote[], bars: number): MelodyNote[] {
+  const first = notes.filter(note => note.step < 16);
+  if (first.length === 0) return notes;
+  const result: MelodyNote[] = [];
+  for (let bar = 0; bar < Math.max(1, bars); bar++) {
+    for (const note of first) {
+      result.push({ ...note, step: bar * 16 + (note.step % 16) });
+    }
+  }
+  return result.sort((a, b) => a.step - b.step);
+}
+
 export interface MelodyStudioHandle {
   undo: () => void;
   redo: () => void;
@@ -59,6 +81,7 @@ interface MelodyStudioProps {
   metronome: boolean;
   countInBars: number;
   loopBars: number;
+  projectName: string;
   isPlaying: boolean;
   onPlayingChange: (playing: boolean) => void;
   melody: MelodyState;
@@ -260,6 +283,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   metronome,
   countInBars,
   loopBars,
+  projectName,
   isPlaying,
   onPlayingChange,
   melody,
@@ -658,9 +682,9 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       if (midi) files['midi/arrangement.mid'] = midi;
 
       const text = (value: string) => new TextEncoder().encode(value);
-      files['project.json'] = text(serializeProject(`${rootKey} ${scaleType} · ${bpm} BPM`, project));
+      files['project.json'] = text(serializeProject(projectName.trim() || `${rootKey} ${scaleType} · ${bpm} BPM`, project));
       files['README.txt'] = text([
-        '∞ Melodies — DAW pack',
+        `∞ Melodies — ${projectName.trim() || 'Untitled project'}`,
         '',
         `Key: ${rootKey} ${scaleType}`,
         `BPM: ${bpm}`,
@@ -684,7 +708,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `infinite-melodies-${rootKey}-${scaleType}-${bpm}bpm.zip`;
+      const slug = (projectName.trim() || `infinite-melodies-${rootKey}-${scaleType}`).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+      link.download = `${slug || 'infinite-melodies'}-${bpm}bpm.zip`;
       link.click();
       URL.revokeObjectURL(url);
       toast.show('DAW pack exported (MIDI, stems, project, README)', 'success');
@@ -694,7 +719,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, projectName, toast]);
 
   const handleSaveArrangement = useCallback(() => {
     const saved = saveArrangement(saveName, project);
@@ -719,9 +744,9 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   }, [toast]);
 
   const openSaveDialog = useCallback(() => {
-    setSaveName(`${rootKey} ${scaleType} · ${bpm} BPM`);
+    setSaveName(projectName.trim() || `${rootKey} ${scaleType} · ${bpm} BPM`);
     setSaveDialog(true);
-  }, [rootKey, scaleType, bpm]);
+  }, [rootKey, scaleType, bpm, projectName]);
 
   const openLoadDialog = useCallback(() => {
     setSavedArrangements(getSavedArrangements());
@@ -1103,6 +1128,22 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
             >
               Glide
             </button>
+            <button
+              type="button"
+              onClick={() => apply({ bassNotes: quantizeNotes(bassMelody.notes) })}
+              title="Quantize bass to 1/8"
+              className="h-9 rounded-md border border-gray-700 px-2 text-[11px] text-gray-300 hover:border-gray-500 sm:h-7"
+            >
+              Q 1/8
+            </button>
+            <button
+              type="button"
+              onClick={() => apply({ bassNotes: repeatFirstBar(bassMelody.notes, bars) })}
+              title="Repeat the first bar across the progression"
+              className="h-9 rounded-md border border-gray-700 px-2 text-[11px] text-gray-300 hover:border-gray-500 sm:h-7"
+            >
+              Repeat bar
+            </button>
           </div>
           <p className="mt-1 hidden text-[11px] text-gray-400 sm:block">
             Click a note to delete · drag to move · drag the right edge to resize
@@ -1236,6 +1277,22 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
                 {variationOptions}
               </select>
             </label>
+            <button
+              type="button"
+              onClick={() => apply({ leadNotes: quantizeNotes(leadMelody.notes) })}
+              title="Quantize lead to 1/8"
+              className="h-9 rounded-md border border-gray-700 px-2 text-[11px] text-gray-300 hover:border-gray-500 sm:h-7"
+            >
+              Q 1/8
+            </button>
+            <button
+              type="button"
+              onClick={() => apply({ leadNotes: repeatFirstBar(leadMelody.notes, bars) })}
+              title="Repeat the first bar across the progression"
+              className="h-9 rounded-md border border-gray-700 px-2 text-[11px] text-gray-300 hover:border-gray-500 sm:h-7"
+            >
+              Repeat bar
+            </button>
           </div>
           <p className="mt-1 hidden text-[11px] text-gray-400 sm:block">
             Click a note to delete · drag to move · drag the right edge to resize

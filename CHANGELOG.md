@@ -3,6 +3,26 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.7.0] — 2026-11-11
+
+### Project name + piano-roll tools
+
+- **Project name** field in the Project Bar, remembered across reloads and used for project JSON filenames, saved arrangements and the DAW pack README/ZIP.
+- **Quantize 1/8** for bass and lead: snaps note starts/durations to the eighth grid, removes duplicates and keeps velocity.
+- **Repeat bar** for bass and lead: repeats the first bar across the progression as an editable custom line.
+- Project name is restored when opening a project JSON; saving uses a slug of the name.
+- README manual updated with the project field, quantize/repeat and DAW-pack naming.
+
+### Verification
+
+- 90 tests, lint/tsc/build clean.
+- Muted browser: name “Infinite Test” persisted, project saved as `infinite-test.json`, Repeat bar changed the bass line, Q 1/8 ran without errors, mobile 390 without overflow.
+
+### Deferred
+
+- Playwright/axe and Safari timing compensation.
+- True multi-layer sample velocity/round-robin (current samples are velocity-responsive but single-layer).
+
 ## [1.6.0] — 2026-11-11
 
 ### Export & documentation

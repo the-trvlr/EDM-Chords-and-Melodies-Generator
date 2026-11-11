@@ -27,6 +27,8 @@ interface ProjectBarProps {
   selectedGenre: Genre;
   chordComplexity: ChordComplexity;
   soundVariant: SoundVariant;
+  projectName: string;
+  onProjectNameChange: (name: string) => void;
   onSoundVariantChange: (variant: SoundVariant) => void;
   onKeyChange: (key: string) => void;
   onScaleChange: (scale: string) => void;
@@ -41,6 +43,8 @@ export function ProjectBar({
   chordComplexity,
   soundVariant,
   onSoundVariantChange,
+  projectName,
+  onProjectNameChange,
   onKeyChange,
   onScaleChange,
   onGenreChange,
@@ -51,6 +55,13 @@ export function ProjectBar({
   return (
     <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-gray-800 bg-gray-900/60 px-2 py-1.5">
       <span className="mr-1 hidden text-[10px] font-semibold uppercase tracking-wider text-gray-500 sm:inline">Project</span>
+      <input
+        value={projectName}
+        onChange={event => onProjectNameChange(event.target.value.slice(0, 80))}
+        aria-label="Project name"
+        placeholder="Untitled project"
+        className="h-9 w-32 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-100 placeholder:text-gray-500 focus:border-purple-500 focus:outline-none sm:h-8"
+      />
 
       <label className="flex items-center gap-1">
         <span className="text-[10px] uppercase tracking-wide text-gray-400">Key</span>
