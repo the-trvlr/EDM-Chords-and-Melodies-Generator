@@ -139,7 +139,11 @@ function TrackHeader({
       </div>
 
       <div className="flex items-center gap-0.5" role="group" aria-label={`${label} time feel`}>
-        {[{ value: 0.5, label: '½', title: 'Half time' }, { value: 1, label: '1×', title: 'Normal time' }, { value: 2, label: '2×', title: 'Double time' }].map(option => (
+        {[
+          { value: 0.5, label: '½', title: trackId === 'drums' ? 'Half-time hats/ride; kick & snare stay' : 'Half time' },
+          { value: 1, label: '1×', title: 'Normal time' },
+          { value: 2, label: '2×', title: trackId === 'drums' ? 'Double-time hats/ride; kick & snare stay' : 'Double time' },
+        ].map(option => (
           <button
             key={option.value}
             type="button"

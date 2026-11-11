@@ -141,7 +141,10 @@ const DRUM_ROWS: { id: keyof DrumPattern; label: string; color: string }[] = [
   { id: 'kick', label: 'Kick', color: 'bg-rose-400' },
   { id: 'snare', label: 'Snare', color: 'bg-orange-400' },
   { id: 'clap', label: 'Clap', color: 'bg-amber-300' },
-  { id: 'hat', label: 'Hat', color: 'bg-emerald-400' },
+  { id: 'hat', label: 'Hi-Hat', color: 'bg-emerald-400' },
+  { id: 'lowHat', label: 'Low Hat', color: 'bg-teal-400' },
+  { id: 'crash', label: 'Crash', color: 'bg-sky-300' },
+  { id: 'ride', label: 'Ride', color: 'bg-indigo-300' },
 ];
 
 export function DrumGrid({

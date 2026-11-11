@@ -35,6 +35,23 @@ describe('generateDrums', () => {
     expect(pattern.snare[12]).toBe(1);
   });
 
+  it('exposes hi-hat, low hat, crash and ride lanes', () => {
+    const pattern = generateDrums('house', 3);
+    for (const lane of ['lowHat', 'crash', 'ride'] as const) {
+      expect(pattern[lane]).toHaveLength(DRUM_STEPS);
+    }
+  });
+
+  it('produces meaningful variations across seeds', () => {
+    const signatures = new Set<string>();
+    for (let seed = 1; seed <= 10; seed++) {
+      const pattern = generateDrums('dnb', seed);
+      signatures.add(['kick', 'snare', 'hat', 'lowHat', 'crash', 'ride']
+        .map(lane => pattern[lane as keyof typeof pattern].join('')).join('|'));
+    }
+    expect(signatures.size).toBeGreaterThan(5);
+  });
+
   it('falls back to a usable pattern for unknown genres', () => {
     const pattern = generateDrums('unknown-genre', 1);
     expect(pattern.kick[0]).toBe(1);

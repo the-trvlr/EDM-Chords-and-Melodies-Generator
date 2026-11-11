@@ -66,6 +66,9 @@ describe('share codec', () => {
         snare: new Array(16).fill(0),
         clap: new Array(16).fill(0),
         hat: [0, 1, ...new Array(14).fill(0)],
+        lowHat: new Array(16).fill(0),
+        crash: new Array(16).fill(0),
+        ride: new Array(16).fill(0),
       },
     };
     const decoded = decodeShare(encodeShare(snapshot({ melody })));

@@ -16,6 +16,9 @@ const DRUM_PITCH: Record<string, string> = {
   snare: 'D2',
   clap: 'D#2',
   hat: 'F#2',
+  lowHat: 'G#2',
+  crash: 'C#3',
+  ride: 'D#3',
 };
 
 const NOTE_LETTERS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -136,7 +139,10 @@ export function buildDrumTracks(drums: DrumPattern, bpm: number, bars: number): 
     { id: 'kick', name: 'Kick', velocity: 100 },
     { id: 'snare', name: 'Snare', velocity: 90 },
     { id: 'clap', name: 'Clap', velocity: 85 },
-    { id: 'hat', name: 'Hat', velocity: 70 },
+    { id: 'hat', name: 'Hi-Hat', velocity: 70 },
+    { id: 'lowHat', name: 'Low Hat', velocity: 65 },
+    { id: 'crash', name: 'Crash', velocity: 80 },
+    { id: 'ride', name: 'Ride', velocity: 60 },
   ];
 
   return instruments.flatMap(({ id, name, velocity }) => {
@@ -160,7 +166,7 @@ export function buildDrumTracks(drums: DrumPattern, bpm: number, bars: number): 
   });
 }
 
-/** Exports the drum bar, repeated for the whole progression, as 4 GM tracks. */
+/** Exports the drum bar, repeated for the whole progression, as 7 GM tracks. */
 export function exportDrumsToMidi(
   drums: DrumPattern,
   bpm: number,
