@@ -145,7 +145,7 @@ export function ProgressionStrip({
         </div>
       )}
 
-      <div className="mt-1.5 flex gap-1.5 overflow-x-auto pb-1" role="list">
+      <div className="mt-1.5 flex gap-1.5 overflow-x-auto pb-1">
         {progression.map((chord, index) => {
           const active = isPlaying && activeIndex === index;
           const selected = selectedIndex === index;
@@ -153,7 +153,6 @@ export function ProgressionStrip({
             <button
               key={`${chord.root}-${chord.type.name}-${index}`}
               type="button"
-              role="listitem"
               onClick={() => {
                 onSelect(index);
                 onPreviewChord(chord);

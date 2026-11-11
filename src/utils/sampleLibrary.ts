@@ -37,8 +37,57 @@ const PRESET_SAMPLE: Partial<Record<SynthPresetId, SampleInstrumentId>> = {
 // instrument presets stay sampled in both variants.
 const EDM_SAMPLED_PRESETS = new Set<SynthPresetId>(['piano', 'organ', 'pluck', 'strings', 'violin', 'flute', 'ebass']);
 
-const samplers = new Map<string, Tone.Sampler>();
-const loading = new Map<string, Promise<Tone.Sampler | null>>();
+/**
+ * Two-layer velocity mapping: the soft layer shares the samples but runs
+ * through a low-pass, so quiet notes are darker as well as quieter.
+ */
+export class LayeredSampler {
+  private soft: Tone.Sampler;
+  private hard: Tone.Sampler;
+  private softFilter: Tone.Filter;
+
+  constructor(soft: Tone.Sampler, hard: Tone.Sampler) {
+    this.soft = soft;
+    this.hard = hard;
+    this.softFilter = new Tone.Filter({ type: 'lowpass', frequency: 2400, rolloff: -24 });
+    this.soft.connect(this.softFilter);
+    this.soft.volume.value = -5;
+  }
+
+  connect(destination: Tone.InputNode): this {
+    this.softFilter.connect(destination);
+    this.hard.connect(destination);
+    return this;
+  }
+
+  disconnect(): void {
+    this.softFilter.disconnect();
+    this.hard.disconnect();
+    this.soft.disconnect();
+  }
+
+  dispose(): void {
+    this.disconnect();
+    this.soft.dispose();
+    this.hard.dispose();
+    this.softFilter.dispose();
+  }
+
+  triggerAttackRelease(
+    notes: Tone.Unit.Frequency | Tone.Unit.Frequency[],
+    duration: Tone.Unit.Time | Tone.Unit.Time[],
+    time?: Tone.Unit.Time,
+    velocity = 0.8,
+  ): this {
+    const target = velocity < 0.55 ? this.soft : this.hard;
+    if (Array.isArray(notes)) target.triggerAttackRelease(notes, duration, time, velocity);
+    else target.triggerAttackRelease(notes, duration, time, velocity);
+    return this;
+  }
+}
+
+const samplers = new Map<string, LayeredSampler>();
+const loading = new Map<string, Promise<LayeredSampler | null>>();
 
 function keyOf(track: TrackId, preset: SynthPresetId): string {
   return `${track}:${preset}`;
@@ -49,7 +98,7 @@ export function sampleFor(preset: SynthPresetId, variant: SoundVariant): SampleI
   return PRESET_SAMPLE[preset] ?? null;
 }
 
-function buildSampler(sampleId: SampleInstrumentId): Promise<Tone.Sampler | null> {
+function buildOneSampler(sampleId: SampleInstrumentId): Promise<Tone.Sampler | null> {
   const set = SAMPLE_SETS[sampleId];
   const toneName = (file: string) => file.length > 1 && file[1] === 's'
     ? `${file[0]}#${file.slice(2)}`
@@ -72,7 +121,12 @@ function buildSampler(sampleId: SampleInstrumentId): Promise<Tone.Sampler | null
   });
 }
 
-export function createSamplerForPreset(preset: SynthPresetId): Promise<Tone.Sampler | null> {
+async function buildSampler(sampleId: SampleInstrumentId): Promise<LayeredSampler | null> {
+  const [soft, hard] = await Promise.all([buildOneSampler(sampleId), buildOneSampler(sampleId)]);
+  return soft && hard ? new LayeredSampler(soft, hard) : null;
+}
+
+export function createSamplerForPreset(preset: SynthPresetId): Promise<LayeredSampler | null> {
   const sampleId = PRESET_SAMPLE[preset];
   return sampleId ? buildSampler(sampleId) : Promise.resolve(null);
 }
@@ -80,7 +134,7 @@ export function createSamplerForPreset(preset: SynthPresetId): Promise<Tone.Samp
 export function loadTrackSampler(
   track: Extract<TrackId, 'chord' | 'bass' | 'lead'>,
   preset: SynthPresetId,
-): Promise<Tone.Sampler | null> {
+): Promise<LayeredSampler | null> {
   const key = keyOf(track, preset);
   const existing = samplers.get(key);
   if (existing) return Promise.resolve(existing);
@@ -103,7 +157,7 @@ export function getTrackSampler(
   track: Extract<TrackId, 'chord' | 'bass' | 'lead'>,
   preset: SynthPresetId,
   variant: SoundVariant,
-): Tone.Sampler | null {
+): LayeredSampler | null {
   if (!sampleFor(preset, variant)) return null;
   return samplers.get(keyOf(track, preset)) ?? null;
 }

@@ -8,7 +8,7 @@ import { createSynth, getChordEnvelope, type SynthPresetId } from './audioEngine
 import type { DrumKitId } from '../data/drumKits';
 import type { SongSection, TrackOctaves } from '../types';
 import { prepareCountIn, startMetronome, stopMetronome } from './metronome';
-import { createSamplerForPreset, getTrackSampler, sampleFor, type SoundVariant } from './sampleLibrary';
+import { createSamplerForPreset, getTrackSampler, LayeredSampler, sampleFor, type SoundVariant } from './sampleLibrary';
 import {
   buildSchedule,
   STEPS_PER_CHORD,
@@ -36,7 +36,7 @@ interface DrumSynths {
   ride: Tone.MetalSynth;
 }
 
-type MelodicSynth = Tone.PolySynth | Tone.MonoSynth | Tone.Sampler;
+type MelodicSynth = Tone.PolySynth | Tone.MonoSynth | Tone.Sampler | LayeredSampler;
 
 interface MixerNodes {
   reverb: Tone.Freeverb;
@@ -174,7 +174,7 @@ function disposeMelodicSynths(m: MixerNodes): void {
     if (synth) {
       synth.disconnect();
       // Shared samplers stay loaded for the next playback; synths are disposable.
-      if (!(synth instanceof Tone.Sampler)) synth.dispose();
+      if (!(synth instanceof Tone.Sampler) && !(synth instanceof LayeredSampler)) synth.dispose();
       m.synths[id] = null;
     }
   }
@@ -578,7 +578,7 @@ function trackIsAudible(
   return anySolo ? tracks[id].solo : !tracks[id].mute;
 }
 
-type RenderSynth = Tone.PolySynth | Tone.MonoSynth | Tone.Sampler;
+type RenderSynth = Tone.PolySynth | Tone.MonoSynth | Tone.Sampler | LayeredSampler;
 
 async function createRenderSynth(
   id: 'chord' | 'bass' | 'lead',
@@ -613,7 +613,7 @@ function triggerChord(
   time: number,
   velocity: number,
 ): void {
-  if (synth instanceof Tone.Sampler) synth.triggerAttackRelease(notes, duration, time, velocity);
+  if (synth instanceof Tone.Sampler || synth instanceof LayeredSampler) synth.triggerAttackRelease(notes, duration, time, velocity);
   else (synth as Tone.PolySynth).triggerAttackRelease(notes, duration, time, velocity);
 }
 

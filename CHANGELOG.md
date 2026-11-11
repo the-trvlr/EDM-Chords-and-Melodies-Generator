@@ -3,6 +3,28 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.8.0] — 2026-11-11
+
+### Velocity layers + browser quality gate
+
+- **Two-layer sampled velocity:** each sample instrument now has a soft and a hard Sampler. Notes below 0.55 velocity use the soft layer through a 2.4 kHz low-pass at −5 dB, so dynamics change timbre as well as level. Live playback, WAV and stems all use the same layered instrument.
+- **Playwright smoke test:** Studio loads, no tabs, project name, add chord and Undo.
+- **axe accessibility gate:** WCAG 2 A/AA structural checks; colour-contrast is deliberately tracked separately as a design-token task.
+- CI now runs `npm run test:e2e` after unit tests and before the build. Playwright uses the system Chrome channel, so no browser download is required.
+- README development section documents the e2e command.
+
+### Verification
+
+- 90 unit tests, 2 e2e tests (Playwright + axe), lint/tsc/build clean.
+- E2E: Studio loads with samples, chord add/undo, no serious/critical ARIA violations.
+- The earlier 1.7 features (project name, Q 1/8, Repeat bar) remain live.
+
+### Still deferred
+
+- Safari-specific playhead timing (needs a real Safari run).
+- Full colour-contrast token pass.
+- Round-robin sample variants.
+
 ## [1.7.0] — 2026-11-11
 
 ### Project name + piano-roll tools
