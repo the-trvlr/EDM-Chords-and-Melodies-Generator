@@ -9,7 +9,7 @@ A fully offline Progressive Web App (PWA) for turning an EDM idea into a playabl
 
 ---
 
-## What's new in 1.4
+## What's new in 1.5
 
 - **Hybrid instrument samples:** local CC-BY piano, organ, nylon guitar, electric bass, upright bass, harmonium, cello, violin, flute and xylophone; lazy-loaded, cached offline and used in WAV/stems renders.
 - **Six track-specific instruments** for Chords, Bass and Lead; piano has a natural 2.2 s release so EDM chords ring instead of clipping.
@@ -59,7 +59,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the complete list.
 
 ### Transport & export
 
-- Sticky transport: play/stop, bar counter, BPM (slider + input), loop, master volume, metronome and count-in.
+- Sticky transport: play/stop, bar counter, BPM (slider + input + tap), loop, master volume, metronome, count-in and MIDI input.
 - `Cmd/Ctrl+Space`/`Space` play-stop, `Cmd/Ctrl+Z`/`Shift+Z` undo-redo, `Cmd/Ctrl+S` save, `Cmd/Ctrl+O` open.
 - **MIDI:** chord progression, full arrangement, per-track files, and separate drum tracks (Kick/Snare/Clap/Hat) on GM notes; section markers included.
 - **WAV mix** and **stems** (4-track zip) rendered offline with the same instruments, kit and effects as playback.

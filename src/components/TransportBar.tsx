@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+
 interface TransportBarProps {
   isPlaying: boolean;
   onToggle: () => void;
@@ -13,6 +15,9 @@ interface TransportBarProps {
   countIn: number;
   onCountInChange: (bars: number) => void;
   position: { bar: number; totalBars: number } | null;
+  midiEnabled: boolean;
+  onMidiToggle: () => void;
+  midiSupported: boolean;
 }
 
 export function TransportBar({
@@ -30,9 +35,26 @@ export function TransportBar({
   countIn,
   onCountInChange,
   position,
+  midiEnabled,
+  onMidiToggle,
+  midiSupported,
 }: TransportBarProps) {
+  const taps = useRef<number[]>([]);
   const minBpm = Math.max(60, bpmRange[0] - 20);
   const maxBpm = Math.min(200, bpmRange[1] + 20);
+
+  const tapTempo = () => {
+    const now = performance.now();
+    if (taps.current.length > 0 && now - taps.current[taps.current.length - 1] > 3000) {
+      taps.current = [];
+    }
+    taps.current = [...taps.current.slice(-4), now];
+    if (taps.current.length < 2) return;
+    const intervals = taps.current.slice(1).map((time, index) => time - taps.current[index]);
+    const average = intervals.reduce((sum, value) => sum + value, 0) / intervals.length;
+    if (average <= 0) return;
+    onBpmChange(Math.max(40, Math.min(220, Math.round(60000 / average))));
+  };
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 sm:gap-2" role="group" aria-label="Transport">
@@ -87,6 +109,32 @@ export function TransportBar({
           className="h-11 w-14 rounded-md border border-gray-700 bg-gray-900 px-1 text-center text-sm tabular-nums text-white sm:h-8 focus:border-purple-500 focus:outline-none"
         />
       </div>
+
+      <button
+        type="button"
+        onClick={tapTempo}
+        aria-label="Tap tempo"
+        title="Tap four times to set the tempo"
+        className="h-11 rounded-md bg-gray-800 px-2 text-[11px] font-medium text-gray-300 transition-colors hover:bg-gray-700 sm:h-8"
+      >
+        Tap
+      </button>
+
+      <button
+        type="button"
+        onClick={onMidiToggle}
+        aria-pressed={midiEnabled}
+        aria-label="MIDI input"
+        disabled={!midiSupported}
+        title={midiSupported ? 'Play notes from a Web MIDI controller' : 'Web MIDI is not available in this browser'}
+        className={`h-11 rounded-md px-2 text-[11px] font-medium transition-colors disabled:opacity-40 sm:h-8 ${
+          midiEnabled
+            ? 'bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-500/60'
+            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+        }`}
+      >
+        MIDI
+      </button>
 
       <button
         type="button"

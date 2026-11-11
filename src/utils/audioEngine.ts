@@ -108,6 +108,8 @@ let currentSynth: Tone.PolySynth | null = null;
 let reverb: Tone.Reverb | null = null;
 let limiter: Tone.Limiter | null = null;
 let isPlaying = false;
+let liveSynth: Tone.PolySynth | null = null;
+let livePreset: SynthPresetId | null = null;
 let loopRef: Tone.Loop | null = null;
 
 export async function initAudio(): Promise<void> {
@@ -138,6 +140,18 @@ function getSynth(presetId: SynthPresetId, envelope?: Partial<Envelope>): Tone.P
   currentSynth = createSynth(presetId, envelope);
   currentSynth.connect(ensureEffects());
   return currentSynth;
+}
+
+export function playMidiNote(midi: number, presetId: SynthPresetId, duration = '8n'): void {
+  if (!liveSynth || livePreset !== presetId) {
+    liveSynth?.dispose();
+    liveSynth = createSynth(presetId);
+    liveSynth.connect(ensureEffects());
+    livePreset = presetId;
+  }
+  const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const octave = Math.floor(midi / 12) - 1;
+  liveSynth.triggerAttackRelease(`${notes[midi % 12]}${octave}`, duration);
 }
 
 export function playChord(
