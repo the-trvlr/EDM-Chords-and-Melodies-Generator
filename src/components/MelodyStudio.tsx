@@ -20,11 +20,11 @@ import {
   updateDrumKit,
   type TrackId,
 } from '../utils/mixer';
-import { exportArrangementToMidi, exportDrumsToMidi, exportMelodyToMidi } from '../utils/midiExport';
+import { buildArrangementMidiBytes, exportArrangementToMidi, exportDrumsToMidi, exportMelodyToMidi } from '../utils/midiExport';
 import { stopPlayback } from '../utils/audioEngine';
 import { arpeggiate, type ArpPattern, type ArpRate } from '../utils/arpeggiator';
 import { generateDrums, type DrumPattern } from '../utils/drumGenerator';
-import { deleteArrangement, duplicateArrangement, getSavedArrangements, renameArrangement, saveArrangement, type SavedArrangement } from '../utils/persistence';
+import { deleteArrangement, duplicateArrangement, getSavedArrangements, renameArrangement, saveArrangement, serializeProject, type SavedArrangement } from '../utils/persistence';
 import type { MelodyState, MixerState, ProjectSnapshot, SongSection, TrackMix } from '../types';
 import { Modal } from './Modal';
 import { ChordLane, DrumGrid, EditablePianoRoll, PianoRollLane, VelocityLane } from './lanes';
@@ -41,6 +41,7 @@ export interface MelodyStudioHandle {
   exportMidi: () => void;
   exportWav: () => void;
   exportStems: () => void;
+  exportDawPack: () => void;
 }
 
 interface MelodyStudioProps {
@@ -618,6 +619,83 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     }
   }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, toast]);
 
+  const handleExportDawPack = useCallback(async () => {
+    setRenderingStems(true);
+    try {
+      const files: Record<string, Uint8Array> = {};
+      for (const track of ['chord', 'bass', 'lead', 'drums'] as TrackId[]) {
+        const tracks = { ...melody.mixer };
+        for (const id of Object.keys(tracks) as TrackId[]) {
+          tracks[id] = { ...tracks[id], mute: false, solo: id === track };
+        }
+        const blob = await renderArrangementToWav({
+          chords: progression,
+          rhythm,
+          bass: bassMelody,
+          lead: leadMelody,
+          arpMelody,
+          drums: drumPattern,
+          synthIds: melody.synthIds,
+          bpm,
+          tracks,
+          drumKitId: melody.drumKitId,
+          masterVolume,
+          sections: melody.sections,
+          octaves: melody.octaves,
+          swing: melody.swing,
+          humanize: melody.humanize,
+          timeScales: melody.timeScales,
+          bassGlide: melody.bassGlide,
+          soundVariant: melody.soundVariant,
+        });
+        files[`stems/${track}.wav`] = new Uint8Array(await blob.arrayBuffer());
+      }
+
+      const midi = buildArrangementMidiBytes(
+        progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
+        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide },
+      );
+      if (midi) files['midi/arrangement.mid'] = midi;
+
+      const text = (value: string) => new TextEncoder().encode(value);
+      files['project.json'] = text(serializeProject(`${rootKey} ${scaleType} · ${bpm} BPM`, project));
+      files['README.txt'] = text([
+        '∞ Melodies — DAW pack',
+        '',
+        `Key: ${rootKey} ${scaleType}`,
+        `BPM: ${bpm}`,
+        `Chords: ${melody.synthIds.chord}`,
+        `Bass: ${melody.synthIds.bass}`,
+        `Lead: ${melody.synthIds.lead}`,
+        `Drums: ${melody.drumKitId}`,
+        `Sound: ${melody.soundVariant}`,
+        '',
+        'Files:',
+        '- midi/arrangement.mid — full arrangement, drums on GM channel 10',
+        '- stems/*.wav — chords, bass, lead, drums',
+        '- project.json — reopen in ∞ Melodies',
+        '',
+        'Import the MIDI at bar 1 with 4/4 and let the DAW map drums to its GM kit.',
+        'Instrument samples: CC-BY 3.0, see docs/SAMPLES.md in the app repository.',
+      ].join('\n'));
+
+      const zipped = zipSync(files, { level: 0 });
+      const blob = new Blob([zipped], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `infinite-melodies-${rootKey}-${scaleType}-${bpm}bpm.zip`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.show('DAW pack exported (MIDI, stems, project, README)', 'success');
+    } catch (error) {
+      console.error('DAW pack failed', error);
+      toast.show('Could not build the DAW pack. Try again.', 'error');
+    } finally {
+      setRenderingStems(false);
+    }
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, toast]);
+
   const handleSaveArrangement = useCallback(() => {
     const saved = saveArrangement(saveName, project);
     setSavedArrangements(prev => [...prev, saved]);
@@ -658,7 +736,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     exportMidi: handleExportMidi,
     exportWav: handleExportWav,
     exportStems: handleExportStems,
-  }), [undo, redo, openSaveDialog, openLoadDialog, handleExportMidi, handleExportWav, handleExportStems]);
+    exportDawPack: handleExportDawPack,
+  }), [undo, redo, openSaveDialog, openLoadDialog, handleExportMidi, handleExportWav, handleExportStems, handleExportDawPack]);
 
   if (progression.length === 0) {
     return (

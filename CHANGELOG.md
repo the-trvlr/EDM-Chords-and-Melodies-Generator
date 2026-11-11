@@ -3,6 +3,27 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.6.0] — 2026-11-11
+
+### Export & documentation
+
+- **DAW pack** (`Export → DAW pack`): one ZIP with
+  - `midi/arrangement.mid` — full arrangement, separate GM drum tracks;
+  - `stems/chord.wav`, `stems/bass.wav`, `stems/lead.wav`, `stems/drums.wav` — sample-based offline renders;
+  - `project.json` — reopen in ∞ Melodies;
+  - `README.txt` — key, BPM, instruments, sound character and import notes.
+- MIDI export refactored to build bytes for the pack without triggering extra downloads.
+- **README rewritten as a full manual**: quick start, Studio tour, project bar, progression strip, inspector, harmony, tracks, instruments, sound modes, piano roll, drums, practice, transport/shortcuts, export, library, offline PWA, troubleshooting, browser support, development and credits.
+
+### Not in this release
+
+- Project-name field and Playwright/axe checks are deferred to 1.6.x; the Safari-only playhead issue remains deferred.
+
+### Verification
+
+- 90 unit tests, lint/tsc/build clean.
+- DAW pack tested in a muted browser: ZIP contains 4 stems, `arrangement.mid`, `project.json` and `README.txt`; no console errors.
+
 ## [1.5.1] — 2026-11-11
 
 ### Loop region
