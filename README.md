@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 1.6
+- **Version:** 1.7
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -50,6 +50,7 @@ The app has one workspace — no Harmony/Arrangement tabs.
 
 | Control | What it does |
 |---|---|
+| **Name** | Project name; used for saved JSON and the DAW pack. |
 | **Key** | The tonic of the project. Changing it transposes a custom progression. |
 | **Scale** | Major, minor and the modes; conventional flat/sharp spelling. |
 | **Genre** | Loads genre defaults and templates, and changes the BPM suggestion. Changing genre performs a **full project reset with Undo**. |
@@ -147,6 +148,8 @@ Samples are bundled locally (about 9.5 MB) and cached by the service worker afte
 | Drag right edge | Change duration |
 | Right-click | Delete |
 | Velocity lane | Drag a bar, or focus and use ↑/↓, to set 5–100 % |
+| **Q 1/8** | Quantize the line to the eighth grid |
+| **Repeat bar** | Repeat the first bar across the progression |
 
 The velocity strip is under each bass/lead lane. Velocity flows into playback, WAV, stems, MIDI and share links.
 
@@ -224,7 +227,7 @@ The DAW pack is the recommended hand-off: import the MIDI at bar 1, 4/4, route d
 - The current session autosaves to `localStorage`.
 - **Save → Save arrangement** stores a named snapshot in the browser; **Open arrangement** restores it.
 - Saved arrangements can be renamed, duplicated and deleted.
-- **Save project…** downloads a `.json`; **Open project…** restores it on any device.
+- **Save project…** downloads a `.json` named after the project; **Open project…** restores it and its name on any device.
 - Share links are stateless and do not create an account.
 
 ---
@@ -311,8 +314,7 @@ All generation, editing and export happen locally. The app has no accounts, anal
 
 ## Roadmap
 
-- **1.6.x:** project name and library polish, Playwright/axe checks, Safari timing.
-- **1.7:** quantize/duplicate bar, velocity layers and round-robin for samples.
+- **1.7.x:** Playwright/axe checks, Safari timing, velocity layers and round-robin samples.
 - **2.0:** song-level arrangement automation, fills/transitions and section-level generator settings.
 
 See [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md) for the full backlog.

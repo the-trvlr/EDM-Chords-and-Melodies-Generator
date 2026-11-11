@@ -33,6 +33,7 @@ export interface PersistedState {
   metronome?: boolean;
   countInBars?: number;
   loopBars?: number;
+  projectName?: string;
 }
 
 export interface SavedArrangement {
@@ -118,6 +119,7 @@ export function loadPersistedState(): Partial<PersistedState> {
       metronome: parsed.metronome === true,
       countInBars: Math.round(numIn(parsed.countInBars, 0, 2, 0)),
       loopBars: [0, 2, 4, 8].includes(Math.round(numIn(parsed.loopBars, 0, 8, 0))) ? Math.round(numIn(parsed.loopBars, 0, 8, 0)) : 0,
+      projectName: typeof parsed.projectName === 'string' ? parsed.projectName.slice(0, 80) : '',
     };
   } catch {
     return {};

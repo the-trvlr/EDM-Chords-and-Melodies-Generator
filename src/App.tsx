@@ -137,6 +137,7 @@ function Studio() {
   const [metronome, setMetronome] = useState(persisted.metronome ?? false);
   const [countIn, setCountIn] = useState(persisted.countInBars ?? 0);
   const [loopBars, setLoopBars] = useState(persisted.loopBars ?? 0);
+  const [projectName, setProjectName] = useState(persisted.projectName ?? '');
   const [doubleTime, setDoubleTime] = useState(sharedProject?.doubleTime ?? persisted.doubleTime ?? false);
   const [chordComplexity, setChordComplexity] = useState<ChordComplexity>(sharedProject?.chordComplexity ?? persisted.chordComplexity ?? 'basic');
   const initialCustomProgression = sharedProject?.customProgression ?? persisted.customProgression ?? null;
@@ -410,10 +411,11 @@ function Studio() {
       metronome,
       countInBars: countIn,
       loopBars,
+      projectName,
     });
   }, [
     selectedKey, selectedScale, selectedGenre.id, selectedProgressionIdx, selectedSynth,
-    bpm, volume, loop, doubleTime, chordComplexity, melody, customProgression, metronome, countIn, loopBars,
+    bpm, volume, loop, doubleTime, chordComplexity, melody, customProgression, metronome, countIn, loopBars, projectName,
   ]);
 
   const chordsPlayingRef = useRef(chordsPlaying);
@@ -516,10 +518,12 @@ function Studio() {
   }, [snapshot, toast]);
 
   const handleSaveProjectFile = useCallback(() => {
-    const name = `${selectedKey}-${selectedGenre.name}-${bpm}bpm`.replace(/\s+/g, '-').toLowerCase();
-    downloadText(`${name}.json`, serializeProject(name, snapshot));
+    const fallback = `${selectedKey}-${selectedGenre.name}-${bpm}bpm`.replace(/\s+/g, '-').toLowerCase();
+    const name = projectName.trim() || fallback;
+    const slug = name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || fallback;
+    downloadText(`${slug}.json`, serializeProject(name, snapshot));
     toast.show('Project file saved', 'success');
-  }, [selectedKey, selectedGenre.name, bpm, snapshot, toast]);
+  }, [selectedKey, selectedGenre.name, bpm, projectName, snapshot, toast]);
 
   const handleFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -533,6 +537,7 @@ function Studio() {
         return;
       }
       applyProject(result.project);
+      setProjectName(result.name);
       toast.show(`Loaded “${result.name}”`, 'success');
     };
     reader.onerror = () => toast.show('Could not read this file', 'error');
@@ -796,6 +801,8 @@ function Studio() {
           chordComplexity={chordComplexity}
           soundVariant={melody.soundVariant}
           onSoundVariantChange={variant => setMelody(previous => ({ ...previous, soundVariant: variant }))}
+          projectName={projectName}
+          onProjectNameChange={setProjectName}
           onKeyChange={handleKeyChange}
           onScaleChange={handleScaleChange}
           onGenreChange={handleGenreChange}
@@ -854,6 +861,7 @@ function Studio() {
               metronome={metronome}
               countInBars={countIn}
               loopBars={loopBars}
+              projectName={projectName}
               isPlaying={arrangementPlaying}
               onPlayingChange={handleArrangementPlayingChange}
               onStepChange={setArrangementStep}

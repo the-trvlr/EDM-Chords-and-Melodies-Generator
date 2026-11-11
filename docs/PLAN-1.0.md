@@ -458,7 +458,9 @@ footer 40
 
 **Сделано в 1.5.0–1.5.1:** tap tempo, компьютерная клавиатура, Web MIDI, loop-регион 2/4/8.
 
-**Осталось:** quantize/duplicate bar, DAW pack, project library, e2e/axe, Safari delay, MusicXML/PDF, velocity-слои.
+**Сделано в 1.7.0:** project name, quantize 1/8, repeat bar.
+
+**Осталось:** e2e/axe, Safari delay, velocity-слои/round-robin, MusicXML/PDF.
 
 - **Generator 2.0+:** мотивы/вариации, call-response, contour, 808 glide.
 - **Harmony 2.0:** подсказки следующего аккорда, borrowed, secondary dominants, key detection.
