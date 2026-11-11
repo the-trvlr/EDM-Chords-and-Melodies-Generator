@@ -98,32 +98,31 @@ export function sampleFor(preset: SynthPresetId, variant: SoundVariant): SampleI
   return PRESET_SAMPLE[preset] ?? null;
 }
 
-function buildOneSampler(sampleId: SampleInstrumentId): Promise<Tone.Sampler | null> {
+async function buildSampler(sampleId: SampleInstrumentId): Promise<LayeredSampler | null> {
   const set = SAMPLE_SETS[sampleId];
   const toneName = (file: string) => file.length > 1 && file[1] === 's'
     ? `${file[0]}#${file.slice(2)}`
     : file;
-  const urls = Object.fromEntries(set.notes.map(file => [toneName(file), `${file}.mp3`]));
   const baseUrl = `${import.meta.env.BASE_URL}samples/${set.folder}/`;
 
-  return new Promise<Tone.Sampler | null>((resolve) => {
-    try {
-      const sampler = new Tone.Sampler({
-        urls,
-        baseUrl,
-        release: set.release,
-        onload: () => resolve(sampler),
-        onerror: () => resolve(null),
-      });
-    } catch {
-      resolve(null);
+  try {
+    // Load each file once and share the decoded AudioBuffer between the soft
+    // and hard samplers. Loading two independent samplers doubled first-load
+    // time and decoded the same audio twice.
+    const buffers = await Promise.all(set.notes.map(async file => {
+      const buffer = await Tone.ToneAudioBuffer.load(`${baseUrl}${file}.mp3`);
+      return [toneName(file), buffer] as const;
+    }));
+    const soft = new Tone.Sampler({ release: set.release });
+    const hard = new Tone.Sampler({ release: set.release });
+    for (const [note, buffer] of buffers) {
+      soft.add(note as Parameters<Tone.Sampler['add']>[0], buffer);
+      hard.add(note as Parameters<Tone.Sampler['add']>[0], buffer);
     }
-  });
-}
-
-async function buildSampler(sampleId: SampleInstrumentId): Promise<LayeredSampler | null> {
-  const [soft, hard] = await Promise.all([buildOneSampler(sampleId), buildOneSampler(sampleId)]);
-  return soft && hard ? new LayeredSampler(soft, hard) : null;
+    return new LayeredSampler(soft, hard);
+  } catch {
+    return null;
+  }
 }
 
 export function createSamplerForPreset(preset: SynthPresetId): Promise<LayeredSampler | null> {
