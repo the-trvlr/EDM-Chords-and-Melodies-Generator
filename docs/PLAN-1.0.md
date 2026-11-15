@@ -462,7 +462,7 @@ footer 40
 
 **Сделано в 1.9.0:** MIDI channels/GM programs, separate MIDI files в DAW pack.
 
-**Сделано в 2.0.0–2.1.0:** song mode; Sketch/Song шаблоны; section regions в arrangement MIDI; дедуп барабанных событий.
+**Сделано в 2.0.0–2.1.2:** song mode; Sketch/Song шаблоны; arrangement MIDI с instrument tracks + section markers; дедуп барабанных событий.
 
 **Осталось:** colour-contrast, round-robin, Safari, MusicXML/PDF.
 

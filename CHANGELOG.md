@@ -3,6 +3,22 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.1.2] — 2026-11-15
+
+### Reverted section-region MIDI export
+
+- MIDI has no native clip/region object. The section layout produced one track per section, all starting at bar 1 on channel 1, so DAWs imported a stack of overlapping “Studio Grand | Ch1” tracks instead of a usable arrangement.
+- Arrangement MIDI is back to the stable instrument layout:
+  - Chords, Bass, Lead and separate drum-lane tracks, spanning the full song;
+  - **section markers** remain in the `Sections` track;
+  - the DAW can slice the long tracks at those markers, as before.
+- The new **Sketch/Song templates** and dynamic duration labels remain unchanged.
+- DAW pack again uses the instrument layout for `arrangement.mid`; full-song per-instrument files are still included.
+
+### Verification
+
+- 96 unit tests, 3 Playwright/axe tests, lint/tsc/build clean.
+
 ## [2.1.1] — 2026-11-15
 
 ### One region per section (not per instrument)
