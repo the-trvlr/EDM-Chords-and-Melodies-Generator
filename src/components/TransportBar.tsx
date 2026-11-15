@@ -66,7 +66,7 @@ export function TransportBar({
         type="button"
         onClick={onToggle}
         aria-label={isPlaying ? 'Stop playback' : 'Play'}
-        className={`flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-white transition-colors sm:h-10 sm:px-4 ${
+        className={`flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-gray-950 transition-colors sm:h-10 sm:px-4 ${
           isPlaying
             ? 'bg-rose-500 hover:bg-rose-600'
             : 'bg-emerald-500 hover:bg-emerald-600'

@@ -47,7 +47,7 @@ export function Inspector({
       className={`min-w-0 rounded-xl border border-gray-800 bg-gray-900/50 p-3 xl:sticky xl:top-36 xl:self-start ${className}`}
     >
       <div className="flex items-center gap-2">
-        <h2 className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Inspector</h2>
+        <h2 className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Inspector</h2>
         {chord && <span className="text-sm font-semibold text-white xl:hidden">{chord.display}</span>}
         <div className="ml-auto flex gap-1">
           <button

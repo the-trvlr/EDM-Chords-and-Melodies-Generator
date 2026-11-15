@@ -54,7 +54,7 @@ export function ProjectBar({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-gray-800 bg-gray-900/60 px-2 py-1.5">
-      <span className="mr-1 hidden text-[10px] font-semibold uppercase tracking-wider text-gray-500 sm:inline">Project</span>
+      <span className="mr-1 hidden text-[10px] font-semibold uppercase tracking-wider text-gray-400 sm:inline">Project</span>
       <input
         value={projectName}
         onChange={event => onProjectNameChange(event.target.value.slice(0, 80))}
@@ -127,7 +127,7 @@ export function ProjectBar({
         </select>
       </label>
 
-      <span className="hidden text-[10px] text-gray-500 lg:inline">
+      <span className="hidden text-[10px] text-gray-400 lg:inline">
         {selectedGenre.bpmRange[0]}–{selectedGenre.bpmRange[1]} BPM
       </span>
     </div>

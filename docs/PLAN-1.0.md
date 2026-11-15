@@ -464,7 +464,9 @@ footer 40
 
 **Сделано в 2.0.0–2.1.2:** song mode; Sketch/Song шаблоны; arrangement MIDI с instrument tracks + section markers; дедуп барабанных событий.
 
-**Осталось:** colour-contrast, round-robin, Safari, MusicXML/PDF.
+**Сделано в 2.2.0:** colour-contrast, derived round-robin.
+
+**Осталось:** Safari, MusicXML/PDF, per-section generators, MIDI recording.
 
 - **Generator 2.0+:** мотивы/вариации, call-response, contour, 808 glide.
 - **Harmony 2.0:** подсказки следующего аккорда, borrowed, secondary dominants, key detection.
