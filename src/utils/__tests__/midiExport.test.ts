@@ -75,9 +75,9 @@ describe('MIDI export layout', () => {
       { sections, layout: 'section' },
     ) as unknown as AnyTrack[];
     const names = tracks.map(track => track.events.find(event => event.name === 'TrackNameEvent')?.text);
-    expect(names).toContain('01 intro · bar 1 · Chords');
-    expect(names).toContain('02 drop · bar 2 · Chords');
-    const dropChords = tracks.find(track => track.events.some(event => event.name === 'TrackNameEvent' && event.text === '02 drop · bar 2 · Chords'))!;
+    expect(names).toContain('01 intro - bar 1');
+    expect(names).toContain('02 drop - bar 2');
+    const dropChords = tracks.find(track => track.events.some(event => event.name === 'TrackNameEvent' && event.text === '02 drop - bar 2'))!;
     expect(noteOns(dropChords)[0].tick).toBe(0);
   });
 
