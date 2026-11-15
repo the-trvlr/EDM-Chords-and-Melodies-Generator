@@ -600,7 +600,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const handleExportMidi = useCallback(() => {
     exportArrangementToMidi(
       progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds },
+      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, layout: 'section' },
     );
     toast.show('Arrangement MIDI exported', 'success');
   }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.synthIds, toast]);
@@ -677,7 +677,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
       const midi = buildArrangementMidiBytes(
         progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds },
+        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, layout: 'section' },
       );
       if (midi) files['midi/arrangement.mid'] = midi;
 
@@ -706,7 +706,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         `Sound: ${melody.soundVariant}`,
         '',
         'Files:',
-        '- midi/arrangement.mid — full arrangement, drums on GM channel 10',
+        '- midi/arrangement.mid — section regions (Intro, Build, Drop…), each track starts at bar 1 and is named with its song start bar',
         '- midi/chords.mid, bass.mid, lead.mid, drums.mid — separate files for DAWs (e.g. FL Studio) that struggle with multi-track import',
         '- stems/*.wav — chords, bass, lead, drums',
         '- project.json — reopen in ∞ Melodies',
@@ -828,7 +828,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         </p>
       </div>
 
-      <SectionsTimeline sections={melody.sections} onChange={handleSectionsChange} />
+      <SectionsTimeline sections={melody.sections} bpm={bpm} onChange={handleSectionsChange} />
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-800 bg-gray-900/50 p-2">
         <label className="flex items-center gap-2 text-xs text-gray-300">

@@ -743,7 +743,7 @@ function Studio() {
                 label="Export"
                 items={[
                   { label: 'Chord progression MIDI', onSelect: handleExportChordMidi },
-                  { label: 'Arrangement MIDI', hint: 'Chords, bass, lead, drums', onSelect: () => studioRef.current?.exportMidi() },
+                  { label: 'Arrangement MIDI', hint: 'Section regions: intro, build, drop…', onSelect: () => studioRef.current?.exportMidi() },
                   { label: 'WAV mix', onSelect: () => studioRef.current?.exportWav() },
                   { label: 'Stems (.zip)', hint: 'Chords, bass, lead and drums as separate WAVs', onSelect: () => studioRef.current?.exportStems() },
                   { label: 'DAW pack (.zip)', hint: 'MIDI + stems + project.json + README', onSelect: () => studioRef.current?.exportDawPack() },

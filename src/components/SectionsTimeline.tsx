@@ -50,10 +50,16 @@ function defaultStructure(): SongSection[] {
 
 interface SectionsTimelineProps {
   sections: SongSection[];
+  bpm: number;
   onChange: (sections: SongSection[]) => void;
 }
 
-export function SectionsTimeline({ sections, onChange }: SectionsTimelineProps) {
+function durationLabel(bars: number, bpm: number): string {
+  const seconds = Math.round(bars * 4 * 60 / Math.max(1, bpm));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+export function SectionsTimeline({ sections, bpm, onChange }: SectionsTimelineProps) {
   const [selectedId, setSelectedId] = useState<string | null>(sections[0]?.id ?? null);
   const totalBars = sections.reduce((sum, section) => sum + section.bars, 0);
   const selected = sections.find(section => section.id === selectedId) ?? sections[0] ?? null;
@@ -88,7 +94,7 @@ export function SectionsTimeline({ sections, onChange }: SectionsTimelineProps) 
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold text-white">Song sections</h2>
         <span className="text-xs text-gray-400">
-          {sections.length === 0 ? 'Looping the progression' : `${totalBars} bars total`}
+          {sections.length === 0 ? 'Looping the progression' : `${totalBars} bars · ~${durationLabel(totalBars, bpm)}`}
         </span>
         <div className="ml-auto flex flex-wrap gap-1.5">
           <select
@@ -104,7 +110,18 @@ export function SectionsTimeline({ sections, onChange }: SectionsTimelineProps) 
             className="h-11 rounded-md border border-gray-700 bg-gray-900 px-2 text-[11px] text-gray-200 sm:h-8"
           >
             <option value="">Template…</option>
-            {ARRANGEMENT_TEMPLATES.map(template => <option key={template.name} value={template.name}>{template.name}</option>)}
+            {(['sketch', 'song'] as const).map(group => (
+              <optgroup key={group} label={group === 'sketch' ? 'Sketch' : 'Song'}>
+                {ARRANGEMENT_TEMPLATES.filter(template => template.group === group).map(template => {
+                  const bars = template.sections.reduce((sum, section) => sum + section.bars, 0);
+                  return (
+                    <option key={template.name} value={template.name}>
+                      {template.name} · ~{durationLabel(bars, bpm)}
+                    </option>
+                  );
+                })}
+              </optgroup>
+            ))}
           </select>
           {sections.length === 0 ? (
             <button
