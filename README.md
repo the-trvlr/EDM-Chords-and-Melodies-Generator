@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 2.0.1
+- **Version:** 2.0.2
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -165,7 +165,14 @@ Seven editable lanes: **Kick, Snare, Clap, Hi-Hat, Low Hat, Crash, Ride**.
 
 ### Song sections
 
-Build Intro / Build / Drop / Break / Outro blocks with bar lengths and per-section track gating. Sections drive arrangement playback, MIDI markers and song length.
+Build Intro / Build / Drop / Break / Outro blocks with bar lengths, per-section track gating, **energy** (Low / Medium / High) and an optional **Fill** in the last bar. Energy scales chord, bass, lead and drum velocity; fills add a snare/hat roll and kick pickup on the section's final bar.
+
+Templates:
+- **Club · 64 bars** — Intro 4 + Build 8 + Drop 16 + Break 8 + Build 8 + Drop 16 + Outro 4.
+- **Radio · 36 bars** — Intro 4 + Build 4 + Drop 8 + Break 4 + Build 4 + Drop 8 + Outro 4.
+- **Festival · 72 bars** — Intro 8 + Build 8 + Drop 16 + Break 8 + Build 8 + Drop 16 + Outro 8.
+
+All templates have two drops; the second build adds the lead. Sections drive playback, WAV, MIDI markers and song length.
 
 ### Groove and time feel
 
