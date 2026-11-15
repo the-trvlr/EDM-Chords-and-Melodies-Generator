@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { SectionEnergy, SectionKind, SongSection } from '../types';
+import { ARRANGEMENT_TEMPLATES, type TemplateSection } from '../data/arrangementTemplates';
 import type { TrackId } from '../utils/schedule';
 
 const KINDS: { id: SectionKind; label: string }[] = [
@@ -32,38 +33,20 @@ function newSection(kind: SectionKind, bars: number, tracks: TrackId[], energy: 
   };
 }
 
-function defaultStructure(): SongSection[] {
-  return [
-    newSection('intro', 4, ['chord'], 'low'),
-    newSection('build', 8, ['chord', 'drums'], 'medium', true),
-    newSection('drop', 12, ['chord', 'bass', 'lead', 'drums'], 'high'),
-    newSection('break', 4, ['chord', 'lead'], 'low'),
-    newSection('outro', 4, ['chord'], 'low'),
-  ];
+function buildTemplate(template: TemplateSection[]): SongSection[] {
+  return template.map(section => newSection(
+    section.kind,
+    section.bars,
+    [...section.tracks],
+    section.energy,
+    section.fill,
+  ));
 }
 
-const TEMPLATES: { name: string; build: () => SongSection[] }[] = [
-  { name: 'Club · 32 bars', build: () => defaultStructure() },
-  {
-    name: 'Radio · 16 bars',
-    build: () => [
-      newSection('intro', 4, ['chord'], 'low'),
-      newSection('build', 4, ['chord', 'drums'], 'medium', true),
-      newSection('drop', 6, ['chord', 'bass', 'lead', 'drums'], 'high'),
-      newSection('outro', 2, ['chord'], 'low'),
-    ],
-  },
-  {
-    name: 'Festival · 48 bars',
-    build: () => [
-      newSection('intro', 8, ['chord'], 'low'),
-      newSection('build', 8, ['chord', 'drums'], 'medium', true),
-      newSection('drop', 16, ['chord', 'bass', 'lead', 'drums'], 'high'),
-      newSection('break', 8, ['chord', 'lead'], 'low'),
-      newSection('drop', 8, ['chord', 'bass', 'lead', 'drums'], 'high'),
-    ],
-  },
-];
+function defaultStructure(): SongSection[] {
+  return buildTemplate(ARRANGEMENT_TEMPLATES[0].sections);
+}
+
 
 interface SectionsTimelineProps {
   sections: SongSection[];
@@ -111,9 +94,9 @@ export function SectionsTimeline({ sections, onChange }: SectionsTimelineProps) 
           <select
             value=""
             onChange={event => {
-              const template = TEMPLATES.find(item => item.name === event.target.value);
+              const template = ARRANGEMENT_TEMPLATES.find(item => item.name === event.target.value);
               if (template) {
-                update(template.build());
+                update(buildTemplate(template.sections));
                 setSelectedId(null);
               }
             }}
@@ -121,7 +104,7 @@ export function SectionsTimeline({ sections, onChange }: SectionsTimelineProps) 
             className="h-11 rounded-md border border-gray-700 bg-gray-900 px-2 text-[11px] text-gray-200 sm:h-8"
           >
             <option value="">Template…</option>
-            {TEMPLATES.map(template => <option key={template.name} value={template.name}>{template.name}</option>)}
+            {ARRANGEMENT_TEMPLATES.map(template => <option key={template.name} value={template.name}>{template.name}</option>)}
           </select>
           {sections.length === 0 ? (
             <button

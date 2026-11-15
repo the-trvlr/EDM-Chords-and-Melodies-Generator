@@ -3,6 +3,22 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.0.2] — 2026-11-15
+
+### Longer two-drop arrangement templates
+
+- Replaced the one-drop sketches with typical EDM structures:
+  - **Club · 64 bars**: Intro 4 + Build 8 + Drop 16 + Break 8 + Build 8 + Drop 16 + Outro 4.
+  - **Radio · 36 bars**: Intro 4 + Build 4 + Drop 8 + Break 4 + Build 4 + Drop 8 + Outro 4.
+  - **Festival · 72 bars**: Intro 8 + Build 8 + Drop 16 + Break 8 + Build 8 + Drop 16 + Outro 8.
+- Every template now has **two drops**; the second build adds the lead before the final drop.
+- Templates live in a pure `data/arrangementTemplates` module with tests for bar totals, two drops, all-track drops, drum entry after the intro and fills on builds.
+- “Create structure” now creates the Club 64 layout.
+
+### Verification
+
+- 96 unit tests, 2 Playwright/axe tests, lint/tsc/build clean.
+
 ## [2.0.1] — 2026-11-15
 
 ### Fixed: drop playback froze on a repeated drum hit
