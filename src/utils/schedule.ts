@@ -101,9 +101,17 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
   const swing = Math.max(0, Math.min(0.6, input.swing ?? 0));
   const humanize = input.humanize === true;
 
-  const pushBar = (barInSong: number, barInProg: number, tracks: Set<TrackId>) => {
+  const pushBar = (
+    barInSong: number,
+    barInProg: number,
+    tracks: Set<TrackId>,
+    section?: SongSection,
+    isLastBar = false,
+  ) => {
     const stepBase = barInSong * STEPS_PER_CHORD;
     const chord = input.chords[barInProg];
+    const energy = section?.energy ?? 'medium';
+    const energyScale = section ? (energy === 'low' ? 0.7 : energy === 'medium' ? 0.88 : 1) : 1;
 
     if (input.arpMelody) {
       if (tracks.has('chord')) {
@@ -116,7 +124,7 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
             durationSteps: note.duration,
             midi: shiftMidi(note.midi, octaves.chord),
             offset: 0,
-            velocity: note.velocity ?? 0.8,
+            velocity: (note.velocity ?? 0.8) * energyScale,
           });
         }
       }
@@ -130,7 +138,7 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
           durationSteps: nextHitDistance(pattern, ps),
           midis: chord.midiNotes.map(midi => shiftMidi(midi, octaves.chord)),
           offset: 0,
-          velocity: 0.8,
+          velocity: 0.8 * energyScale,
         });
       }
     }
@@ -150,7 +158,7 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
           durationSteps: note.duration,
           midi: shiftMidi(note.midi, octave),
           offset: 0,
-          velocity: note.velocity ?? 0.8,
+          velocity: (note.velocity ?? 0.8) * energyScale,
         });
       }
     };
@@ -169,15 +177,44 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
             durationSteps: 1,
             instrument,
             offset: 0,
-            velocity: instrument === 'kick' ? 0.95
+            velocity: (instrument === 'kick' ? 0.95
               : instrument === 'snare' ? 0.85
               : instrument === 'clap' ? 0.8
               : instrument === 'crash' ? 0.7
               : instrument === 'ride' ? 0.55
               : instrument === 'lowHat' ? 0.62
-              : 0.6,
+              : 0.6) * energyScale,
           });
         }
+      }
+
+      if (section?.fill && isLastBar && tracks.has('drums')) {
+        for (const step of [12, 13, 14, 15]) {
+          events.push({
+            track: 'drums',
+            step: stepBase + step,
+            durationSteps: 1,
+            instrument: 'snare',
+            offset: 0,
+            velocity: 0.72,
+          });
+          events.push({
+            track: 'drums',
+            step: stepBase + step,
+            durationSteps: 1,
+            instrument: 'hat',
+            offset: 0,
+            velocity: 0.55,
+          });
+        }
+        events.push({
+          track: 'drums',
+          step: stepBase + 14,
+          durationSteps: 1,
+          instrument: 'kick',
+          offset: 0,
+          velocity: 0.9,
+        });
       }
     }
   };
@@ -188,7 +225,7 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
     for (const section of sections) {
       const tracks = new Set(section.tracks);
       for (let bar = 0; bar < section.bars; bar++) {
-        pushBar(barInSong, barInSong % input.chords.length, tracks);
+        pushBar(barInSong, barInSong % input.chords.length, tracks, section, bar === section.bars - 1);
         barInSong++;
       }
     }

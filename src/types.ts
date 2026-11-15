@@ -17,11 +17,17 @@ export type MixerState = Record<TrackId, TrackMix>;
 
 export type SectionKind = 'intro' | 'build' | 'drop' | 'break' | 'outro';
 
+export type SectionEnergy = 'low' | 'medium' | 'high';
+
 export interface SongSection {
   id: string;
   kind: SectionKind;
   bars: number;
   tracks: TrackId[];
+  /** Song-mode intensity: low thins the section, high pushes it. */
+  energy?: SectionEnergy;
+  /** Adds a drum fill in the last bar of the section. */
+  fill?: boolean;
 }
 
 export interface MelodyRangeSpans {

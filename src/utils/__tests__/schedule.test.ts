@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildSchedule, eventsForTrack, groupByStep, songBars, totalSteps } from '../schedule';
 import { getChordNotes } from '../musicTheory';
 import type { RhythmPattern } from '../../data/genres';
+import type { SongSection } from '../../types';
 
 const rhythm: RhythmPattern = {
   name: 'Straight',
@@ -116,6 +117,30 @@ describe('buildSchedule', () => {
     expect(steps(fast, 'hat').length).toBeGreaterThan(steps(normal, 'hat').length);
   });
 
+  it('applies section energy and adds a fill in the last bar', () => {
+    const drums = {
+      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      clap: new Array(16).fill(0),
+      hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+      lowHat: new Array(16).fill(0),
+      crash: new Array(16).fill(0),
+      ride: new Array(16).fill(0),
+    };
+    const sections: SongSection[] = [
+      { id: 'a', kind: 'intro' as const, bars: 1, tracks: ['drums'], energy: 'low' as const },
+      { id: 'b', kind: 'drop' as const, bars: 1, tracks: ['drums'], energy: 'high' as const, fill: true },
+    ];
+    const events = buildSchedule({ chords, rhythm, drums, sections });
+    const snare = events.filter(event => event.track === 'drums' && event.instrument === 'snare');
+    const lowSnare = snare.find(event => event.step < 16)!;
+    const highSnare = snare.find(event => event.step >= 16 && event.step < 32)!;
+    expect(highSnare.velocity).toBeGreaterThan(lowSnare.velocity);
+    // Last bar of the second section gets a 12-15 snare/hat fill and a kick.
+    expect(snare.some(event => event.step === 16 + 15)).toBe(true);
+    expect(events.some(event => event.track === 'drums' && event.instrument === 'kick' && event.step === 16 + 14)).toBe(true);
+  });
+
   it('carries note velocity into schedule events', () => {
     const bass = {
       notes: [{ midi: 40, step: 0, duration: 2, velocity: 0.35 }],
@@ -155,7 +180,7 @@ describe('buildSchedule', () => {
   });
 
   it('sums section bars and repeats the progression per section', () => {
-    const sections = [
+    const sections: SongSection[] = [
       { id: 'a', kind: 'intro' as const, bars: 2, tracks: ['chord' as const] },
       { id: 'b', kind: 'drop' as const, bars: 2, tracks: ['chord' as const, 'bass' as const] },
     ];

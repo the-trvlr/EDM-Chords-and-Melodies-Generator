@@ -3,6 +3,25 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.0.0] — 2026-11-15
+
+### Song mode
+
+- **Section energy**: every section can be Low / Medium / High. Energy scales chord, bass, lead and drum velocity; sections without energy keep the old mix. Song-mode sections now sound like an arrangement instead of four identical loops.
+- **Section fills**: a Fill toggle adds a snare/hat roll on steps 12–15 and a kick pickup on 14 of the section's last bar, gated by the drums track.
+- **Arrangement templates**: Club 32, Radio 16 and Festival 48 bars in one click from the Song sections header. Every section still has type, length, track gating, energy and fill.
+- Energy and fill are stored in projects, share links and the session; old sections default to Medium/no fill.
+- README manual updated with Song mode, energy, fills and templates.
+
+### Verification
+
+- 92 unit tests (new energy/fill scheduler test), 2 Playwright/axe tests, lint/tsc/build clean.
+- Playback/WAV/MIDI all use the same section-aware schedule.
+
+### Deferred
+
+- Full colour-contrast token pass and true round-robin sample variants.
+
 ## [1.9.0] — 2026-11-15
 
 ### MIDI interoperability (FL Studio and other DAWs)

@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 1.9
+- **Version:** 2.0
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -319,7 +319,7 @@ All generation, editing and export happen locally. The app has no accounts, anal
 
 ## Roadmap
 
-- **1.8.x:** Safari timing, colour-contrast token pass, round-robin samples.
-- **2.0:** song-level arrangement automation, fills/transitions and section-level generator settings.
+- **2.0.x:** colour-contrast token pass and round-robin sample variants.
+- **2.1:** more section-level generator parameters and transition automation.
 
 See [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md) for the full backlog.

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { SectionKind, SongSection } from '../types';
+import type { SectionEnergy, SectionKind, SongSection } from '../types';
 import type { TrackId } from '../utils/schedule';
 
 const KINDS: { id: SectionKind; label: string }[] = [
@@ -19,7 +19,7 @@ const TRACKS: { id: TrackId; label: string }[] = [
 
 const BARS = [2, 4, 8, 16];
 
-function newSection(kind: SectionKind, bars: number, tracks: TrackId[]): SongSection {
+function newSection(kind: SectionKind, bars: number, tracks: TrackId[], energy: SectionEnergy = 'medium', fill = false): SongSection {
   return {
     id: typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
@@ -27,18 +27,43 @@ function newSection(kind: SectionKind, bars: number, tracks: TrackId[]): SongSec
     kind,
     bars,
     tracks,
+    energy,
+    fill,
   };
 }
 
 function defaultStructure(): SongSection[] {
   return [
-    newSection('intro', 4, ['chord']),
-    newSection('build', 8, ['chord', 'drums']),
-    newSection('drop', 8, ['chord', 'bass', 'lead', 'drums']),
-    newSection('break', 4, ['chord', 'lead']),
-    newSection('outro', 4, ['chord']),
+    newSection('intro', 4, ['chord'], 'low'),
+    newSection('build', 8, ['chord', 'drums'], 'medium', true),
+    newSection('drop', 8, ['chord', 'bass', 'lead', 'drums'], 'high'),
+    newSection('break', 4, ['chord', 'lead'], 'low'),
+    newSection('outro', 4, ['chord'], 'low'),
   ];
 }
+
+const TEMPLATES: { name: string; build: () => SongSection[] }[] = [
+  { name: 'Club · 32 bars', build: () => defaultStructure() },
+  {
+    name: 'Radio · 16 bars',
+    build: () => [
+      newSection('intro', 2, ['chord'], 'low'),
+      newSection('build', 4, ['chord', 'drums'], 'medium', true),
+      newSection('drop', 8, ['chord', 'bass', 'lead', 'drums'], 'high'),
+      newSection('outro', 2, ['chord'], 'low'),
+    ],
+  },
+  {
+    name: 'Festival · 48 bars',
+    build: () => [
+      newSection('intro', 8, ['chord'], 'low'),
+      newSection('build', 8, ['chord', 'drums'], 'medium', true),
+      newSection('drop', 16, ['chord', 'bass', 'lead', 'drums'], 'high'),
+      newSection('break', 8, ['chord', 'lead'], 'low'),
+      newSection('drop', 8, ['chord', 'bass', 'lead', 'drums'], 'high'),
+    ],
+  },
+];
 
 interface SectionsTimelineProps {
   sections: SongSection[];
@@ -83,6 +108,21 @@ export function SectionsTimeline({ sections, onChange }: SectionsTimelineProps) 
           {sections.length === 0 ? 'Looping the progression' : `${totalBars} bars total`}
         </span>
         <div className="ml-auto flex flex-wrap gap-1.5">
+          <select
+            value=""
+            onChange={event => {
+              const template = TEMPLATES.find(item => item.name === event.target.value);
+              if (template) {
+                update(template.build());
+                setSelectedId(null);
+              }
+            }}
+            aria-label="Arrangement template"
+            className="h-11 rounded-md border border-gray-700 bg-gray-900 px-2 text-[11px] text-gray-200 sm:h-8"
+          >
+            <option value="">Template…</option>
+            {TEMPLATES.map(template => <option key={template.name} value={template.name}>{template.name}</option>)}
+          </select>
           {sections.length === 0 ? (
             <button
               type="button"
@@ -126,7 +166,7 @@ export function SectionsTimeline({ sections, onChange }: SectionsTimelineProps) 
                   }`}
                 >
                   <span className="block font-semibold">{kind.label}</span>
-                  <span className="block text-gray-400">{section.bars} bars</span>
+                  <span className="block text-gray-400">{section.bars} bars · {section.energy ?? 'medium'}</span>
                 </button>
               );
             })}
@@ -154,6 +194,31 @@ export function SectionsTimeline({ sections, onChange }: SectionsTimelineProps) 
                   {BARS.map(bars => <option key={bars} value={bars}>{bars} bars</option>)}
                 </select>
               </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] uppercase tracking-wide text-gray-400">Energy</span>
+                <select
+                  value={selected.energy ?? 'medium'}
+                  onChange={event => patchSelected({ energy: event.target.value as SectionEnergy })}
+                  className="h-11 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-200 sm:h-8"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => patchSelected({ fill: !selected.fill })}
+                aria-pressed={selected.fill === true}
+                title="Add a drum fill in the last bar of this section"
+                className={`h-11 rounded-md px-2 text-[11px] font-medium transition-colors sm:h-8 ${
+                  selected.fill
+                    ? 'bg-amber-400/20 text-amber-200 ring-1 ring-amber-400/60'
+                    : 'border border-gray-700 text-gray-300 hover:border-gray-500'
+                }`}
+              >
+                Fill
+              </button>
 
               <div className="flex flex-wrap gap-1" role="group" aria-label="Tracks in this section">
                 {TRACKS.map(track => (
