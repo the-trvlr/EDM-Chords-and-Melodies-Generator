@@ -20,7 +20,7 @@ import {
   updateDrumKit,
   type TrackId,
 } from '../utils/mixer';
-import { buildArrangementMidiBytes, exportArrangementToMidi, exportDrumsToMidi, exportMelodyToMidi } from '../utils/midiExport';
+import { buildArrangementMidiBytes, buildDrumTracks, buildMelodyTrack, buildProgressionTracks, exportArrangementToMidi, exportDrumsToMidi, exportMelodyToMidi, midiBytesFromTracks } from '../utils/midiExport';
 import { stopPlayback } from '../utils/audioEngine';
 import { arpeggiate, type ArpPattern, type ArpRate } from '../utils/arpeggiator';
 import { generateDrums, type DrumPattern } from '../utils/drumGenerator';
@@ -600,10 +600,10 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const handleExportMidi = useCallback(() => {
     exportArrangementToMidi(
       progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide },
+      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds },
     );
     toast.show('Arrangement MIDI exported', 'success');
-  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.synthIds, toast]);
 
   const handleExportWav = useCallback(async () => {
     setRendering(true);
@@ -677,9 +677,20 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
       const midi = buildArrangementMidiBytes(
         progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide },
+        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds },
       );
       if (midi) files['midi/arrangement.mid'] = midi;
+
+      const separate = [
+        ['chords', buildProgressionTracks(progression, bpm, rhythm, doubleTime, melody.synthIds.chord, 1)],
+        ['bass', buildMelodyTrack(bassMelody, bpm, 'Bass', rootKey, scaleType, melody.synthIds.bass, 2)],
+        ['lead', buildMelodyTrack(leadMelody, bpm, 'Lead', rootKey, scaleType, melody.synthIds.lead, 3)],
+        ['drums', buildDrumTracks(drumPattern, bpm, bars)],
+      ] as const;
+      for (const [name, tracks] of separate) {
+        const bytes = midiBytesFromTracks([...tracks]);
+        if (bytes) files[`midi/${name}.mid`] = bytes;
+      }
 
       const text = (value: string) => new TextEncoder().encode(value);
       files['project.json'] = text(serializeProject(projectName.trim() || `${rootKey} ${scaleType} · ${bpm} BPM`, project));
@@ -696,6 +707,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         '',
         'Files:',
         '- midi/arrangement.mid — full arrangement, drums on GM channel 10',
+        '- midi/chords.mid, bass.mid, lead.mid, drums.mid — separate files for DAWs (e.g. FL Studio) that struggle with multi-track import',
         '- stems/*.wav — chords, bass, lead, drums',
         '- project.json — reopen in ∞ Melodies',
         '',
@@ -719,7 +731,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, projectName, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, projectName, bars, toast]);
 
   const handleSaveArrangement = useCallback(() => {
     const saved = saveArrangement(saveName, project);

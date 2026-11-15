@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildDrumTracks, buildProgressionTracks } from '../midiExport';
+import { buildDrumTracks, buildMelodyTrack, buildProgressionTracks } from '../midiExport';
 import { getChordNotes } from '../musicTheory';
 import type { RhythmPattern } from '../../data/genres';
 
@@ -11,7 +11,7 @@ const whole: RhythmPattern = {
 };
 
 type AnyTrack = {
-  events: { name: string; tick: number; pitch?: string[]; channel?: number }[];
+  events: { name: string; tick: number; pitch?: string[]; channel?: number; instrument?: number }[];
   buildData: () => unknown;
 };
 
@@ -29,6 +29,27 @@ describe('MIDI export layout', () => {
     // Whole-note chords start every 16 sixteenths = 512 ticks, with no gap.
     const ons = noteOns(tracks[0]);
     expect([...new Set(ons.map(event => event.tick))]).toEqual([0, 512]);
+  });
+
+  it('assigns distinct channels and GM programs to melodic tracks', () => {
+    const chords = [getChordNotes('A', 'minor', 4, false)];
+    const chordTrack = buildProgressionTracks(chords, 124, whole, false, 'organ', 1)[0] as unknown as AnyTrack;
+    const chordProgram = chordTrack.events.find(event => event.name === 'ProgramChangeEvent');
+    expect(chordProgram?.channel).toBe(1);
+    expect(chordProgram?.instrument).toBe(16);
+    expect(noteOns(chordTrack)[0].channel).toBe(1);
+
+    const bass = {
+      notes: [{ midi: 40, step: 0, duration: 4, velocity: 0.8 }],
+      type: 'bass' as const,
+      styleId: 't',
+      stepsPerChord: 16,
+    };
+    const bassTrack = buildMelodyTrack(bass, 124, 'Bass', 'A', 'minor', 'sub', 2)[0] as unknown as AnyTrack;
+    const bassProgram = bassTrack.events.find(event => event.name === 'ProgramChangeEvent');
+    expect(bassProgram?.channel).toBe(2);
+    expect(bassProgram?.instrument).toBe(38);
+    expect(noteOns(bassTrack)[0].channel).toBe(2);
   });
 
   it('writes drum parts on GM channel 10 with GM notes', () => {
