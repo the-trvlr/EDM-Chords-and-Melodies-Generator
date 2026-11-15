@@ -462,7 +462,9 @@ footer 40
 
 **Сделано в 1.9.0:** MIDI channels/GM programs, separate MIDI files в DAW pack.
 
-**Осталось:** Safari delay, colour-contrast, round-robin, MusicXML/PDF.
+**Сделано в 2.0.0:** song mode — energy/fill секций, шаблоны аранжировки.
+
+**Осталось:** colour-contrast, round-robin, Safari, MusicXML/PDF.
 
 - **Generator 2.0+:** мотивы/вариации, call-response, contour, 808 glide.
 - **Harmony 2.0:** подсказки следующего аккорда, borrowed, secondary dominants, key detection.

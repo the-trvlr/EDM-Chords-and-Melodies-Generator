@@ -64,6 +64,8 @@ export function sanitizeSections(value: unknown): SongSection[] {
       kind,
       bars: clampIn(raw.bars, 1, 32, 4),
       tracks: [...new Set(tracks)],
+      energy: (['low', 'medium', 'high'] as string[]).includes(String(raw.energy)) ? raw.energy as SongSection['energy'] : 'medium',
+      fill: raw.fill === true,
     }];
   });
 }
