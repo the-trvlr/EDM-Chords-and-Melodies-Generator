@@ -3,6 +3,25 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.1.0] — 2026-11-15
+
+### Sketch/Song templates and section regions
+
+- Template picker is grouped into **Sketch** and **Song**:
+  - Sketch: Club 64, Radio 36, Festival 72 (quick ideas).
+  - Song: Radio 112 (~3:00 @150), Club 128 (~3:25 @150), Festival 160 (~4:16 @150), all with three or four drops.
+- Template options show a **duration estimate at the current BPM**; the Song sections header also shows total bars and duration.
+- **Arrangement MIDI now exports one local region per section and instrument**:
+  - track names like `02 drop · bar 17 · Chords`, `02 drop · bar 17 · Bass`, drums per lane;
+  - notes start at tick 0 inside each region, so every clip is clean for copying/editing;
+  - the track name includes the song start bar for placement.
+- The DAW pack uses the same sectioned `arrangement.mid`; the full-song per-instrument files (`midi/chords.mid`, etc.) remain for FL-style workflows.
+- README updated with template levels, duration estimates and section-region import notes.
+
+### Verification
+
+- 97 unit tests (section-MIDI region test), 3 Playwright/axe tests, lint/tsc/build clean.
+
 ## [2.0.2] — 2026-11-15
 
 ### Longer two-drop arrangement templates

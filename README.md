@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 2.0.2
+- **Version:** 2.1
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -167,12 +167,19 @@ Seven editable lanes: **Kick, Snare, Clap, Hi-Hat, Low Hat, Crash, Ride**.
 
 Build Intro / Build / Drop / Break / Outro blocks with bar lengths, per-section track gating, **energy** (Low / Medium / High) and an optional **Fill** in the last bar. Energy scales chord, bass, lead and drum velocity; fills add a snare/hat roll and kick pickup on the section's final bar.
 
-Templates:
+Templates come in two levels, and the picker shows the duration at the current BPM:
+
+**Sketch** — quick ideas with two drops:
 - **Club · 64 bars** — Intro 4 + Build 8 + Drop 16 + Break 8 + Build 8 + Drop 16 + Outro 4.
 - **Radio · 36 bars** — Intro 4 + Build 4 + Drop 8 + Break 4 + Build 4 + Drop 8 + Outro 4.
 - **Festival · 72 bars** — Intro 8 + Build 8 + Drop 16 + Break 8 + Build 8 + Drop 16 + Outro 8.
 
-All templates have two drops; the second build adds the lead. Sections drive playback, WAV, MIDI markers and song length.
+**Song** — full-length arrangements with three or four drops:
+- **Radio · 112 bars** — ~3:00 at 150 BPM.
+- **Club · 128 bars** — ~3:25 at 150 BPM.
+- **Festival · 160 bars** — ~4:16 at 150 BPM.
+
+Sections drive playback, WAV, MIDI markers and song length.
 
 ### Groove and time feel
 
@@ -217,13 +224,15 @@ A metronome click is accented on the first beat of each bar. Count-in clicks are
 | Export | Contents |
 |---|---|
 | **Chord progression MIDI** | Chords only, absolute ticks, no empty bar between chords |
-| **Arrangement MIDI** | Chords, bass, lead, separate drum tracks, section markers |
+| **Arrangement MIDI** | Section regions: one local MIDI track per section and instrument, plus section markers |
 | **WAV mix** | Offline render of the full song, sample instruments included |
 | **Stems (.zip)** | Chords, bass, lead and drums as separate WAVs |
 | **DAW pack (.zip)** | `midi/arrangement.mid` + separate `midi/chords.mid`, `bass.mid`, `lead.mid`, `drums.mid`, `stems/*.wav`, `project.json`, `README.txt` |
 | **Project JSON** | Full project, reopen with Save → Open project |
 
 The DAW pack is the recommended hand-off: import the MIDI at bar 1, 4/4, route drums to a GM kit, and use the stems as a reference or for further processing.
+
+Arrangement MIDI is split into section regions, e.g. `02 drop · bar 17 · Chords`. Each region starts at tick 0 and its track name carries the song start bar; place the region at that bar in the DAW. The full-song per-instrument files in the DAW pack remain available when a DAW prefers one track per instrument.
 
 Melodic MIDI uses channels 1 (chords), 2 (bass) and 3 (lead), with a GM program change matching the selected app instrument. Drums are on channel 10. Some DAWs — notably FL Studio — can import only the first track of a multi-track file; use the separate `midi/chords.mid`, `bass.mid`, `lead.mid`, `drums.mid` files in the DAW pack in that case. The separate files carry the same channels and programs.
 

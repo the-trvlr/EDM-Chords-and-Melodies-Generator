@@ -11,6 +11,7 @@ export interface TemplateSection {
 
 export interface ArrangementTemplate {
   name: string;
+  group: 'sketch' | 'song';
   sections: TemplateSection[];
 }
 
@@ -23,6 +24,7 @@ const ALL: TrackId[] = ['chord', 'bass', 'lead', 'drums'];
 export const ARRANGEMENT_TEMPLATES: ArrangementTemplate[] = [
   {
     name: 'Club · 64 bars',
+    group: 'sketch',
     sections: [
       { kind: 'intro', bars: 4, tracks: ['chord'], energy: 'low', fill: false },
       { kind: 'build', bars: 8, tracks: ['chord', 'drums'], energy: 'medium', fill: true },
@@ -35,6 +37,7 @@ export const ARRANGEMENT_TEMPLATES: ArrangementTemplate[] = [
   },
   {
     name: 'Radio · 36 bars',
+    group: 'sketch',
     sections: [
       { kind: 'intro', bars: 4, tracks: ['chord'], energy: 'low', fill: false },
       { kind: 'build', bars: 4, tracks: ['chord', 'drums'], energy: 'medium', fill: true },
@@ -47,6 +50,7 @@ export const ARRANGEMENT_TEMPLATES: ArrangementTemplate[] = [
   },
   {
     name: 'Festival · 72 bars',
+    group: 'sketch',
     sections: [
       { kind: 'intro', bars: 8, tracks: ['chord'], energy: 'low', fill: false },
       { kind: 'build', bars: 8, tracks: ['chord', 'drums'], energy: 'medium', fill: true },
@@ -55,6 +59,57 @@ export const ARRANGEMENT_TEMPLATES: ArrangementTemplate[] = [
       { kind: 'build', bars: 8, tracks: ['chord', 'drums', 'lead'], energy: 'medium', fill: true },
       { kind: 'drop', bars: 16, tracks: ALL, energy: 'high', fill: false },
       { kind: 'outro', bars: 8, tracks: ['chord'], energy: 'low', fill: false },
+    ],
+  },
+  {
+    name: 'Radio · 112 bars',
+    group: 'song',
+    sections: [
+      { kind: 'intro', bars: 8, tracks: ['chord'], energy: 'low', fill: false },
+      { kind: 'build', bars: 8, tracks: ['chord', 'drums'], energy: 'medium', fill: true },
+      { kind: 'drop', bars: 16, tracks: ALL, energy: 'high', fill: false },
+      { kind: 'break', bars: 8, tracks: ['chord', 'lead'], energy: 'low', fill: false },
+      { kind: 'build', bars: 8, tracks: ['chord', 'drums', 'lead'], energy: 'medium', fill: true },
+      { kind: 'drop', bars: 16, tracks: ALL, energy: 'high', fill: false },
+      { kind: 'break', bars: 8, tracks: ['chord', 'lead'], energy: 'low', fill: false },
+      { kind: 'build', bars: 8, tracks: ['chord', 'drums', 'lead'], energy: 'medium', fill: true },
+      { kind: 'drop', bars: 16, tracks: ALL, energy: 'high', fill: false },
+      { kind: 'break', bars: 8, tracks: ['chord', 'lead'], energy: 'low', fill: false },
+      { kind: 'outro', bars: 8, tracks: ['chord'], energy: 'low', fill: false },
+    ],
+  },
+  {
+    name: 'Club · 128 bars',
+    group: 'song',
+    sections: [
+      { kind: 'intro', bars: 8, tracks: ['chord'], energy: 'low', fill: false },
+      { kind: 'build', bars: 8, tracks: ['chord', 'drums'], energy: 'medium', fill: true },
+      { kind: 'drop', bars: 24, tracks: ALL, energy: 'high', fill: false },
+      { kind: 'break', bars: 8, tracks: ['chord', 'lead'], energy: 'low', fill: false },
+      { kind: 'build', bars: 8, tracks: ['chord', 'drums', 'lead'], energy: 'medium', fill: true },
+      { kind: 'drop', bars: 24, tracks: ALL, energy: 'high', fill: false },
+      { kind: 'break', bars: 8, tracks: ['chord', 'lead'], energy: 'low', fill: false },
+      { kind: 'build', bars: 8, tracks: ['chord', 'drums', 'lead'], energy: 'medium', fill: true },
+      { kind: 'drop', bars: 24, tracks: ALL, energy: 'high', fill: false },
+      { kind: 'outro', bars: 8, tracks: ['chord'], energy: 'low', fill: false },
+    ],
+  },
+  {
+    name: 'Festival · 160 bars',
+    group: 'song',
+    sections: [
+      { kind: 'intro', bars: 8, tracks: ['chord'], energy: 'low', fill: false },
+      { kind: 'build', bars: 8, tracks: ['chord', 'drums'], energy: 'medium', fill: true },
+      { kind: 'drop', bars: 24, tracks: ALL, energy: 'high', fill: false },
+      { kind: 'break', bars: 8, tracks: ['chord', 'lead'], energy: 'low', fill: false },
+      { kind: 'build', bars: 8, tracks: ['chord', 'drums', 'lead'], energy: 'medium', fill: true },
+      { kind: 'drop', bars: 24, tracks: ALL, energy: 'high', fill: false },
+      { kind: 'break', bars: 8, tracks: ['chord', 'lead'], energy: 'low', fill: false },
+      { kind: 'build', bars: 8, tracks: ['chord', 'drums', 'lead'], energy: 'medium', fill: true },
+      { kind: 'drop', bars: 24, tracks: ALL, energy: 'high', fill: false },
+      { kind: 'break', bars: 8, tracks: ['chord', 'lead'], energy: 'low', fill: false },
+      { kind: 'build', bars: 8, tracks: ['chord', 'drums', 'lead'], energy: 'medium', fill: true },
+      { kind: 'drop', bars: 24, tracks: ALL, energy: 'high', fill: false },
     ],
   },
 ];

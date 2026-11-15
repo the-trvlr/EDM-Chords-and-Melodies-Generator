@@ -20,6 +20,15 @@ test('studio loads, edits a chord and undoes it', async ({ page }) => {
   await expect(cards).toHaveCount(4);
 });
 
+test('applies a song template and shows section regions', async ({ page }) => {
+  await openStudio(page);
+  await page.selectOption('select[aria-label="Arrangement template"]', 'Radio · 36 bars');
+  const sections = await page.evaluate(() => JSON.parse(localStorage.getItem('edm-chordgen-state-v1') ?? '{}')?.melody?.sections as { kind: string; bars: number }[]);
+  expect(sections).toHaveLength(7);
+  expect(sections.filter(section => section.kind === 'drop')).toHaveLength(2);
+  expect(sections.reduce((sum, section) => sum + section.bars, 0)).toBe(36);
+});
+
 test('no serious or critical accessibility violations', async ({ page }) => {
   await openStudio(page);
   // Color-contrast is tracked separately as a design-token task; this gate

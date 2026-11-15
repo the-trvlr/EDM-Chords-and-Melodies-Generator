@@ -462,7 +462,7 @@ footer 40
 
 **Сделано в 1.9.0:** MIDI channels/GM programs, separate MIDI files в DAW pack.
 
-**Сделано в 2.0.0–2.0.2:** song mode — energy/fill секций, двухдроповые шаблоны Club64/Radio36/Festival72; дедуп барабанных событий.
+**Сделано в 2.0.0–2.1.0:** song mode; Sketch/Song шаблоны; section regions в arrangement MIDI; дедуп барабанных событий.
 
 **Осталось:** colour-contrast, round-robin, Safari, MusicXML/PDF.
 
