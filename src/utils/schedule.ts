@@ -236,10 +236,22 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
     }
   }
 
+  // A metal/noise drum voice cannot start twice at the same audio time.
+  // Section fills can duplicate an existing hat/snare on the same step, so
+  // collapse duplicate drum hits before playback/export.
+  const drumKeys = new Set<string>();
+  const uniqueEvents = events.filter(event => {
+    if (event.track !== 'drums') return true;
+    const key = `${event.step}:${event.instrument}`;
+    if (drumKeys.has(key)) return false;
+    drumKeys.add(key);
+    return true;
+  });
+
   const timeScales = input.timeScales ?? { chord: 1, bass: 1, lead: 1, drums: 1 };
   const scaled: ScheduleEvent[] = [];
 
-  for (const event of events) {
+  for (const event of uniqueEvents) {
     const trackId: TrackId = event.track === 'arp' ? 'chord' : event.track;
     const scale = timeScales[trackId] ?? 1;
 
