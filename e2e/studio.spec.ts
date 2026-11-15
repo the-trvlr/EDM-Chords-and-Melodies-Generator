@@ -35,7 +35,6 @@ test('no serious or critical accessibility violations', async ({ page }) => {
   // catches structural/ARIA regressions.
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa'])
-    .disableRules(['color-contrast'])
     .analyze();
   const blocking = results.violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
   expect(blocking, blocking.map(v => `${v.id}: ${v.help}`).join('\n')).toEqual([]);

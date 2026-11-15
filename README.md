@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 2.1.2
+- **Version:** 2.2
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -271,6 +271,7 @@ Melodic MIDI uses channels 1 (chords), 2 (bass) and 3 (lead), with a GM program 
 - **Synths:** pad, supersaw, dark, bells, sub, reese, acid, 808 and synth fallbacks.
 - **Effects:** master limiter, shared reverb, per-track level/mute/solo; acoustic mode uses a slightly longer reverb.
 - **Velocity layers:** each sample instrument has soft and hard samplers; quiet notes use a low-passed soft layer, so velocity changes timbre, not just level.
+- **Round-robin:** hard notes alternate between the source attack and a derived 7 ms offset/fade variant, avoiding identical repeated waveforms without extra sample data.
 - **WAV/stems** use the same sample/synth selection as live playback.
 - **808 Glide** uses a monophonic portamento synth and legato bass durations.
 
@@ -335,7 +336,7 @@ All generation, editing and export happen locally. The app has no accounts, anal
 
 ## Roadmap
 
-- **2.0.x:** colour-contrast token pass and round-robin sample variants.
+- **2.2.x:** per-section generator overrides, transitions/risers, MIDI recording, MusicXML/PDF.
 - **2.1:** more section-level generator parameters and transition automation.
 
 See [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md) for the full backlog.

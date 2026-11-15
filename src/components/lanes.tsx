@@ -74,7 +74,7 @@ export function ChordLane({
             style={{ left: `${(index / chords.length) * 100}%`, width: `${100 / chords.length}%` }}
           >
             <span className="font-semibold">{chord.display}</span>
-            <span className="text-[9px] opacity-60">{chord.notes.join(' ')}</span>
+            <span className="text-[9px] text-purple-100/90">{chord.notes.join(' ')}</span>
           </div>
         ))}
         {activeStep !== null && <Playhead position={activeStep / totalSteps} />}

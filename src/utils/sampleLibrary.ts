@@ -44,11 +44,14 @@ const EDM_SAMPLED_PRESETS = new Set<SynthPresetId>(['piano', 'organ', 'pluck', '
 export class LayeredSampler {
   private soft: Tone.Sampler;
   private hard: Tone.Sampler;
+  private hardAlt: Tone.Sampler;
+  private hardIndex = 0;
   private softFilter: Tone.Filter;
 
-  constructor(soft: Tone.Sampler, hard: Tone.Sampler) {
+  constructor(soft: Tone.Sampler, hard: Tone.Sampler, hardAlt: Tone.Sampler) {
     this.soft = soft;
     this.hard = hard;
+    this.hardAlt = hardAlt;
     this.softFilter = new Tone.Filter({ type: 'lowpass', frequency: 2400, rolloff: -24 });
     this.soft.connect(this.softFilter);
     this.soft.volume.value = -5;
@@ -57,12 +60,14 @@ export class LayeredSampler {
   connect(destination: Tone.InputNode): this {
     this.softFilter.connect(destination);
     this.hard.connect(destination);
+    this.hardAlt.connect(destination);
     return this;
   }
 
   disconnect(): void {
     this.softFilter.disconnect();
     this.hard.disconnect();
+    this.hardAlt.disconnect();
     this.soft.disconnect();
   }
 
@@ -70,6 +75,7 @@ export class LayeredSampler {
     this.disconnect();
     this.soft.dispose();
     this.hard.dispose();
+    this.hardAlt.dispose();
     this.softFilter.dispose();
   }
 
@@ -79,7 +85,9 @@ export class LayeredSampler {
     time?: Tone.Unit.Time,
     velocity = 0.8,
   ): this {
-    const target = velocity < 0.55 ? this.soft : this.hard;
+    const target = velocity < 0.55
+      ? this.soft
+      : (this.hardIndex++ % 2 === 0 ? this.hard : this.hardAlt);
     if (Array.isArray(notes)) target.triggerAttackRelease(notes, duration, time, velocity);
     else target.triggerAttackRelease(notes, duration, time, velocity);
     return this;
@@ -96,6 +104,27 @@ function keyOf(track: TrackId, preset: SynthPresetId): string {
 export function sampleFor(preset: SynthPresetId, variant: SoundVariant): SampleInstrumentId | null {
   if (variant === 'edm' && !EDM_SAMPLED_PRESETS.has(preset)) return null;
   return PRESET_SAMPLE[preset] ?? null;
+}
+
+/**
+ * Derived round-robin variant: the same sample with a tiny start offset and
+ * fade-in. It keeps pitch/material identical while varying the attack phase,
+ * so repeated hard notes do not stack the exact same waveform.
+ */
+function makeRoundRobinVariant(buffer: AudioBuffer): AudioBuffer {
+  const context = Tone.getContext().rawContext;
+  const output = context.createBuffer(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+  const offset = Math.max(1, Math.round(buffer.sampleRate * 0.007));
+  for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+    const source = buffer.getChannelData(channel);
+    const target = output.getChannelData(channel);
+    const fade = Math.min(128, target.length);
+    for (let i = 0; i < target.length; i++) {
+      const value = i + offset < source.length ? source[i + offset] : 0;
+      target[i] = value * (i < fade ? i / fade : 0.97);
+    }
+  }
+  return output;
 }
 
 async function buildSampler(sampleId: SampleInstrumentId): Promise<LayeredSampler | null> {
@@ -115,11 +144,13 @@ async function buildSampler(sampleId: SampleInstrumentId): Promise<LayeredSample
     }));
     const soft = new Tone.Sampler({ release: set.release });
     const hard = new Tone.Sampler({ release: set.release });
+    const hardAlt = new Tone.Sampler({ release: set.release });
     for (const [note, buffer] of buffers) {
       soft.add(note as Parameters<Tone.Sampler['add']>[0], buffer);
       hard.add(note as Parameters<Tone.Sampler['add']>[0], buffer);
+      hardAlt.add(note as Parameters<Tone.Sampler['add']>[0], makeRoundRobinVariant(buffer));
     }
-    return new LayeredSampler(soft, hard);
+    return new LayeredSampler(soft, hard, hardAlt);
   } catch {
     return null;
   }

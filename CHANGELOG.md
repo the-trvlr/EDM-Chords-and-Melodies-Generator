@@ -3,6 +3,19 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.2.0] — 2026-11-15
+
+### Contrast + round-robin
+
+- **Colour contrast:** fixed the Play/Stop button (dark text on emerald/rose), Project/Progression/Inspector labels (gray-400), BPM hint and chord-note labels. axe `color-contrast` is no longer disabled; the accessibility gate now runs the full WCAG 2 A/AA structural set.
+- **Round-robin:** the hard sample layer now alternates between the source buffer and a derived variant with a 7 ms offset/fade-in. Repeated notes no longer stack the identical attack phase; pitch and material stay unchanged, no extra sample files or network weight.
+- Soft velocity notes keep the low-passed soft layer.
+- README documents velocity layers, round-robin and accessibility.
+
+### Verification
+
+- 96 unit tests, 3 Playwright/axe tests including colour contrast, lint/tsc/build clean.
+
 ## [2.1.2] — 2026-11-15
 
 ### Reverted section-region MIDI export
