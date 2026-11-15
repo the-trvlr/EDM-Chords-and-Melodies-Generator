@@ -243,62 +243,38 @@ function buildSectionMidiTracks(
 ): MidiWriter.Track[] {
   const tracks: MidiWriter.Track[] = [];
   let cursor = 0;
-  const drumLanes: { id: string; name: string }[] = [
-    { id: 'kick', name: 'Kick' },
-    { id: 'snare', name: 'Snare' },
-    { id: 'clap', name: 'Clap' },
-    { id: 'hat', name: 'Hi-Hat' },
-    { id: 'lowHat', name: 'Low Hat' },
-    { id: 'crash', name: 'Crash' },
-    { id: 'ride', name: 'Ride' },
-  ];
 
   sections.forEach((section, index) => {
     const startStep = cursor;
     const endStep = cursor + section.bars * 16;
-    const localTick = (event: ScheduleEvent) => Math.max(0, Math.round((event.step - startStep) * TICKS_PER_16));
     const local = events.filter(event => event.step >= startStep && event.step < endStep);
-    const label = `${String(index + 1).padStart(2, '0')} ${section.kind} · bar ${Math.floor(startStep / 16) + 1}`;
-
-    const chordEvents = local.filter(event => event.track === 'chord' || event.track === 'arp');
-    if (chordEvents.length > 0) {
-      const track = newTrack(`${label} · Chords`, bpm);
-      addProgramChange(track, options.synthIds?.chord ?? 'piano', 1);
-      for (const event of chordEvents) {
-        if (event.track === 'chord') {
-          addEvent(track, event.midis.map(midiToPitch), localTick(event), event.durationSteps * TICKS_PER_16 * 0.98, 80, 1);
-        } else if (event.track === 'arp') {
-          addEvent(track, midiToPitch(event.midi), localTick(event), event.durationSteps * TICKS_PER_16 * 0.98, Math.round(event.velocity * 100), 1);
-        }
-      }
-      tracks.push(track);
+    if (local.length === 0) {
+      cursor = endStep;
+      return;
     }
+    const track = newTrack(`${String(index + 1).padStart(2, '0')} ${section.kind} - bar ${Math.floor(startStep / 16) + 1}`, bpm);
+    const has = (kind: 'chord' | 'bass' | 'lead' | 'drums') => local.some(event =>
+      kind === 'chord' ? event.track === 'chord' || event.track === 'arp' : event.track === kind,
+    );
+    if (has('chord')) addProgramChange(track, options.synthIds?.chord ?? 'piano', 1);
+    if (has('bass')) addProgramChange(track, options.synthIds?.bass ?? 'sub', 2);
+    if (has('lead')) addProgramChange(track, options.synthIds?.lead ?? 'supersaw', 3);
 
-    for (const [eventsForTrack, name, channel, preset] of [
-      [local.filter(event => event.track === 'bass'), 'Bass', 2, options.synthIds?.bass ?? 'sub'],
-      [local.filter(event => event.track === 'lead'), 'Lead', 3, options.synthIds?.lead ?? 'supersaw'],
-    ] as const) {
-      if (eventsForTrack.length === 0) continue;
-      const track = newTrack(`${label} · ${name}`, bpm);
-      addProgramChange(track, preset, channel);
-      for (const event of eventsForTrack) {
-        if (event.track === 'bass' || event.track === 'lead') {
-          addEvent(track, midiToPitch(event.midi), localTick(event), event.durationSteps * TICKS_PER_16 * 0.98, Math.round(event.velocity * 100), channel);
-        }
+    for (const event of local) {
+      const tick = Math.max(0, Math.round((event.step - startStep) * TICKS_PER_16));
+      if (event.track === 'chord') {
+        addEvent(track, event.midis.map(midiToPitch), tick, event.durationSteps * TICKS_PER_16 * 0.98, 80, 1);
+      } else if (event.track === 'arp') {
+        addEvent(track, midiToPitch(event.midi), tick, event.durationSteps * TICKS_PER_16 * 0.98, Math.round(event.velocity * 100), 1);
+      } else if (event.track === 'bass') {
+        addEvent(track, midiToPitch(event.midi), tick, event.durationSteps * TICKS_PER_16 * 0.98, Math.round(event.velocity * 100), 2);
+      } else if (event.track === 'lead') {
+        addEvent(track, midiToPitch(event.midi), tick, event.durationSteps * TICKS_PER_16 * 0.98, Math.round(event.velocity * 100), 3);
+      } else if (event.track === 'drums') {
+        addEvent(track, DRUM_PITCH[event.instrument], tick, TICKS_PER_16, Math.round(event.velocity * 100), 10);
       }
-      tracks.push(track);
     }
-
-    for (const lane of drumLanes) {
-      const matching = local.filter(event => event.track === 'drums' && event.instrument === lane.id);
-      if (matching.length === 0) continue;
-      const track = newTrack(`${label} · ${lane.name}`, bpm);
-      for (const event of matching) {
-        addEvent(track, DRUM_PITCH[lane.id], localTick(event), TICKS_PER_16, Math.round(event.velocity * 100), 10);
-      }
-      tracks.push(track);
-    }
-
+    tracks.push(track);
     cursor = endStep;
   });
 

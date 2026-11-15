@@ -3,6 +3,19 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.1.1] — 2026-11-15
+
+### One region per section (not per instrument)
+
+- Arrangement MIDI section layout now writes **one MIDI track per section** containing chords, bass, lead and drums, instead of one track per section+instrument. A Radio 112 song is 11 region tracks, not 58.
+- Track names use ASCII: `02 drop - bar 17`.
+- Notes stay local (tick 0) so each region is a clean clip; channels 1/2/3/10 and GM programs are preserved inside the region.
+- Full-song per-instrument MIDI files remain in the DAW pack.
+
+### Verification
+
+- 97 unit tests, 3 Playwright/axe tests, lint/tsc/build clean.
+
 ## [2.1.0] — 2026-11-15
 
 ### Sketch/Song templates and section regions
@@ -11,8 +24,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), ver
   - Sketch: Club 64, Radio 36, Festival 72 (quick ideas).
   - Song: Radio 112 (~3:00 @150), Club 128 (~3:25 @150), Festival 160 (~4:16 @150), all with three or four drops.
 - Template options show a **duration estimate at the current BPM**; the Song sections header also shows total bars and duration.
-- **Arrangement MIDI now exports one local region per section and instrument**:
-  - track names like `02 drop · bar 17 · Chords`, `02 drop · bar 17 · Bass`, drums per lane;
+- **Arrangement MIDI now exports one local region per section**:
+  - track names like `02 drop - bar 17`, containing chords, bass, lead and drums with their channels/programs;
   - notes start at tick 0 inside each region, so every clip is clean for copying/editing;
   - the track name includes the song start bar for placement.
 - The DAW pack uses the same sectioned `arrangement.mid`; the full-song per-instrument files (`midi/chords.mid`, etc.) remain for FL-style workflows.
