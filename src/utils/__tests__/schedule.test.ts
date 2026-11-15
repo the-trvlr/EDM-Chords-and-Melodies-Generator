@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSchedule, eventsForTrack, groupByStep, songBars, totalSteps } from '../schedule';
+import { buildSchedule, eventsForTrack, groupByStep, songBars, totalSteps, type ScheduleEvent } from '../schedule';
 import { getChordNotes } from '../musicTheory';
 import type { RhythmPattern } from '../../data/genres';
 import type { SongSection } from '../../types';
@@ -148,6 +148,55 @@ describe('buildSchedule', () => {
     }
   });
 
+  it('applies per-section melody density, octave and drum density', () => {
+    const bass = {
+      notes: [
+        { midi: 40, step: 0, duration: 1, velocity: 0.8 },
+        { midi: 41, step: 1, duration: 1, velocity: 0.8 },
+        { midi: 42, step: 2, duration: 1, velocity: 0.8 },
+        { midi: 43, step: 3, duration: 1, velocity: 0.8 },
+      ],
+      type: 'bass' as const,
+      styleId: 't',
+      stepsPerChord: 16,
+    };
+    const drums = {
+      kick: [1, ...new Array(15).fill(0)],
+      snare: [0, 0, 0, 0, 1, ...new Array(11).fill(0)],
+      clap: new Array(16).fill(0),
+      hat: new Array(16).fill(1),
+      lowHat: new Array(16).fill(0),
+      crash: new Array(16).fill(0),
+      ride: new Array(16).fill(0),
+    };
+    const sections: SongSection[] = [
+      { id: 'a', kind: 'drop', bars: 1, tracks: ['bass', 'drums'], density: 'low', octaveShift: 1, drumDensity: 'low' },
+    ];
+    const events = buildSchedule({ chords, rhythm, bass, drums, sections });
+    const bassEvents = events.filter(event => event.track === 'bass') as Array<Extract<ScheduleEvent, { midi: number }>>;
+    expect(bassEvents.map(event => event.step)).toEqual([0, 2]);
+    expect(bassEvents.map(event => event.midi)).toEqual([52, 54]);
+    expect(events.some(event => event.track === 'drums' && event.instrument === 'hat')).toBe(false);
+  });
+
+  it('adds ride accents for high drum density', () => {
+    const drums = {
+      kick: [1, ...new Array(15).fill(0)],
+      snare: [0, 0, 0, 0, 1, ...new Array(11).fill(0)],
+      clap: new Array(16).fill(0),
+      hat: new Array(16).fill(0),
+      lowHat: new Array(16).fill(0),
+      crash: new Array(16).fill(0),
+      ride: new Array(16).fill(0),
+    };
+    const sections: SongSection[] = [
+      { id: 'a', kind: 'drop', bars: 1, tracks: ['drums'], drumDensity: 'high' },
+    ];
+    const events = buildSchedule({ chords, rhythm, drums, sections });
+    const ride = events.filter(event => event.track === 'drums' && event.instrument === 'ride');
+    expect(ride.map(event => event.step)).toEqual([0, 4, 8, 12]);
+  });
+
   it('carries note velocity into schedule events', () => {
     const bass = {
       notes: [{ midi: 40, step: 0, duration: 2, velocity: 0.35 }],
@@ -194,7 +243,7 @@ describe('buildSchedule', () => {
     expect(songBars({ chords, sections })).toBe(4);
     const bass = { notes: [{ midi: 40, step: 0, duration: 2 }], type: 'bass' as const, styleId: 't', stepsPerChord: 16 };
     const events = buildSchedule({ chords, rhythm, bass, sections });
-    const bassEvents = events.filter(event => event.track === 'bass');
+    const bassEvents = events.filter(event => event.track === 'bass') as Array<Extract<ScheduleEvent, { midi: number }>>;
     // Bass plays only in the drop section, once per progression cycle.
     expect(bassEvents.map(event => event.step)).toEqual([32]);
   });

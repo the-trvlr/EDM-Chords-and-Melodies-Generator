@@ -66,6 +66,9 @@ export function sanitizeSections(value: unknown): SongSection[] {
       tracks: [...new Set(tracks)],
       energy: (['low', 'medium', 'high'] as string[]).includes(String(raw.energy)) ? raw.energy as SongSection['energy'] : 'medium',
       fill: raw.fill === true,
+      density: (['low', 'medium', 'high'] as string[]).includes(String(raw.density)) ? raw.density as SongSection['density'] : 'medium',
+      octaveShift: clampIn(raw.octaveShift, -1, 1, 0),
+      drumDensity: (['low', 'medium', 'high'] as string[]).includes(String(raw.drumDensity)) ? raw.drumDensity as SongSection['drumDensity'] : 'medium',
     }];
   });
 }

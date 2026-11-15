@@ -3,6 +3,25 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.3.0] — 2026-11-15
+
+### Per-section generator overrides
+
+- Every section now has independent **Melody density** (Low/Medium/High):
+  - Low keeps eighth-note positions, thinning bass/lead/arp runs;
+  - Medium/High keep the generated line.
+- **Octave shift** −1 / 0 / +1 for bass, lead and arp in that section only.
+- Independent **Drum density**:
+  - Low removes hats, low hats and ride but keeps kick/snare/clap/crash;
+  - Medium uses the generated pattern;
+  - High adds ride accents on every quarter.
+- Density/octave/drums are stored in projects and share links; section templates default to Medium/0.
+- README Song sections updated.
+
+### Verification
+
+- 98 unit tests (density, octave, drum-density assertions), 3 Playwright/axe tests, lint/tsc/build clean.
+
 ## [2.2.0] — 2026-11-15
 
 ### Contrast + round-robin

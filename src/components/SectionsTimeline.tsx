@@ -206,6 +206,45 @@ export function SectionsTimeline({ sections, bpm, onChange }: SectionsTimelinePr
                   <option value="high">High</option>
                 </select>
               </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] uppercase tracking-wide text-gray-400">Melody</span>
+                <select
+                  value={selected.density ?? 'medium'}
+                  onChange={event => patchSelected({ density: event.target.value as SongSection['density'] })}
+                  aria-label="Melody density"
+                  className="h-11 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-200 sm:h-8"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] uppercase tracking-wide text-gray-400">Oct</span>
+                <select
+                  value={selected.octaveShift ?? 0}
+                  onChange={event => patchSelected({ octaveShift: Number(event.target.value) })}
+                  aria-label="Melody octave shift"
+                  className="h-11 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-200 sm:h-8"
+                >
+                  <option value={-1}>−1</option>
+                  <option value={0}>0</option>
+                  <option value={1}>+1</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] uppercase tracking-wide text-gray-400">Drums</span>
+                <select
+                  value={selected.drumDensity ?? 'medium'}
+                  onChange={event => patchSelected({ drumDensity: event.target.value as SongSection['drumDensity'] })}
+                  aria-label="Drum density"
+                  className="h-11 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-200 sm:h-8"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
               <button
                 type="button"
                 onClick={() => patchSelected({ fill: !selected.fill })}

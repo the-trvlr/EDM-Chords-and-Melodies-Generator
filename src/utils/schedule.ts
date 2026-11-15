@@ -112,17 +112,23 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
     const chord = input.chords[barInProg];
     const energy = section?.energy ?? 'medium';
     const energyScale = section ? (energy === 'low' ? 0.7 : energy === 'medium' ? 0.88 : 1) : 1;
+    const melodyDensity = section?.density ?? 'medium';
+    const octaveShift = section?.octaveShift ?? 0;
+    const drumDensity = section?.drumDensity ?? 'medium';
+    const keepMelody = (localStep: number) => melodyDensity !== 'low' || localStep % 2 === 0;
 
     if (input.arpMelody) {
       if (tracks.has('chord')) {
         for (const note of input.arpMelody.notes) {
           const barOfNote = Math.floor(note.step / STEPS_PER_CHORD);
           if (barOfNote !== barInProg) continue;
+          const localStep = note.step % STEPS_PER_CHORD;
+          if (!keepMelody(localStep)) continue;
           events.push({
             track: 'arp',
-            step: stepBase + (note.step % STEPS_PER_CHORD),
+            step: stepBase + localStep,
             durationSteps: note.duration,
-            midi: shiftMidi(note.midi, octaves.chord),
+            midi: shiftMidi(note.midi, octaves.chord + octaveShift),
             offset: 0,
             velocity: (note.velocity ?? 0.8) * energyScale,
           });
@@ -152,11 +158,13 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
       for (const note of melody.notes) {
         const barOfNote = Math.floor(note.step / STEPS_PER_CHORD);
         if (barOfNote !== barInProg) continue;
+        const localStep = note.step % STEPS_PER_CHORD;
+        if (!keepMelody(localStep)) continue;
         events.push({
           track,
-          step: stepBase + (note.step % STEPS_PER_CHORD),
+          step: stepBase + localStep,
           durationSteps: note.duration,
-          midi: shiftMidi(note.midi, octave),
+          midi: shiftMidi(note.midi, octave + octaveShift),
           offset: 0,
           velocity: (note.velocity ?? 0.8) * energyScale,
         });
@@ -171,6 +179,7 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
       for (let sic = 0; sic < STEPS_PER_CHORD; sic++) {
         for (const instrument of instruments) {
           if (!input.drums[instrument][sic]) continue;
+          if (drumDensity === 'low' && (instrument === 'hat' || instrument === 'lowHat' || instrument === 'ride')) continue;
           events.push({
             track: 'drums',
             step: stepBase + sic,
@@ -184,6 +193,19 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
               : instrument === 'ride' ? 0.55
               : instrument === 'lowHat' ? 0.62
               : 0.6) * energyScale,
+          });
+        }
+      }
+
+      if (drumDensity === 'high') {
+        for (const step of [0, 4, 8, 12]) {
+          events.push({
+            track: 'drums',
+            step: stepBase + step,
+            durationSteps: 1,
+            instrument: 'ride',
+            offset: 0,
+            velocity: 0.5,
           });
         }
       }
