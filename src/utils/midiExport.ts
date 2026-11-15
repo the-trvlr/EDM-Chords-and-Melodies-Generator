@@ -231,55 +231,8 @@ export interface ArrangementMidiOptions {
   timeScales?: Record<'chord' | 'bass' | 'lead' | 'drums', number>;
   bassGlide?: boolean;
   synthIds?: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId };
-  /** 'section' creates one local region per section/instrument; 'instrument' keeps one track per instrument. */
-  layout?: 'section' | 'instrument';
 }
 
-function buildSectionMidiTracks(
-  events: ScheduleEvent[],
-  sections: SongSection[],
-  bpm: number,
-  options: ArrangementMidiOptions,
-): MidiWriter.Track[] {
-  const tracks: MidiWriter.Track[] = [];
-  let cursor = 0;
-
-  sections.forEach((section, index) => {
-    const startStep = cursor;
-    const endStep = cursor + section.bars * 16;
-    const local = events.filter(event => event.step >= startStep && event.step < endStep);
-    if (local.length === 0) {
-      cursor = endStep;
-      return;
-    }
-    const track = newTrack(`${String(index + 1).padStart(2, '0')} ${section.kind} - bar ${Math.floor(startStep / 16) + 1}`, bpm);
-    const has = (kind: 'chord' | 'bass' | 'lead' | 'drums') => local.some(event =>
-      kind === 'chord' ? event.track === 'chord' || event.track === 'arp' : event.track === kind,
-    );
-    if (has('chord')) addProgramChange(track, options.synthIds?.chord ?? 'piano', 1);
-    if (has('bass')) addProgramChange(track, options.synthIds?.bass ?? 'sub', 2);
-    if (has('lead')) addProgramChange(track, options.synthIds?.lead ?? 'supersaw', 3);
-
-    for (const event of local) {
-      const tick = Math.max(0, Math.round((event.step - startStep) * TICKS_PER_16));
-      if (event.track === 'chord') {
-        addEvent(track, event.midis.map(midiToPitch), tick, event.durationSteps * TICKS_PER_16 * 0.98, 80, 1);
-      } else if (event.track === 'arp') {
-        addEvent(track, midiToPitch(event.midi), tick, event.durationSteps * TICKS_PER_16 * 0.98, Math.round(event.velocity * 100), 1);
-      } else if (event.track === 'bass') {
-        addEvent(track, midiToPitch(event.midi), tick, event.durationSteps * TICKS_PER_16 * 0.98, Math.round(event.velocity * 100), 2);
-      } else if (event.track === 'lead') {
-        addEvent(track, midiToPitch(event.midi), tick, event.durationSteps * TICKS_PER_16 * 0.98, Math.round(event.velocity * 100), 3);
-      } else if (event.track === 'drums') {
-        addEvent(track, DRUM_PITCH[event.instrument], tick, TICKS_PER_16, Math.round(event.velocity * 100), 10);
-      }
-    }
-    tracks.push(track);
-    cursor = endStep;
-  });
-
-  return tracks;
-}
 
 /**
  * Full arrangement MIDI from the same schedule as playback: chords, bass,
@@ -317,10 +270,6 @@ export function buildArrangementMidiTracks(
     bassGlide: options.bassGlide,
   });
   if (events.length === 0) return [];
-
-  if ((options.layout ?? 'section') === 'section' && options.sections && options.sections.length > 0) {
-    return buildSectionMidiTracks(events, options.sections, bpm, options);
-  }
 
   const chordEvents = events.filter(event => event.track === 'chord' || event.track === 'arp');
   const bassEvents = events.filter(event => event.track === 'bass');

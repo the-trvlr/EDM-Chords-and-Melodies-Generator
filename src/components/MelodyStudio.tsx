@@ -600,7 +600,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const handleExportMidi = useCallback(() => {
     exportArrangementToMidi(
       progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, layout: 'section' },
+      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds },
     );
     toast.show('Arrangement MIDI exported', 'success');
   }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.synthIds, toast]);
@@ -677,7 +677,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
       const midi = buildArrangementMidiBytes(
         progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, layout: 'section' },
+        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds },
       );
       if (midi) files['midi/arrangement.mid'] = midi;
 
