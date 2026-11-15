@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 2.2
+- **Version:** 2.3
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -165,7 +165,7 @@ Seven editable lanes: **Kick, Snare, Clap, Hi-Hat, Low Hat, Crash, Ride**.
 
 ### Song sections
 
-Build Intro / Build / Drop / Break / Outro blocks with bar lengths, per-section track gating, **energy** (Low / Medium / High) and an optional **Fill** in the last bar. Energy scales chord, bass, lead and drum velocity; fills add a snare/hat roll and kick pickup on the section's final bar.
+Build Intro / Build / Drop / Break / Outro blocks with bar lengths, per-section track gating, **energy** (Low / Medium / High), **melody density**, **octave shift**, **drum density** and an optional **Fill** in the last bar. Energy scales chord, bass, lead and drum velocity; energy, density and octave apply only inside that section; fills add a snare/hat roll and kick pickup on the section's final bar.
 
 Templates come in two levels, and the picker shows the duration at the current BPM:
 
@@ -179,7 +179,7 @@ Templates come in two levels, and the picker shows the duration at the current B
 - **Club · 128 bars** — ~3:25 at 150 BPM.
 - **Festival · 160 bars** — ~4:16 at 150 BPM.
 
-Sections drive playback, WAV, MIDI markers and song length.
+Sections drive playback, WAV, MIDI markers and song length. Melody density Low keeps eighth-note positions; drum density Low removes hats/ride, High adds quarter-note ride accents.
 
 ### Groove and time feel
 

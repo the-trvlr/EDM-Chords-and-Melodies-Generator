@@ -28,6 +28,12 @@ export interface SongSection {
   energy?: SectionEnergy;
   /** Adds a drum fill in the last bar of the section. */
   fill?: boolean;
+  /** Section-level melody density; low keeps eighth-note positions. */
+  density?: 'low' | 'medium' | 'high';
+  /** Shifts bass/lead/arp by -1, 0 or +1 octave in this section. */
+  octaveShift?: number;
+  /** Section-level drum density; low removes hats/ride, high adds ride accents. */
+  drumDensity?: 'low' | 'medium' | 'high';
 }
 
 export interface MelodyRangeSpans {
