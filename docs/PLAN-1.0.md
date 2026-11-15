@@ -460,6 +460,8 @@ footer 40
 
 **Сделано в 1.7.0–1.8.1:** project name, quantize 1/8, repeat bar, Playwright/axe, velocity-слои, общий буфер слоёв.
 
+**Сделано в 1.9.0:** MIDI channels/GM programs, separate MIDI files в DAW pack.
+
 **Осталось:** Safari delay, colour-contrast, round-robin, MusicXML/PDF.
 
 - **Generator 2.0+:** мотивы/вариации, call-response, contour, 808 glide.

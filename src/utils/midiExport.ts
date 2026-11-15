@@ -6,6 +6,7 @@ import type { GeneratedMelody } from './melodyGenerator';
 import type { DrumPattern } from './drumGenerator';
 import { buildSchedule, type ScheduleEvent } from './schedule';
 import type { SongSection, TrackOctaves } from '../types';
+import type { SynthPresetId } from './audioEngine';
 
 /** Ticks per 16th note in the exported files. */
 const TICKS_PER_16 = 32;
@@ -22,6 +23,31 @@ const DRUM_PITCH: Record<string, string> = {
 };
 
 const NOTE_LETTERS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+/** General MIDI programs matching the app's track instruments. */
+const GM_PROGRAM: Record<SynthPresetId, number> = {
+  piano: 0,
+  organ: 16,
+  pad: 89,
+  strings: 48,
+  pluck: 24,
+  bell: 14,
+  supersaw: 81,
+  dark: 81,
+  violin: 40,
+  flute: 73,
+  sub: 38,
+  reese: 38,
+  acid: 38,
+  bass808: 38,
+  ebass: 33,
+  upright: 32,
+};
+
+function addProgramChange(track: MidiWriter.Track, preset: SynthPresetId | undefined, channel: number): void {
+  if (!preset) return;
+  track.addEvent(new MidiWriter.ProgramChangeEvent({ instrument: GM_PROGRAM[preset] ?? 0, channel, delta: 0 }));
+}
 
 function midiToPitch(midi: number): string {
   return `${NOTE_LETTERS[midi % 12]}${Math.floor(midi / 12) - 1}`;
@@ -77,6 +103,8 @@ export function buildProgressionTracks(
   bpm: number,
   rhythm: RhythmPattern,
   doubleTime = false,
+  preset: SynthPresetId = 'piano',
+  channel = 1,
 ): MidiWriter.Track[] {
   const scheduleChords = doubleTime ? chords.flatMap(chord => [chord, chord]) : chords;
   const events = buildSchedule({ chords: scheduleChords, rhythm })
@@ -84,6 +112,7 @@ export function buildProgressionTracks(
   if (events.length === 0) return [];
 
   const track = newTrack('Chords', bpm);
+  addProgramChange(track, preset, channel);
   for (const event of events) {
     addEvent(
       track,
@@ -91,6 +120,7 @@ export function buildProgressionTracks(
       tickOf(event),
       event.durationSteps * TICKS_PER_16 * 0.98,
       80,
+      channel,
     );
   }
   return [track];
@@ -109,6 +139,30 @@ export function exportProgressionToMidi(
   download(tracks, `chord-progression-${keyName}-${scaleName}-${bpm}bpm.mid`);
 }
 
+export function buildMelodyTrack(
+  melody: GeneratedMelody,
+  bpm: number,
+  label: string,
+  keyName: string,
+  scaleName: string,
+  preset: SynthPresetId = 'pluck',
+  channel = 2,
+): MidiWriter.Track[] {
+  const track = newTrack(`${label} ${keyName} ${scaleName}`, bpm);
+  addProgramChange(track, preset, channel);
+  for (const note of melody.notes) {
+    addEvent(
+      track,
+      midiToPitch(note.midi),
+      note.step * TICKS_PER_16,
+      note.duration * TICKS_PER_16 * 0.98,
+      Math.round((note.velocity ?? 0.8) * 100),
+      channel,
+    );
+  }
+  return [track];
+}
+
 /** Exports a single melody (bass/lead/arp) as its own MIDI file. */
 export function exportMelodyToMidi(
   melody: GeneratedMelody,
@@ -117,17 +171,7 @@ export function exportMelodyToMidi(
   keyName: string,
   scaleName: string,
 ): void {
-  const track = newTrack(`${label} ${keyName} ${scaleName}`, bpm);
-  for (const note of melody.notes) {
-    addEvent(
-      track,
-      midiToPitch(note.midi),
-      note.step * TICKS_PER_16,
-      note.duration * TICKS_PER_16 * 0.98,
-      Math.round((note.velocity ?? 0.8) * 100),
-    );
-  }
-  download([track], `edm-${label.toLowerCase()}-${keyName}-${scaleName}-${bpm}bpm.mid`);
+  download(buildMelodyTrack(melody, bpm, label, keyName, scaleName), `edm-${label.toLowerCase()}-${keyName}-${scaleName}-${bpm}bpm.mid`);
 }
 
 /**
@@ -186,6 +230,7 @@ export interface ArrangementMidiOptions {
   humanize?: boolean;
   timeScales?: Record<'chord' | 'bass' | 'lead' | 'drums', number>;
   bassGlide?: boolean;
+  synthIds?: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId };
 }
 
 /**
@@ -234,22 +279,27 @@ export function buildArrangementMidiTracks(
 
   if (chordEvents.length > 0) {
     const chordTrack = newTrack('Chords', bpm);
+    addProgramChange(chordTrack, options.synthIds?.chord ?? 'piano', 1);
     for (const event of chordEvents) {
       if (event.track === 'chord') {
-        addEvent(chordTrack, event.midis.map(midiToPitch), tickOf(event), event.durationSteps * TICKS_PER_16 * 0.98, 80);
+        addEvent(chordTrack, event.midis.map(midiToPitch), tickOf(event), event.durationSteps * TICKS_PER_16 * 0.98, 80, 1);
       } else if (event.track === 'arp') {
-        addEvent(chordTrack, midiToPitch(event.midi), tickOf(event), event.durationSteps * TICKS_PER_16 * 0.98, Math.round(event.velocity * 100));
+        addEvent(chordTrack, midiToPitch(event.midi), tickOf(event), event.durationSteps * TICKS_PER_16 * 0.98, Math.round(event.velocity * 100), 1);
       }
     }
     tracks.push(chordTrack);
   }
 
-  for (const [eventsForTrack, name] of [[bassEvents, 'Bass'], [leadEvents, 'Lead']] as const) {
+  for (const [eventsForTrack, name, channel, preset] of [
+    [bassEvents, 'Bass', 2, options.synthIds?.bass ?? 'sub'],
+    [leadEvents, 'Lead', 3, options.synthIds?.lead ?? 'supersaw'],
+  ] as const) {
     if (eventsForTrack.length === 0) continue;
     const track = newTrack(name, bpm);
+    addProgramChange(track, preset, channel);
     for (const event of eventsForTrack) {
       if (event.track === 'bass' || event.track === 'lead') {
-        addEvent(track, midiToPitch(event.midi), tickOf(event), event.durationSteps * TICKS_PER_16 * 0.98, Math.round(event.velocity * 100));
+        addEvent(track, midiToPitch(event.midi), tickOf(event), event.durationSteps * TICKS_PER_16 * 0.98, Math.round(event.velocity * 100), channel);
       }
     }
     tracks.push(track);
@@ -299,6 +349,10 @@ export function buildArrangementMidiTracks(
   }
 
   return tracks;
+}
+
+export function midiBytesFromTracks(tracks: MidiWriter.Track[]): Uint8Array | null {
+  return tracks.length > 0 ? new MidiWriter.Writer(tracks).buildFile() : null;
 }
 
 export function exportArrangementToMidi(

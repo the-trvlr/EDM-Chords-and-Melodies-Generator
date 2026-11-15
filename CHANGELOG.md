@@ -3,6 +3,27 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [1.9.0] — 2026-11-15
+
+### MIDI interoperability (FL Studio and other DAWs)
+
+- Melodic MIDI tracks now use **distinct channels**: Chords 1, Bass 2, Lead 3; drums stay on GM channel 10. This prevents DAWs from collapsing all melodic parts onto one channel.
+- Each track gets a **GM program change** matching the selected app instrument:
+  - piano 0, organ 16, nylon pluck 24, strings 48, violin 40, flute 73, supersaw/dark 81, bells 14;
+  - sub/reese/acid/808 38, electric bass 33, upright bass 32.
+- The **DAW pack** now includes separate `midi/chords.mid`, `bass.mid`, `lead.mid`, `drums.mid` alongside `arrangement.mid`. This is the reliable workaround for FL Studio's multi-track import quirk; separate files carry the same channels/programs.
+- Arrangement and standalone MIDI use the same program metadata.
+- README manual updated with the FL Studio guidance and the separate-file workflow.
+
+### Verification
+
+- 91 unit tests (new channel/program test), 2 Playwright/axe tests, lint/tsc/build clean.
+- DAW pack inspected: separate MIDI files present, program changes parsed as Chords ch1/program 0, Bass ch2/38, Lead ch3/81.
+
+### Still deferred
+
+- Safari playhead timing, colour-contrast tokens, round-robin sample variants.
+
 ## [1.8.1] — 2026-11-11
 
 ### Faster layered-sample loading

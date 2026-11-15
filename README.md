@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 1.8.1
+- **Version:** 1.9
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -213,10 +213,12 @@ A metronome click is accented on the first beat of each bar. Count-in clicks are
 | **Arrangement MIDI** | Chords, bass, lead, separate drum tracks, section markers |
 | **WAV mix** | Offline render of the full song, sample instruments included |
 | **Stems (.zip)** | Chords, bass, lead and drums as separate WAVs |
-| **DAW pack (.zip)** | `midi/arrangement.mid`, `stems/*.wav`, `project.json`, `README.txt` |
+| **DAW pack (.zip)** | `midi/arrangement.mid` + separate `midi/chords.mid`, `bass.mid`, `lead.mid`, `drums.mid`, `stems/*.wav`, `project.json`, `README.txt` |
 | **Project JSON** | Full project, reopen with Save → Open project |
 
 The DAW pack is the recommended hand-off: import the MIDI at bar 1, 4/4, route drums to a GM kit, and use the stems as a reference or for further processing.
+
+Melodic MIDI uses channels 1 (chords), 2 (bass) and 3 (lead), with a GM program change matching the selected app instrument. Drums are on channel 10. Some DAWs — notably FL Studio — can import only the first track of a multi-track file; use the separate `midi/chords.mid`, `bass.mid`, `lead.mid`, `drums.mid` files in the DAW pack in that case. The separate files carry the same channels and programs.
 
 **Share** copies a link that restores the project, including custom chords, mixer, melody edits, time feels, sound character and drum pattern. Very large projects may exceed the link limit; use project JSON instead.
 
@@ -271,6 +273,7 @@ Attribution is required if you redistribute the sample files; the code and app a
 | Exported WAV sounds different | Confirm the same Sound character and instrument; if a sample failed to load, the synth fallback is used. |
 | Safari playhead lag | Known Safari-only issue, deferred; Chrome/Edge are the reference browsers. |
 | Share link too long | Use **Save → Save project…** and open the JSON. |
+| FL Studio imports only Chords from `arrangement.mid` | FL's multi-track import quirk. Use the separate `midi/chords.mid`, `bass.mid`, `lead.mid`, `drums.mid` files from the DAW pack; they carry the correct channels and GM programs. |
 | Old project missing drum lanes | Old 4-lane drum patterns are migrated automatically with empty hi-hat/low-hat/crash/ride lanes. |
 
 ---
