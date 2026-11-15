@@ -139,6 +139,13 @@ describe('buildSchedule', () => {
     // Last bar of the second section gets a 12-15 snare/hat fill and a kick.
     expect(snare.some(event => event.step === 16 + 15)).toBe(true);
     expect(events.some(event => event.track === 'drums' && event.instrument === 'kick' && event.step === 16 + 14)).toBe(true);
+    const drumKeys = new Set<string>();
+    for (const event of events) {
+      if (event.track !== 'drums') continue;
+      const key = `${event.step}:${event.instrument}`;
+      expect(drumKeys.has(key), key).toBe(false);
+      drumKeys.add(key);
+    }
   });
 
   it('carries note velocity into schedule events', () => {

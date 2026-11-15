@@ -3,6 +3,24 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.0.1] — 2026-11-15
+
+### Fixed: drop playback froze on a repeated drum hit
+
+- Section fills could duplicate an existing hat/snare at the same step. `Tone.MetalSynth` cannot start twice at the same audio time, so the loop callback threw “Start time must be strictly greater than previous start time”, leaving one drum voice ringing/stuttering and the preview stuck.
+- Drum events are now deduplicated by `step + instrument` before playback/export; fills still add new hits, but never a second trigger of the same voice at the same instant.
+- Verified with the default Club structure at 200 BPM: no console errors, playhead continues past the drop.
+
+### Fixed: arrangement template lengths
+
+- **Radio · 16 bars** is now Intro 4 + Build 4 + Drop 6 + Outro 2, so drums enter on bar 5, not bar 3.
+- **Club · 32 bars** is Intro 4 + Build 8 + Drop 12 + Break 4 + Outro 4.
+- Added 6- and 12-bar options to the section length selector so template values display correctly.
+
+### Verification
+
+- 92 unit tests (including a no-duplicate drum event assertion), 2 Playwright/axe tests, lint/tsc/build clean.
+
 ## [2.0.0] — 2026-11-15
 
 ### Song mode

@@ -17,7 +17,7 @@ const TRACKS: { id: TrackId; label: string }[] = [
   { id: 'drums', label: 'Drums' },
 ];
 
-const BARS = [2, 4, 8, 16];
+const BARS = [2, 4, 6, 8, 12, 16];
 
 function newSection(kind: SectionKind, bars: number, tracks: TrackId[], energy: SectionEnergy = 'medium', fill = false): SongSection {
   return {
@@ -36,7 +36,7 @@ function defaultStructure(): SongSection[] {
   return [
     newSection('intro', 4, ['chord'], 'low'),
     newSection('build', 8, ['chord', 'drums'], 'medium', true),
-    newSection('drop', 8, ['chord', 'bass', 'lead', 'drums'], 'high'),
+    newSection('drop', 12, ['chord', 'bass', 'lead', 'drums'], 'high'),
     newSection('break', 4, ['chord', 'lead'], 'low'),
     newSection('outro', 4, ['chord'], 'low'),
   ];
@@ -47,9 +47,9 @@ const TEMPLATES: { name: string; build: () => SongSection[] }[] = [
   {
     name: 'Radio · 16 bars',
     build: () => [
-      newSection('intro', 2, ['chord'], 'low'),
+      newSection('intro', 4, ['chord'], 'low'),
       newSection('build', 4, ['chord', 'drums'], 'medium', true),
-      newSection('drop', 8, ['chord', 'bass', 'lead', 'drums'], 'high'),
+      newSection('drop', 6, ['chord', 'bass', 'lead', 'drums'], 'high'),
       newSection('outro', 2, ['chord'], 'low'),
     ],
   },
