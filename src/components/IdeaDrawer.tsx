@@ -15,6 +15,9 @@ interface IdeaDrawerProps {
   arpSettings: ArpSettings;
   arpSeed: number;
   onApplyNotes: (track: 'bass' | 'lead', notes: MelodyNote[]) => void;
+  onPreviewNotes: (track: 'bass' | 'lead' | 'arp', notes: MelodyNote[]) => void;
+  onPreviewTrack: (track: 'bass' | 'lead' | 'drums') => void;
+  onPreviewArp: (settings: ArpSettings, seed: number) => void;
   onSeedsChange: (seeds: { bass: number; lead: number; drums: number }) => void;
   onSeedLocksChange: (locks: { bass: boolean; lead: boolean; drums: boolean }) => void;
   onArpChange: (enabled: boolean, settings: ArpSettings, seed: number) => void;
@@ -43,6 +46,9 @@ export function IdeaDrawer({
   arpSettings,
   arpSeed,
   onApplyNotes,
+  onPreviewNotes,
+  onPreviewTrack,
+  onPreviewArp,
   onSeedsChange,
   onSeedLocksChange,
   onArpChange,
@@ -101,6 +107,9 @@ export function IdeaDrawer({
             </select>
           </label>
         </div>
+        <p className="mt-2 rounded-md border border-purple-500/20 bg-purple-500/10 p-2 text-[11px] leading-relaxed text-purple-100">
+          <strong className="font-semibold">Why Motif Lab:</strong> a motif is your one-bar hook. Transformations keep its shape while making a related variation, so a bass answer or lead hook sounds composed instead of regenerated. Try Retrograde for call/response, Augment for a build, Invert for a darker answer.
+        </p>
         <div className="mt-2 flex flex-wrap gap-1">
           {TRANSFORMS.map(item => (
             <button
@@ -122,14 +131,24 @@ export function IdeaDrawer({
           {motif.length} notes in the first bar · {transformed.length} after transform
           {motif.length > 0 && <span className="mt-1 block truncate text-gray-300">{motif.slice(0, 6).map(note => note.midi).join(' · ')}</span>}
         </div>
-        <button
-          type="button"
-          disabled={transformed.length === 0}
-          onClick={() => onApplyNotes(source, transformed)}
-          className="mt-2 h-9 w-full rounded-md bg-purple-600 px-3 text-xs font-semibold text-white hover:bg-purple-500 disabled:opacity-40"
-        >
-          Apply motif to {source}
-        </button>
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            disabled={transformed.length === 0}
+            onClick={() => onPreviewNotes(source, transformed)}
+            className="h-9 flex-1 rounded-md border border-cyan-600/50 bg-cyan-500/10 px-3 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/20 disabled:opacity-40"
+          >
+            Preview variation
+          </button>
+          <button
+            type="button"
+            disabled={transformed.length === 0}
+            onClick={() => onApplyNotes(source, transformed)}
+            className="h-9 flex-1 rounded-md bg-purple-600 px-3 text-xs font-semibold text-white hover:bg-purple-500 disabled:opacity-40"
+          >
+            Apply to {source}
+          </button>
+        </div>
       </details>
 
       <details open className="mt-2 rounded-xl border border-gray-800 bg-gray-900/40 p-3">
@@ -154,6 +173,13 @@ export function IdeaDrawer({
         <div className="mt-2 flex gap-2">
           <button type="button" onClick={mutate} className="h-9 flex-1 rounded-md bg-cyan-600 px-3 text-xs font-semibold text-white hover:bg-cyan-500">Mutate unlocked</button>
           <button type="button" onClick={() => { onSeedLocksChange(locks); onSeedsChange(seeds); }} className="h-9 rounded-md border border-gray-700 px-3 text-xs text-gray-300 hover:border-gray-500">Save locks</button>
+        </div>
+        <div className="mt-1.5 grid grid-cols-3 gap-1">
+          {(['bass', 'lead', 'drums'] as const).map(track => (
+            <button key={track} type="button" onClick={() => onPreviewTrack(track)} className="h-8 rounded-md border border-cyan-700/40 text-[10px] text-cyan-200 hover:border-cyan-500">
+              Preview {track}
+            </button>
+          ))}
         </div>
       </details>
 
@@ -193,6 +219,7 @@ export function IdeaDrawer({
         </div>
         <div className="mt-2 flex gap-2">
           <button type="button" onClick={() => setASeed(randomSeed())} className="h-9 rounded-md border border-gray-700 px-3 text-xs text-gray-300 hover:border-gray-500">New seed</button>
+          <button type="button" onClick={() => onPreviewArp(settings, aSeed)} className="h-9 rounded-md border border-cyan-600/50 bg-cyan-500/10 px-3 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/20">Preview arp</button>
           <button type="button" onClick={() => onArpChange(arpOn, settings, aSeed)} className="h-9 flex-1 rounded-md bg-purple-600 px-3 text-xs font-semibold text-white hover:bg-purple-500">Apply arp</button>
         </div>
       </details>

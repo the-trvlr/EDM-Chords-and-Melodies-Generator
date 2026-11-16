@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 2.8
+- **Version:** 2.8.1
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -167,9 +167,9 @@ Seven editable lanes: **Kick, Snare, Clap, Hi-Hat, Low Hat, Crash, Ride**.
 
 Open **Idea lab** above the tracks for three generator tools in one drawer:
 
-- **Motif Lab** — take the first bar of Bass or Lead, transform it (Invert / Retrograde / Augment / Diminish), transpose it and repeat it across the song.
-- **Seeds** — lock Bass, Lead or Drums and mutate only the unlocked parts. Locks are saved with the project/share link.
-- **Arp Designer** — pattern, rate, octaves, gate and seed for the chord arpeggio.
+- **Motif Lab** — take the first bar of Bass or Lead, transform it (Invert / Retrograde / Augment / Diminish), transpose it and repeat it across the song. Use Preview variation to hear the result before applying; it is a hook/identity tool, not another random generator.
+- **Seeds** — lock Bass, Lead or Drums and mutate only the unlocked parts. Locks are saved with the project/share link; preview each part before applying.
+- **Arp Designer** — pattern, rate, octaves, gate and seed for the chord arpeggio, with Preview arp.
 
 ## Song sections
 

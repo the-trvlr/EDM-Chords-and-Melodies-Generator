@@ -3,6 +3,18 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.8.1] — 2026-11-16
+
+### Motif clarity + Idea Lab previews
+
+- Idea Lab now explains **why Motif Lab exists**: it is a one-bar hook/identity tool, not a replacement generator. Invert/Retrograde/Augment/Diminish produce related variations for bass answers, builds and darker turns.
+- Added non-destructive previews:
+  - **Preview variation** for the transformed motif (bass or lead instrument);
+  - **Preview bass / lead / drums** after seed mutation;
+  - **Preview arp** with the current arp settings and seed.
+- Closing Idea Lab stops the preview.
+- 105 unit tests, 6 Playwright/axe tests.
+
 ## [2.8.0] — 2026-11-16
 
 ### Phase 2: Idea Lab
