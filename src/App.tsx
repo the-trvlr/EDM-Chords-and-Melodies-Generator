@@ -28,6 +28,9 @@ import { defaultMelodyState, type MelodyState, type ProjectSnapshot } from './ty
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { FirstRun } from './components/FirstRun';
 import { Guide } from './components/Guide';
+import { KeyExplorer } from './components/KeyExplorer';
+import { ProgressionGenerator } from './components/ProgressionGenerator';
+import { VoicingEngine } from './components/VoicingEngine';
 import { Inspector } from './components/Inspector';
 import { MelodyStudio, type MelodyStudioHandle } from './components/MelodyStudio';
 import { Menu } from './components/Menu';
@@ -142,6 +145,9 @@ function Studio() {
   const [loopBars, setLoopBars] = useState(persisted.loopBars ?? 0);
   const [projectName, setProjectName] = useState(persisted.projectName ?? '');
   const [guideOpen, setGuideOpen] = useState(false);
+  const [progressionGeneratorOpen, setProgressionGeneratorOpen] = useState(false);
+  const [keyExplorerOpen, setKeyExplorerOpen] = useState(false);
+  const [voicingOpen, setVoicingOpen] = useState(false);
   const [workflowStage, setWorkflowStage] = useState<WorkflowStage>('harmony');
   const [firstRunOpen, setFirstRunOpen] = useState(() => {
     try {
@@ -675,6 +681,26 @@ function Studio() {
     playChord(chord, melody.synthIds.chord, '4n', selectedRhythm.name, bpm, selectedRhythm.pattern);
   }, [audioReady, melody.synthIds.chord, selectedRhythm.name, selectedRhythm.pattern, bpm]);
 
+  const applyGeneratedProgression = useCallback((chords: ChordInfo[]) => {
+    commitProgression(chords);
+    setSelectedChordForView(null);
+    setProgressionGeneratorOpen(false);
+    toast.show('Generated progression applied — Undo is available', 'success');
+  }, [commitProgression, toast]);
+
+  const applyKeyScale = useCallback((keyName: string, scaleName: string) => {
+    if (keyName !== selectedKey) handleKeyChange(keyName);
+    if (scaleName !== selectedScale) handleScaleChange(scaleName);
+    setKeyExplorerOpen(false);
+  }, [selectedKey, selectedScale, handleKeyChange, handleScaleChange]);
+
+  const applyVoicing = useCallback((chord: ChordInfo) => {
+    if (selectedChordForView === null) return;
+    commitProgression(progression.map((item, index) => index === selectedChordForView ? chord : item));
+    setVoicingOpen(false);
+    toast.show('Voicing applied — Undo is available', 'success');
+  }, [selectedChordForView, progression, commitProgression, toast]);
+
   const dismissFirstRun = useCallback(() => {
     setFirstRunOpen(false);
     try {
@@ -873,6 +899,7 @@ function Studio() {
           onScaleChange={handleScaleChange}
           onGenreChange={handleGenreChange}
           onComplexityChange={handleComplexityChange}
+          onOpenKeyExplorer={() => setKeyExplorerOpen(true)}
         />
 
         <WorkflowPill active={workflowStage} onSelect={handleWorkflowSelect} onGuide={openGuide} />
@@ -905,6 +932,7 @@ function Studio() {
             suggestions={harmonySuggestions}
             onAddSuggestion={handleAddSuggestion}
             onDetectKey={handleDetectKey}
+            onGenerate={() => setProgressionGeneratorOpen(true)}
           />
         </div>
 
@@ -953,6 +981,7 @@ function Studio() {
             onMove={handleMoveChord}
             onRemove={handleRemoveChord}
             onVoiceLead={handleVoiceLead}
+            onOpenVoicing={() => setVoicingOpen(true)}
             onPreview={previewChord}
             pinned={selectedChordForView !== null && pinnedChords.has(selectedChordForView)}
             onTogglePin={() => {
@@ -974,6 +1003,30 @@ function Studio() {
         onClose={dismissFirstRun}
         onTour={openFirstRunTour}
         onTarget={firstRunTarget}
+      />
+      <ProgressionGenerator
+        open={progressionGeneratorOpen}
+        onClose={() => setProgressionGeneratorOpen(false)}
+        keyName={selectedKey}
+        scaleName={selectedScale}
+        complexity={chordComplexity}
+        onApply={applyGeneratedProgression}
+        onPreview={previewChord}
+      />
+      <KeyExplorer
+        key={`${selectedKey}-${selectedScale}-${keyExplorerOpen}`}
+        open={keyExplorerOpen}
+        onClose={() => setKeyExplorerOpen(false)}
+        keyName={selectedKey}
+        scaleName={selectedScale}
+        onApply={applyKeyScale}
+      />
+      <VoicingEngine
+        open={voicingOpen}
+        onClose={() => setVoicingOpen(false)}
+        chord={viewedChord}
+        onApply={applyVoicing}
+        onPreview={previewChord}
       />
 
       <footer className="mt-8 border-t border-gray-800 py-4 text-center text-xs text-gray-400">

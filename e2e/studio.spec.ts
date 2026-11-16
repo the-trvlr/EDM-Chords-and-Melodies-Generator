@@ -41,6 +41,24 @@ test('applies a song template and shows section regions', async ({ page }) => {
   expect(sections.reduce((sum, section) => sum + section.bars, 0)).toBe(36);
 });
 
+test('generates a progression and opens the voicing engine', async ({ page }) => {
+  await openStudio(page);
+  await page.locator('#harmony').getByRole('button', { name: 'Generate', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Generate progression' })).toBeVisible();
+  await page.getByRole('button', { name: 'Apply progression' }).click();
+  await expect(page.getByRole('dialog', { name: 'Generate progression' })).toBeHidden();
+  const cards = page.locator('section[aria-label="Chord progression"] button[aria-pressed]');
+  await expect(cards).toHaveCount(4);
+
+  await page.getByRole('button', { name: 'Keys' }).click();
+  await expect(page.getByRole('dialog', { name: 'Key & scale explorer' })).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).click();
+
+  await cards.first().click();
+  await page.getByRole('button', { name: 'Voicing' }).click();
+  await expect(page.getByRole('dialog', { name: 'Voicing engine' })).toBeVisible();
+});
+
 test('no serious or critical accessibility violations', async ({ page }) => {
   await openStudio(page);
   // Color-contrast is tracked separately as a design-token task; this gate

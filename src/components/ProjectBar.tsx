@@ -34,6 +34,7 @@ interface ProjectBarProps {
   onScaleChange: (scale: string) => void;
   onGenreChange: (genre: Genre) => void;
   onComplexityChange: (complexity: ChordComplexity) => void;
+  onOpenKeyExplorer: () => void;
 }
 
 export function ProjectBar({
@@ -49,6 +50,7 @@ export function ProjectBar({
   onScaleChange,
   onGenreChange,
   onComplexityChange,
+  onOpenKeyExplorer,
 }: ProjectBarProps) {
   const keyNames = getKeyNamesForScale(selectedScale);
 
@@ -102,6 +104,14 @@ export function ProjectBar({
         </select>
       </label>
 
+      <button
+        type="button"
+        onClick={onOpenKeyExplorer}
+        className="h-8 rounded-md border border-gray-700 px-2 text-[11px] text-gray-300 transition-colors hover:border-gray-500"
+        title="Open key and scale explorer"
+      >
+        Keys
+      </button>
       <label className="flex items-center gap-1">
         <span className="text-[10px] uppercase tracking-wide text-gray-400">Chords</span>
         <select

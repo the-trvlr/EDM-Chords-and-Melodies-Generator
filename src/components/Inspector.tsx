@@ -17,6 +17,7 @@ interface InspectorProps {
   onMove: (index: number, direction: -1 | 1) => void;
   onRemove: (index: number) => void;
   onVoiceLead: () => void;
+  onOpenVoicing: () => void;
   onPreview: (chord: ChordInfo) => void;
   pinned: boolean;
   onTogglePin: () => void;
@@ -34,6 +35,7 @@ export function Inspector({
   onMove,
   onRemove,
   onVoiceLead,
+  onOpenVoicing,
   onPreview,
   pinned,
   onTogglePin,
@@ -145,6 +147,13 @@ export function Inspector({
               className="h-8 rounded-md border border-gray-700 px-2 text-[11px] text-gray-300 hover:border-gray-500"
             >
               Voice lead
+            </button>
+            <button
+              type="button"
+              onClick={onOpenVoicing}
+              className="h-8 rounded-md border border-purple-600/50 bg-purple-500/10 px-2 text-[11px] text-purple-200 hover:border-purple-400"
+            >
+              Voicing
             </button>
             <button
               type="button"
