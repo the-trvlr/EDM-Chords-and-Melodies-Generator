@@ -114,6 +114,12 @@ const ENTRIES: GuideEntry[] = [
     body: 'Energy curve opens from Song sections. Set each section Low/Medium/High, use Auto shape for a classic intro→build→drop arc, then Apply curve.',
   },
   {
+    id: 'reference',
+    title: 'Reference analysis',
+    target: 'export-actions',
+    body: 'Reference opens from the header. Drop a MIDI or audio file to estimate BPM/key; MIDI also yields chord ideas. Choose which parts to use and apply them as a starting point. Audio analysis is approximate; MIDI is more precise.',
+  },
+  {
     id: 'shortcuts',
     title: 'Keyboard and MIDI',
     body: 'Space starts/stops. Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z undo/redo. Cmd/Ctrl+S saves a project JSON, Cmd/Ctrl+O opens one. A–K plays notes from C4; connect a MIDI controller with the MIDI button.',
@@ -126,7 +132,7 @@ const ENTRIES: GuideEntry[] = [
   {
     id: 'next',
     title: 'Coming next',
-    body: 'Harmony, Idea Lab, Groove engine and Energy curve are live. Next: Reference Analysis, then final polish.',
+    body: 'Harmony, Idea Lab, Groove engine, Energy curve and Reference analysis are live. Remaining: final polish, more e2e coverage and performance.',
   },
 ];
 

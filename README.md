@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 2.9
+- **Version:** 3.0
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -163,7 +163,11 @@ Seven editable lanes: **Kick, Snare, Clap, Hi-Hat, Low Hat, Crash, Ride**.
 - Click steps to edit; **Reset edits** restores the generated pattern.
 - Drums MIDI exports separate GM tracks: kick 36, snare 38, clap 39, hi-hat 42, low hat 44, crash 49, ride 51.
 
-### Groove engine and energy curve
+### Reference analysis
+
+Open **Reference** in the header and drop a `.mid`/`.midi` or audio file (`.wav`, `.mp3`, `.m4a`, `.ogg`, `.aac`). The app estimates BPM, key/scale and energy; for MIDI it also infers chord ideas. Choose Use tempo / key / chords and apply them as a starting point. Audio analysis is approximate; MIDI is the precise path.
+
+## Groove engine and energy curve
 
 - **Groove** next to Swing opens per-track swing for Chords, Bass, Lead and Drums. Presets Tight / Pocket / Loose / Shuffle set all four at once; drums can stay tight while chords sit back.
 - **Energy curve** in Song sections shows a bar per section. Set Low/Medium/High per section, use Auto shape, then Apply curve to write section energy in one Undo step.

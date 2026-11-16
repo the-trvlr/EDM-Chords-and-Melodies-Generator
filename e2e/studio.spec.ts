@@ -84,6 +84,13 @@ test('opens Groove and Energy curve drawers', async ({ page }) => {
   await expect(page.getByRole('dialog', { name: 'Energy curve' })).toBeHidden();
 });
 
+test('opens reference analysis', async ({ page }) => {
+  await openStudio(page);
+  await page.getByRole('button', { name: 'Reference' }).click();
+  await expect(page.getByRole('dialog', { name: 'Reference analysis' })).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).click();
+});
+
 test('no serious or critical accessibility violations', async ({ page }) => {
   await openStudio(page);
   // Color-contrast is tracked separately as a design-token task; this gate
