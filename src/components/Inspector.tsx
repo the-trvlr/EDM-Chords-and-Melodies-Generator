@@ -43,6 +43,7 @@ export function Inspector({
 
   return (
     <aside
+      id="inspector"
       aria-label="Chord inspector"
       className={`min-w-0 rounded-xl border border-gray-800 bg-gray-900/50 p-3 xl:sticky xl:top-36 xl:self-start ${className}`}
     >

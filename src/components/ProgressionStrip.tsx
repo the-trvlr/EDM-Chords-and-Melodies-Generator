@@ -56,7 +56,7 @@ export function ProgressionStrip({
   };
 
   return (
-    <section className="rounded-xl border border-gray-800 bg-gray-900/50 p-2" aria-label="Chord progression">
+    <section id="harmony" className="rounded-xl border border-gray-800 bg-gray-900/50 p-2" aria-label="Chord progression">
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Progression</span>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-1">

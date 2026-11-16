@@ -26,6 +26,8 @@ import { preloadTrackSamplers } from './utils/sampleLibrary';
 import { songBars } from './utils/schedule';
 import { defaultMelodyState, type MelodyState, type ProjectSnapshot } from './types';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { FirstRun } from './components/FirstRun';
+import { Guide } from './components/Guide';
 import { Inspector } from './components/Inspector';
 import { MelodyStudio, type MelodyStudioHandle } from './components/MelodyStudio';
 import { Menu } from './components/Menu';
@@ -34,6 +36,7 @@ import { ProgressionStrip } from './components/ProgressionStrip';
 import { ToastProvider } from './components/Toast';
 import { useToast } from './hooks/useToast';
 import { TransportBar } from './components/TransportBar';
+import { WorkflowPill, type WorkflowStage } from './components/WorkflowPill';
 
 const persisted = loadPersistedState();
 
@@ -138,6 +141,15 @@ function Studio() {
   const [countIn, setCountIn] = useState(persisted.countInBars ?? 0);
   const [loopBars, setLoopBars] = useState(persisted.loopBars ?? 0);
   const [projectName, setProjectName] = useState(persisted.projectName ?? '');
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [workflowStage, setWorkflowStage] = useState<WorkflowStage>('harmony');
+  const [firstRunOpen, setFirstRunOpen] = useState(() => {
+    try {
+      return localStorage.getItem('edm-guide-onboarded-v1') !== '1';
+    } catch {
+      return false;
+    }
+  });
   const [doubleTime, setDoubleTime] = useState(sharedProject?.doubleTime ?? persisted.doubleTime ?? false);
   const [chordComplexity, setChordComplexity] = useState<ChordComplexity>(sharedProject?.chordComplexity ?? persisted.chordComplexity ?? 'basic');
   const initialCustomProgression = sharedProject?.customProgression ?? persisted.customProgression ?? null;
@@ -663,6 +675,52 @@ function Studio() {
     playChord(chord, melody.synthIds.chord, '4n', selectedRhythm.name, bpm, selectedRhythm.pattern);
   }, [audioReady, melody.synthIds.chord, selectedRhythm.name, selectedRhythm.pattern, bpm]);
 
+  const dismissFirstRun = useCallback(() => {
+    setFirstRunOpen(false);
+    try {
+      localStorage.setItem('edm-guide-onboarded-v1', '1');
+    } catch {
+      // Storage can be unavailable in private mode; the guide still works.
+    }
+  }, []);
+
+  const showGuideTarget = useCallback((target: string) => {
+    setGuideOpen(false);
+    window.setTimeout(() => {
+      const element = document.getElementById(target);
+      if (!element) return;
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('ring-2', 'ring-purple-400', 'ring-offset-2', 'ring-offset-gray-950');
+      window.setTimeout(() => {
+        element.classList.remove('ring-2', 'ring-purple-400', 'ring-offset-2', 'ring-offset-gray-950');
+      }, 1800);
+    }, 60);
+  }, []);
+
+  const handleWorkflowSelect = useCallback((stage: WorkflowStage) => {
+    setWorkflowStage(stage);
+    const target: Record<WorkflowStage, string> = {
+      harmony: 'harmony',
+      idea: 'tracks',
+      groove: 'groove',
+      arrange: 'arrangement',
+      export: 'export-actions',
+    };
+    showGuideTarget(target[stage]);
+  }, [showGuideTarget]);
+
+  const openGuide = useCallback(() => setGuideOpen(true), []);
+
+  const openFirstRunTour = useCallback(() => {
+    dismissFirstRun();
+    setGuideOpen(true);
+  }, [dismissFirstRun]);
+
+  const firstRunTarget = useCallback((target: string) => {
+    dismissFirstRun();
+    showGuideTarget(target);
+  }, [dismissFirstRun, showGuideTarget]);
+
   if (!audioReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-950 px-4">
@@ -711,7 +769,15 @@ function Studio() {
               </div>
             </div>
 
-            <div className="ml-auto flex flex-wrap items-center gap-1.5">
+            <div id="export-actions" className="ml-auto flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={openGuide}
+                aria-label="Open guide"
+                className="h-11 rounded-lg border border-purple-500/40 bg-purple-500/10 px-2 text-xs font-medium text-purple-200 transition-colors hover:bg-purple-500/20 sm:h-9"
+              >
+                ? Guide
+              </button>
               <button
                 type="button"
                 onClick={handleUndo}
@@ -809,6 +875,8 @@ function Studio() {
           onComplexityChange={handleComplexityChange}
         />
 
+        <WorkflowPill active={workflowStage} onSelect={handleWorkflowSelect} onGuide={openGuide} />
+
         <div className="mt-2">
           <ProgressionStrip
             progression={progression}
@@ -899,6 +967,14 @@ function Studio() {
           />
         </div>
       </main>
+
+      <Guide open={guideOpen} onClose={() => setGuideOpen(false)} onShowTarget={showGuideTarget} />
+      <FirstRun
+        open={audioReady && firstRunOpen}
+        onClose={dismissFirstRun}
+        onTour={openFirstRunTour}
+        onTarget={firstRunTarget}
+      />
 
       <footer className="mt-8 border-t border-gray-800 py-4 text-center text-xs text-gray-400">
         ∞ Melodies · works fully offline · PWA · A–K plays notes

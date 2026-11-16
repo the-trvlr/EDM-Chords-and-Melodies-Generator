@@ -5,8 +5,20 @@ async function openStudio(page: import('@playwright/test').Page) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Start making music' }).click();
   await expect(page.getByRole('heading', { name: '∞ Melodies' })).toBeVisible({ timeout: 30_000 });
+  const skip = page.getByRole('button', { name: 'Skip' });
+  await page.waitForTimeout(250);
+  if (await skip.isVisible().catch(() => false)) await skip.click();
   await expect(page.getByLabel('Project name')).toBeVisible();
 }
+
+test('first run offers the guide', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Start making music' }).click();
+  await expect(page.getByRole('dialog', { name: 'Welcome to ∞ Melodies' })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Open the guide' }).click();
+  await expect(page.getByRole('dialog', { name: 'Guide' })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to studio' }).click();
+});
 
 test('studio loads, edits a chord and undoes it', async ({ page }) => {
   await openStudio(page);
