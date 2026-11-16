@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [3.1.0] — 2026-11-16
+
+### Section-scoped editing + source→target Motif Lab
+
+- **Section selection is now an editor context.** Choose a section chip or Whole song; bass/lead lanes show that segment, and edits are stored as section clips. The scheduler, WAV/stems/MIDI use section clips over the global line.
+- Section clips persist in project JSON and share links; Reset to global removes a clip.
+- **Motif Lab** now has separate Source and Target tracks (Lead→Bass or Bass→Lead), 1/2/4-bar phrase capture, and works on the selected section. Transformations restart from the captured phrase, so Diminish/Augment no longer accumulate.
+- Preview plays the target; Repeat stays inside the section and transform length is clamped to it.
+- 108 unit tests, 9 Playwright/axe tests.
+
 ## [3.0.0] — 2026-11-16
 
 ### Phase 4: Reference analysis

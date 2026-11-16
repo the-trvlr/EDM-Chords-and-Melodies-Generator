@@ -1,6 +1,6 @@
 import type { ChordInfo } from './musicTheory';
 import type { RhythmPattern } from '../data/genres';
-import type { GeneratedMelody } from './melodyGenerator';
+import type { GeneratedMelody, MelodyNote } from './melodyGenerator';
 import type { DrumPattern } from './drumGenerator';
 import type { SongSection, TrackOctaves } from '../types';
 
@@ -40,6 +40,8 @@ export interface ScheduleInput {
   groove?: Partial<Record<TrackId, number>>;
   /** Global call/response default; sections may override. */
   callResponse?: boolean;
+  /** Per-section note clips, keyed by SongSection.id. */
+  sectionNotes?: Record<string, { bass?: MelodyNote[]; lead?: MelodyNote[] }>;
 }
 
 const ALL_TRACKS: TrackId[] = ['chord', 'bass', 'lead', 'drums'];
@@ -112,6 +114,7 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
     tracks: Set<TrackId>,
     section?: SongSection,
     isLastBar = false,
+    barInSection = 0,
   ) => {
     const stepBase = barInSong * STEPS_PER_CHORD;
     const chord = input.chords[barInProg];
@@ -162,6 +165,24 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
       octave: number,
     ) => {
       if (!melody || !tracks.has(track)) return;
+      const clip = section ? input.sectionNotes?.[section.id]?.[track] : undefined;
+      if (clip) {
+        for (const note of clip) {
+          const noteBar = Math.floor(note.step / STEPS_PER_CHORD);
+          if (noteBar !== barInSection) continue;
+          const localStep = note.step % STEPS_PER_CHORD;
+          if (!keepMelody(localStep)) continue;
+          events.push({
+            track,
+            step: stepBase + localStep,
+            durationSteps: note.duration,
+            midi: shiftMidi(note.midi, octave + octaveShift),
+            offset: 0,
+            velocity: (note.velocity ?? 0.8) * energyScale,
+          });
+        }
+        return;
+      }
       for (const note of melody.notes) {
         const barOfNote = Math.floor(note.step / STEPS_PER_CHORD);
         if (barOfNote !== barInProg) continue;
@@ -262,7 +283,7 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
       const sectionStartBar = barInSong;
       const tracks = new Set(section.tracks);
       for (let bar = 0; bar < section.bars; bar++) {
-        pushBar(barInSong, barInSong % input.chords.length, tracks, section, bar === section.bars - 1);
+        pushBar(barInSong, barInSong % input.chords.length, tracks, section, bar === section.bars - 1, bar);
         barInSong++;
       }
       if (section.fx === false) return;

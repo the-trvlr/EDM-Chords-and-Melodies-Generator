@@ -366,6 +366,7 @@ interface ArrangementInput {
   bassGlide?: boolean;
   callResponse?: boolean;
   groove?: Partial<Record<TrackId, number>>;
+  sectionNotes?: Record<string, { bass?: import('./melodyGenerator').MelodyNote[]; lead?: import('./melodyGenerator').MelodyNote[] }>;
   soundVariant?: SoundVariant;
   metronome?: boolean;
   countInBars?: number;
@@ -590,6 +591,7 @@ export interface RenderOptions {
   bassGlide?: boolean;
   callResponse?: boolean;
   groove?: Partial<Record<TrackId, number>>;
+  sectionNotes?: Record<string, { bass?: import('./melodyGenerator').MelodyNote[]; lead?: import('./melodyGenerator').MelodyNote[] }>;
   soundVariant?: SoundVariant;
   /** Dry render for stems: skip reverb and transition FX. */
   dry?: boolean;

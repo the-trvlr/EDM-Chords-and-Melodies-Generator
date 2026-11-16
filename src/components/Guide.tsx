@@ -64,13 +64,13 @@ const ENTRIES: GuideEntry[] = [
     id: 'idea',
     title: 'Idea Lab — motif, seeds and arp',
     target: 'tracks',
-    body: 'Open Idea lab above the tracks. Motif captures the first bar of Bass/Lead and can invert, retrograde, augment, diminish or transpose it, optionally repeated across the song. Seeds locks individual parts and mutates only unlocked ones. Arp Designer controls pattern, rate, octaves and gate.',
+    body: 'Open Idea lab above the tracks. Select a section first to edit its clip; Whole song edits the global line. Motif has separate Source and Target (Lead→Bass or Bass→Lead), 1/2/4-bar phrase capture and non-cumulative Invert/Retrograde/Augment/Diminish. Seeds locks individual parts; Arp Designer controls pattern, rate, octaves and gate.',
   },
   {
     id: 'sections',
     title: 'Song sections and arrangement',
     target: 'arrangement',
-    body: 'Sections define bar length, active tracks, energy, melody density, octave, drum density/energy, call & response and transition FX. Templates give you a full starting structure.',
+    body: 'Sections define bar length, active tracks, energy, melody density, octave, drum density/energy, call & response and transition FX. Select a section chip to edit it; the bass/lead lanes switch to that section clip (or the global line repeated), and edits stay inside the section.',
     steps: [
       'Create structure or pick a Sketch/Song template.',
       'Select a section chip to edit its settings.',

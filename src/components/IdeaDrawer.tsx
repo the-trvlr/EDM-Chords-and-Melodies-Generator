@@ -9,6 +9,7 @@ interface IdeaDrawerProps {
   bassNotes: MelodyNote[];
   leadNotes: MelodyNote[];
   bars: number;
+  contextLabel: string;
   seeds: { bass: number; lead: number; drums: number };
   seedLocks: { bass: boolean; lead: boolean; drums: boolean };
   arpEnabled: boolean;
@@ -40,6 +41,7 @@ export function IdeaDrawer({
   bassNotes,
   leadNotes,
   bars,
+  contextLabel,
   seeds,
   seedLocks,
   arpEnabled,
@@ -54,6 +56,12 @@ export function IdeaDrawer({
   onArpChange,
 }: IdeaDrawerProps) {
   const [source, setSource] = useState<'bass' | 'lead'>('lead');
+  const [target, setTarget] = useState<'bass' | 'lead'>('bass');
+  const [phraseBars, setPhraseBars] = useState<1 | 2 | 4>(1);
+  const [captured, setCaptured] = useState<{ track: 'bass' | 'lead'; motif: MelodyNote[] }>(() => ({
+    track: 'lead',
+    motif: extractMotif(leadNotes, 16),
+  }));
   const [transform, setTransform] = useState<MotifTransform>('original');
   const [transpose, setTranspose] = useState(0);
   const [repeat, setRepeat] = useState(true);
@@ -63,11 +71,18 @@ export function IdeaDrawer({
   const [aSeed, setASeed] = useState(arpSeed);
 
   const sourceNotes = source === 'bass' ? bassNotes : leadNotes;
-  const motif = useMemo(() => extractMotif(sourceNotes), [sourceNotes]);
+  const motif = captured.track === source ? captured.motif : extractMotif(sourceNotes, phraseBars * 16);
   const transformed = useMemo(() => {
     const next = transformMotif(motif, transform, transpose);
-    return repeat ? repeatMotif(next, bars) : next;
-  }, [motif, transform, transpose, repeat, bars]);
+    const limit = bars * 16;
+    const bounded = next
+      .filter(note => note.step < limit)
+      .map(note => ({ ...note, duration: Math.max(1, Math.min(note.duration, limit - note.step)) }));
+    if (!repeat) return bounded;
+    const phraseSteps = phraseBars * 16;
+    return repeatMotif(bounded, Math.ceil(limit / phraseSteps), phraseSteps)
+      .filter(note => note.step < limit);
+  }, [motif, transform, transpose, repeat, bars, phraseBars]);
 
   const mutate = () => {
     onSeedsChange({
@@ -91,7 +106,41 @@ export function IdeaDrawer({
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <label className="flex flex-col gap-1">
             <span className="text-[10px] uppercase tracking-wide text-gray-400">Source</span>
-            <select value={source} onChange={event => setSource(event.target.value as 'bass' | 'lead')} aria-label="Motif source" className="h-9 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-100">
+            <select
+              value={source}
+              onChange={event => {
+                const next = event.target.value as 'bass' | 'lead';
+                setSource(next);
+                setTarget(next === 'bass' ? 'lead' : 'bass');
+                setCaptured({ track: next, motif: extractMotif(next === 'bass' ? bassNotes : leadNotes, phraseBars * 16) });
+              }}
+              aria-label="Motif source"
+              className="h-9 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-100"
+            >
+              <option value="bass">Bass</option>
+              <option value="lead">Lead</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] uppercase tracking-wide text-gray-400">Phrase</span>
+            <select
+              value={phraseBars}
+              onChange={event => {
+                const next = Number(event.target.value) as 1 | 2 | 4;
+                setPhraseBars(next);
+                setCaptured({ track: source, motif: extractMotif(sourceNotes, next * 16) });
+              }}
+              aria-label="Motif phrase length"
+              className="h-9 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-100"
+            >
+              <option value={1}>1 bar</option>
+              <option value={2}>2 bars</option>
+              <option value={4}>4 bars</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] uppercase tracking-wide text-gray-400">Target</span>
+            <select value={target} onChange={event => setTarget(event.target.value as 'bass' | 'lead')} aria-label="Motif target" className="h-9 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-100">
               <option value="bass">Bass</option>
               <option value="lead">Lead</option>
             </select>
@@ -107,8 +156,12 @@ export function IdeaDrawer({
             </select>
           </label>
         </div>
+        <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-gray-400">
+          <span>Context: <strong className="text-gray-200">{contextLabel}</strong> · target is the same segment</span>
+          <button type="button" onClick={() => setCaptured({ track: source, motif: extractMotif(sourceNotes, phraseBars * 16) })} className="rounded border border-gray-700 px-1.5 py-0.5 text-gray-300 hover:border-gray-500">Recapture</button>
+        </div>
         <p className="mt-2 rounded-md border border-purple-500/20 bg-purple-500/10 p-2 text-[11px] leading-relaxed text-purple-100">
-          <strong className="font-semibold">Why Motif Lab:</strong> a motif is your one-bar hook. Transformations keep its shape while making a related variation, so a bass answer or lead hook sounds composed instead of regenerated. Try Retrograde for call/response, Augment for a build, Invert for a darker answer.
+          <strong className="font-semibold">Why Motif Lab:</strong> a motif is your hook. Source and Target are separate: capture a Lead phrase and apply an answer to Bass, or develop the same track. Transformations always restart from the captured phrase, not from the last result. Try Retrograde for call/response, Augment for a build, Invert for a darker answer.
         </p>
         <div className="mt-2 flex flex-wrap gap-1">
           {TRANSFORMS.map(item => (
@@ -135,7 +188,7 @@ export function IdeaDrawer({
           <button
             type="button"
             disabled={transformed.length === 0}
-            onClick={() => onPreviewNotes(source, transformed)}
+            onClick={() => onPreviewNotes(target, transformed)}
             className="h-9 flex-1 rounded-md border border-cyan-600/50 bg-cyan-500/10 px-3 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/20 disabled:opacity-40"
           >
             Preview variation
@@ -143,10 +196,10 @@ export function IdeaDrawer({
           <button
             type="button"
             disabled={transformed.length === 0}
-            onClick={() => onApplyNotes(source, transformed)}
+            onClick={() => onApplyNotes(target, transformed)}
             className="h-9 flex-1 rounded-md bg-purple-600 px-3 text-xs font-semibold text-white hover:bg-purple-500 disabled:opacity-40"
           >
-            Apply to {source}
+            Apply to {target}
           </button>
         </div>
       </details>

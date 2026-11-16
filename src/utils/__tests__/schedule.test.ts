@@ -276,6 +276,24 @@ describe('buildSchedule', () => {
     expect(hat.offset).toBeCloseTo(0.15);
   });
 
+  it('uses per-section note clips instead of the global melody', () => {
+    const bass = {
+      notes: [{ midi: 40, step: 0, duration: 4, velocity: 0.8 }],
+      type: 'bass' as const,
+      styleId: 't',
+      stepsPerChord: 16,
+    };
+    const sections: SongSection[] = [
+      { id: 'drop', kind: 'drop', bars: 1, tracks: ['bass'] },
+    ];
+    const clip = [{ midi: 52, step: 0, duration: 2, velocity: 0.9 }];
+    const events = buildSchedule({ chords, rhythm, bass, sections, sectionNotes: { drop: { bass: clip } } });
+    const bassEvents = events.filter(event => event.track === 'bass') as Array<Extract<ScheduleEvent, { midi: number }>>;
+    expect(bassEvents).toHaveLength(1);
+    expect(bassEvents[0].midi).toBe(52);
+    expect(bassEvents[0].velocity).toBeCloseTo(0.79, 2);
+  });
+
   it('carries note velocity into schedule events', () => {
     const bass = {
       notes: [{ midi: 40, step: 0, duration: 2, velocity: 0.35 }],
