@@ -167,6 +167,7 @@ export function sanitizeMixer(value: unknown): MixerState {
 export function sanitizeMelody(value: unknown): MelodyState {
   const melody = defaultMelodyState();
   if (!isRecord(value)) return melody;
+  const rawSeedLocks = isRecord(value.seedLocks) ? value.seedLocks : isRecord(value.sl) ? value.sl : null;
 
   const arp = isRecord(value.as)
     ? value.as
@@ -231,6 +232,9 @@ export function sanitizeMelody(value: unknown): MelodyState {
     leadVariation: sanitizeVariation(value.leadVariation ?? value.lv),
     callResponse: value.callResponse === true || value.cr === true,
     bassGlide: value.bassGlide === true || value.bg === true,
+    seedLocks: rawSeedLocks
+      ? { bass: rawSeedLocks.bass === true, lead: rawSeedLocks.lead === true, drums: rawSeedLocks.drums === true }
+      : { bass: false, lead: false, drums: false },
     soundVariant: sanitizeSoundVariant(value.soundVariant ?? value.sv),
     sections: sanitizeSections(value.sections ?? value.sc),
     swing: clampNum(value.swing ?? value.sw, 0, 0.6, 0),

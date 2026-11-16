@@ -96,6 +96,8 @@ export interface MelodyState {
   callResponse: boolean;
   /** Portamento bass for 808-style glides. */
   bassGlide: boolean;
+  /** Seed locks for the Idea Lab mutate action. */
+  seedLocks?: { bass: boolean; lead: boolean; drums: boolean };
   /** Sound character: sampled/acoustic or electronic. */
   soundVariant: SoundVariant;
   /** Song structure; empty means "loop the progression". */
@@ -158,6 +160,7 @@ export const defaultMelodyState = (): MelodyState => ({
   leadVariation: 'off',
   callResponse: false,
   bassGlide: false,
+  seedLocks: { bass: false, lead: false, drums: false },
   soundVariant: 'edm',
   sections: [],
   swing: 0,

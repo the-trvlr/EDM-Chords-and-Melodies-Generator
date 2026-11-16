@@ -63,6 +63,7 @@ interface SharePayloadV2 {
     lv?: string;
     cr?: boolean;
     bg?: boolean;
+    sl?: { bass: boolean; lead: boolean; drums: boolean };
     sv?: string;
     sc?: [string, number, string, string?, boolean?, string?, number?, string?, boolean?, string?, string?, boolean?][];
     sw?: number;
@@ -199,6 +200,7 @@ export function encodeShare(snapshot: ProjectSnapshot): string {
       lv: melody.leadVariation,
       cr: melody.callResponse,
       bg: melody.bassGlide,
+      sl: melody.seedLocks ?? { bass: false, lead: false, drums: false },
       sv: melody.soundVariant,
       sc: melody.sections.map(section => [section.kind, section.bars, section.tracks.join(','), section.energy ?? 'medium', section.fill === true, section.density ?? 'medium', section.octaveShift ?? 0, section.drumDensity ?? 'medium', section.fx !== false, section.drumEnergy ?? 'inherit', section.callResponse ?? 'inherit', section.callInvert === true]),
       sw: melody.swing,

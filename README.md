@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 2.7.1
+- **Version:** 2.8
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -163,7 +163,15 @@ Seven editable lanes: **Kick, Snare, Clap, Hi-Hat, Low Hat, Crash, Ride**.
 - Click steps to edit; **Reset edits** restores the generated pattern.
 - Drums MIDI exports separate GM tracks: kick 36, snare 38, clap 39, hi-hat 42, low hat 44, crash 49, ride 51.
 
-### Song sections
+### Idea Lab
+
+Open **Idea lab** above the tracks for three generator tools in one drawer:
+
+- **Motif Lab** — take the first bar of Bass or Lead, transform it (Invert / Retrograde / Augment / Diminish), transpose it and repeat it across the song.
+- **Seeds** — lock Bass, Lead or Drums and mutate only the unlocked parts. Locks are saved with the project/share link.
+- **Arp Designer** — pattern, rate, octaves, gate and seed for the chord arpeggio.
+
+## Song sections
 
 Build Intro / Build / Drop / Break / Outro blocks with bar lengths, per-section track gating, **energy** (Low / Medium / High), **melody density**, **octave shift**, **drum density**, **drum energy**, **call/response** (Inherit / On / Off, plus Invert) and an optional **Fill** in the last bar. Energy scales chord, bass, lead and drum velocity; energy, density and octave apply only inside that section; fills add a snare/hat roll and kick pickup on the section's final bar.
 

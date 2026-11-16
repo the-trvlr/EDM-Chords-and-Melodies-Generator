@@ -61,6 +61,12 @@ const ENTRIES: GuideEntry[] = [
     ],
   },
   {
+    id: 'idea',
+    title: 'Idea Lab — motif, seeds and arp',
+    target: 'tracks',
+    body: 'Open Idea lab above the tracks. Motif captures the first bar of Bass/Lead and can invert, retrograde, augment, diminish or transpose it, optionally repeated across the song. Seeds locks individual parts and mutates only unlocked ones. Arp Designer controls pattern, rate, octaves and gate.',
+  },
+  {
     id: 'sections',
     title: 'Song sections and arrangement',
     target: 'arrangement',
@@ -108,7 +114,7 @@ const ENTRIES: GuideEntry[] = [
   {
     id: 'next',
     title: 'Coming next',
-    body: 'Progression generation, Key & Scale Explorer and Voicing Engine are now live in the Harmony workflow. Next: Motif Lab, Arp Designer, Energy/Mood Curve, Seed Lock & Mutate, Groove Engine and Reference Analysis — all using the same drawer pattern and Show me actions.',
+    body: 'Harmony tools and the Idea Lab (Motif, Seeds, Arp) are live. Next: Energy/Mood Curve, Groove Engine and Reference Analysis — all using the same drawer pattern and Show me actions.',
   },
 ];
 
