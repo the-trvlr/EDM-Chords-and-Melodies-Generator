@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 2.3
+- **Version:** 2.4
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -180,6 +180,8 @@ Templates come in two levels, and the picker shows the duration at the current B
 - **Festival · 160 bars** — ~4:16 at 150 BPM.
 
 Sections drive playback, WAV, MIDI markers and song length. Melody density Low keeps eighth-note positions; drum density Low removes hats/ride, High adds quarter-note ride accents.
+
+**Transitions:** each section has an **FX** toggle. A build/break before a drop gets a two-bar riser, a drop gets an impact, and break/outro get a downlifter. Transitions are synth-generated, play on the master bus in live/WAV, and are not baked into stems.
 
 ### Groove and time feel
 

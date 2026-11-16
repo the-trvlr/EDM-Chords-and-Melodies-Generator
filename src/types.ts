@@ -34,6 +34,8 @@ export interface SongSection {
   octaveShift?: number;
   /** Section-level drum density; low removes hats/ride, high adds ride accents. */
   drumDensity?: 'low' | 'medium' | 'high';
+  /** Automatic transition FX at section boundaries (default true). */
+  fx?: boolean;
 }
 
 export interface MelodyRangeSpans {

@@ -38,12 +38,21 @@ interface DrumSynths {
 
 type MelodicSynth = Tone.PolySynth | Tone.MonoSynth | Tone.Sampler | LayeredSampler;
 
+interface FxNodes {
+  riser: Tone.NoiseSynth;
+  riserFilter: Tone.Filter;
+  impact: Tone.MembraneSynth;
+  down: Tone.NoiseSynth;
+  downFilter: Tone.Filter;
+}
+
 interface MixerNodes {
   reverb: Tone.Freeverb;
   limiter: Tone.Limiter;
   channels: Record<TrackId, Tone.Channel>;
   synths: { chord: Tone.PolySynth | null; bass: MelodicSynth | null; lead: Tone.PolySynth | null };
   drumSynths: DrumSynths | null;
+  fx: FxNodes;
 }
 
 let mixer: MixerNodes | null = null;
@@ -115,8 +124,53 @@ function ensureMixer(): MixerNodes {
     channels,
     synths: { chord: null, bass: null, lead: null },
     drumSynths: null,
+    fx: createFx(limiter),
   };
   return mixer;
+}
+
+function createFx(destination: Tone.InputNode): FxNodes {
+  const riserFilter = new Tone.Filter({ type: 'bandpass', frequency: 300, Q: 1.1 }).connect(destination);
+  const downFilter = new Tone.Filter({ type: 'lowpass', frequency: 7000, Q: 0.8 }).connect(destination);
+  return {
+    riserFilter,
+    riser: new Tone.NoiseSynth({
+      noise: { type: 'white' },
+      envelope: { attack: 0.25, decay: 0.1, sustain: 1, release: 0.35 },
+      volume: -20,
+    }).connect(riserFilter),
+    downFilter,
+    down: new Tone.NoiseSynth({
+      noise: { type: 'pink' },
+      envelope: { attack: 0.01, decay: 0.2, sustain: 0.9, release: 0.5 },
+      volume: -22,
+    }).connect(downFilter),
+    impact: new Tone.MembraneSynth({
+      pitchDecay: 0.08,
+      octaves: 8,
+      envelope: { attack: 0.001, decay: 0.6, sustain: 0.01, release: 0.8 },
+      volume: -4,
+    }).connect(destination),
+  };
+}
+
+function triggerFx(fx: FxNodes, kind: 'riser' | 'impact' | 'downlifter', sixteenth: number, durationSteps: number, time: number, velocity: number): void {
+  if (kind === 'impact') {
+    fx.impact.triggerAttackRelease('C1', '8n', time, velocity);
+    return;
+  }
+  const duration = Math.max(0.2, sixteenth * durationSteps);
+  if (kind === 'riser') {
+    fx.riserFilter.frequency.cancelScheduledValues(time);
+    fx.riserFilter.frequency.setValueAtTime(240, time);
+    fx.riserFilter.frequency.exponentialRampToValueAtTime(9000, time + duration);
+    fx.riser.triggerAttackRelease(duration, time, velocity);
+    return;
+  }
+  fx.downFilter.frequency.cancelScheduledValues(time);
+  fx.downFilter.frequency.setValueAtTime(7000, time);
+  fx.downFilter.frequency.exponentialRampToValueAtTime(220, time + duration);
+  fx.down.triggerAttackRelease(duration, time, velocity);
 }
 
 function createDrumSynths(kitId: DrumKitId, destination: Tone.InputNode): DrumSynths {
@@ -286,6 +340,9 @@ function playEvent(
       break;
     case 'drums':
       if (m.drumSynths) triggerDrum(m.drumSynths, event.instrument, sixteenth, time, event.velocity);
+      break;
+    case 'fx':
+      triggerFx(m.fx, event.transition, sixteenth, event.durationSteps, time, event.velocity);
       break;
   }
 }
@@ -570,7 +627,7 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
 }
 
 function trackIsAudible(
-  eventTrack: ScheduleEvent['track'],
+  eventTrack: Exclude<ScheduleEvent['track'], 'fx'>,
   tracks: RenderOptions['tracks'],
 ): boolean {
   const id: TrackId = eventTrack === 'arp' ? 'chord' : eventTrack;
@@ -639,8 +696,13 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
       lead: (await createRenderSynth('lead', opts)).connect(channels.lead),
     };
     const drums = createDrumSynths(opts.drumKitId ?? currentKitId, channels.drums);
+    const fx = createFx(limiter);
 
     for (const event of events) {
+      if (event.track === 'fx') {
+        triggerFx(fx, event.transition, secPer16, event.durationSteps, (event.step + event.offset) * secPer16, event.velocity);
+        continue;
+      }
       if (!trackIsAudible(event.track, opts.tracks)) continue;
       const time = (event.step + event.offset) * secPer16;
       switch (event.track) {
