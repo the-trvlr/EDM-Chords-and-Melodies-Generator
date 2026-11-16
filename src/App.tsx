@@ -30,7 +30,9 @@ import { FirstRun } from './components/FirstRun';
 import { Guide } from './components/Guide';
 import { KeyExplorer } from './components/KeyExplorer';
 import { ProgressionGenerator } from './components/ProgressionGenerator';
+import { ReferenceAnalysis } from './components/ReferenceAnalysis';
 import { VoicingEngine } from './components/VoicingEngine';
+import type { ReferenceResult } from './utils/referenceAnalysis';
 import { Inspector } from './components/Inspector';
 import { MelodyStudio, type MelodyStudioHandle } from './components/MelodyStudio';
 import { Menu } from './components/Menu';
@@ -148,6 +150,7 @@ function Studio() {
   const [progressionGeneratorOpen, setProgressionGeneratorOpen] = useState(false);
   const [keyExplorerOpen, setKeyExplorerOpen] = useState(false);
   const [voicingOpen, setVoicingOpen] = useState(false);
+  const [referenceOpen, setReferenceOpen] = useState(false);
   const [workflowStage, setWorkflowStage] = useState<WorkflowStage>('harmony');
   const [firstRunOpen, setFirstRunOpen] = useState(() => {
     try {
@@ -701,6 +704,17 @@ function Studio() {
     toast.show('Voicing applied — Undo is available', 'success');
   }, [selectedChordForView, progression, commitProgression, toast]);
 
+  const applyReference = useCallback((result: ReferenceResult, options: { bpm: boolean; key: boolean; chords: boolean }) => {
+    if (options.bpm) setBpm(result.bpm);
+    if (options.key) {
+      handleKeyChange(result.key);
+      handleScaleChange(result.scale);
+    }
+    if (options.chords && result.chords.length > 0) commitProgression(result.chords);
+    setReferenceOpen(false);
+    toast.show('Reference applied as a starting point', 'success');
+  }, [handleKeyChange, handleScaleChange, commitProgression, toast]);
+
   const dismissFirstRun = useCallback(() => {
     setFirstRunOpen(false);
     try {
@@ -796,6 +810,13 @@ function Studio() {
             </div>
 
             <div id="export-actions" className="ml-auto flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setReferenceOpen(true)}
+                className="h-11 rounded-lg border border-gray-700 px-2 text-xs font-medium text-gray-200 transition-colors hover:border-gray-500 sm:h-9"
+              >
+                Reference
+              </button>
               <button
                 type="button"
                 onClick={openGuide}
@@ -1027,6 +1048,11 @@ function Studio() {
         chord={viewedChord}
         onApply={applyVoicing}
         onPreview={previewChord}
+      />
+      <ReferenceAnalysis
+        open={referenceOpen}
+        onClose={() => setReferenceOpen(false)}
+        onApply={applyReference}
       />
 
       <footer className="mt-8 border-t border-gray-800 py-4 text-center text-xs text-gray-400">

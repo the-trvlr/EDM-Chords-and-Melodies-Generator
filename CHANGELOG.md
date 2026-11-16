@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [3.0.0] — 2026-11-16
+
+### Phase 4: Reference analysis
+
+- Header **Reference** drawer accepts MIDI and audio references (up to 40 MB).
+- **MIDI:** parses tempo, notes, key/scale, energy and infers chord ideas from simultaneous notes.
+- **Audio:** estimates BPM and key/scale from a local analysis; chords remain MIDI-only. Analysis is approximate and never uploaded.
+- Use tempo / key / chords independently; Apply starts from the reference as one Undo step.
+- Guide and README updated; 107 unit tests, 8 Playwright/axe tests.
+
 ## [2.9.0] — 2026-11-16
 
 ### Phase 3: Groove engine + Energy curve
