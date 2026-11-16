@@ -45,10 +45,11 @@ test('generates a progression and opens the voicing engine', async ({ page }) =>
   await openStudio(page);
   await page.locator('#harmony').getByRole('button', { name: 'Generate', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Generate progression' })).toBeVisible();
+  await page.getByLabel('Progression length').selectOption('8');
   await page.getByRole('button', { name: 'Apply progression' }).click();
   await expect(page.getByRole('dialog', { name: 'Generate progression' })).toBeHidden();
   const cards = page.locator('section[aria-label="Chord progression"] button[aria-pressed]');
-  await expect(cards).toHaveCount(4);
+  await expect(cards).toHaveCount(8);
 
   await page.getByRole('button', { name: 'Keys' }).click();
   await expect(page.getByRole('dialog', { name: 'Key & scale explorer' })).toBeVisible();

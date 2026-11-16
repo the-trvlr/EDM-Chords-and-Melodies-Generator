@@ -59,13 +59,13 @@ export function ProgressionGenerator({ open, onClose, keyName, scaleName, comple
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="flex flex-col gap-1">
           <span className="text-[10px] uppercase tracking-wide text-gray-400">Mood</span>
-          <select value={mood} onChange={event => setMood(event.target.value as ProgressionMood)} className="h-10 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-100">
+          <select value={mood} onChange={event => setMood(event.target.value as ProgressionMood)} aria-label="Progression mood" className="h-10 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-100">
             {MOODS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-[10px] uppercase tracking-wide text-gray-400">Length</span>
-          <select value={bars} onChange={event => setBars(Number(event.target.value) as 4 | 8)} className="h-10 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-100">
+          <select value={bars} onChange={event => setBars(Number(event.target.value) as 4 | 8)} aria-label="Progression length" className="h-10 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-100">
             <option value={4}>4 bars</option>
             <option value={8}>8 bars</option>
           </select>

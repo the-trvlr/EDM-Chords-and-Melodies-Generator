@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.7.1] — 2026-11-16
+
+### Harmony-tool polish
+
+- Accessible labels on the generator mood/length selects.
+- Added a pure 8-bar generation test and an e2e assertion that 8-bar Apply renders eight chord cards.
+- Guide/README wording aligned with the shipped Harmony tools.
+- 102 unit tests, 5 Playwright/axe tests.
+
 ## [2.7.0] — 2026-11-16
 
 ### Phase 1: progression generator, key explorer, voicing
