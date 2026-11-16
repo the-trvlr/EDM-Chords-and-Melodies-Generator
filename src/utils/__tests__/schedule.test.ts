@@ -197,6 +197,21 @@ describe('buildSchedule', () => {
     expect(ride.map(event => event.step)).toEqual([0, 4, 8, 12]);
   });
 
+  it('adds riser, impact and downlifter at section boundaries', () => {
+    const sections: SongSection[] = [
+      { id: 'build', kind: 'build', bars: 1, tracks: ['chord'], fx: true },
+      { id: 'drop', kind: 'drop', bars: 1, tracks: ['chord'] },
+      { id: 'break', kind: 'break', bars: 1, tracks: ['chord'] },
+    ];
+    const events = buildSchedule({ chords, rhythm, sections });
+    const fx = events.filter(event => event.track === 'fx');
+    expect(fx.some(event => event.transition === 'riser' && event.step === 0 && event.durationSteps === 16)).toBe(true);
+    expect(fx.some(event => event.transition === 'impact' && event.step === 16)).toBe(true);
+    expect(fx.some(event => event.transition === 'downlifter' && event.step === 32)).toBe(true);
+    const muted = buildSchedule({ chords, rhythm, sections: [{ ...sections[0], fx: false }, sections[1], sections[2]] });
+    expect(muted.some(event => event.track === 'fx' && event.transition === 'riser')).toBe(false);
+  });
+
   it('carries note velocity into schedule events', () => {
     const bass = {
       notes: [{ midi: 40, step: 0, duration: 2, velocity: 0.35 }],

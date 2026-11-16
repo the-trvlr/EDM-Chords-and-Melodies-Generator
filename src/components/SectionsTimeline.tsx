@@ -259,6 +259,20 @@ export function SectionsTimeline({ sections, bpm, onChange }: SectionsTimelinePr
                 Fill
               </button>
 
+              <button
+                type="button"
+                onClick={() => patchSelected({ fx: selected.fx === false })}
+                aria-pressed={selected.fx !== false}
+                title="Automatic riser, impact and downlifter at section boundaries"
+                className={`h-11 rounded-md px-2 text-[11px] font-medium transition-colors sm:h-8 ${
+                  selected.fx !== false
+                    ? 'bg-fuchsia-500/20 text-fuchsia-200 ring-1 ring-fuchsia-400/60'
+                    : 'border border-gray-700 text-gray-400 hover:border-gray-500'
+                }`}
+              >
+                FX
+              </button>
+
               <div className="flex flex-wrap gap-1" role="group" aria-label="Tracks in this section">
                 {TRACKS.map(track => (
                   <button

@@ -64,7 +64,7 @@ interface SharePayloadV2 {
     cr?: boolean;
     bg?: boolean;
     sv?: string;
-    sc?: [string, number, string, string?, boolean?, string?, number?, string?][];
+    sc?: [string, number, string, string?, boolean?, string?, number?, string?, boolean?][];
     sw?: number;
     hu?: boolean;
     bn?: [number, number, number, number][] | null;
@@ -96,6 +96,7 @@ function expandSections(value: unknown): unknown {
         density: item[5] ?? 'medium',
         octaveShift: item[6] ?? 0,
         drumDensity: item[7] ?? 'medium',
+        fx: item[8] !== false,
       }
     : item);
 }
@@ -196,7 +197,7 @@ export function encodeShare(snapshot: ProjectSnapshot): string {
       cr: melody.callResponse,
       bg: melody.bassGlide,
       sv: melody.soundVariant,
-      sc: melody.sections.map(section => [section.kind, section.bars, section.tracks.join(','), section.energy ?? 'medium', section.fill === true, section.density ?? 'medium', section.octaveShift ?? 0, section.drumDensity ?? 'medium']),
+      sc: melody.sections.map(section => [section.kind, section.bars, section.tracks.join(','), section.energy ?? 'medium', section.fill === true, section.density ?? 'medium', section.octaveShift ?? 0, section.drumDensity ?? 'medium', section.fx !== false]),
       sw: melody.swing,
       hu: melody.humanize,
       bn: compactNotes(melody.bassNotes),

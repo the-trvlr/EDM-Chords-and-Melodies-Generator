@@ -3,6 +3,23 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.4.0] — 2026-11-16
+
+### Section transitions
+
+- Automatic transition FX at section boundaries:
+  - **riser** in the last two bars before a drop (noise sweep through a band-pass, rising to 9 kHz);
+  - **impact** at the first step of a drop;
+  - **downlifter** at the start of a break/outro (noise sweep falling to 220 Hz).
+- Every section has an **FX** toggle, on by default. It is stored in projects/share links.
+- Transitions are synthesised (no new samples) and rendered on the master bus in live playback and WAV export. Stems intentionally stay dry; add them from the mix.
+- Section templates therefore get transitions automatically; disable FX on a section to keep it clean.
+- README Song sections/export notes updated.
+
+### Verification
+
+- 99 unit tests (transition schedule and FX-off), 3 Playwright/axe tests, lint/tsc/build clean.
+
 ## [2.3.0] — 2026-11-15
 
 ### Per-section generator overrides

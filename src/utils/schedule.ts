@@ -17,7 +17,8 @@ export type DrumInstrument = 'kick' | 'snare' | 'clap' | 'hat' | 'lowHat' | 'cra
 export type ScheduleEvent =
   | { track: 'chord'; step: number; durationSteps: number; midis: number[]; offset: number; velocity: number }
   | { track: 'bass' | 'lead' | 'arp'; step: number; durationSteps: number; midi: number; offset: number; velocity: number }
-  | { track: 'drums'; step: number; durationSteps: number; instrument: DrumInstrument; offset: number; velocity: number };
+  | { track: 'drums'; step: number; durationSteps: number; instrument: DrumInstrument; offset: number; velocity: number }
+  | { track: 'fx'; transition: 'riser' | 'impact' | 'downlifter'; step: number; durationSteps: number; offset: number; velocity: number };
 
 export interface ScheduleInput {
   chords: ChordInfo[];
@@ -244,13 +245,48 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
   const sections = activeSections(input);
   if (sections) {
     let barInSong = 0;
-    for (const section of sections) {
+    sections.forEach((section, sectionIndex) => {
+      const sectionStartBar = barInSong;
       const tracks = new Set(section.tracks);
       for (let bar = 0; bar < section.bars; bar++) {
         pushBar(barInSong, barInSong % input.chords.length, tracks, section, bar === section.bars - 1);
         barInSong++;
       }
-    }
+      if (section.fx === false) return;
+      const previous = sections[sectionIndex - 1];
+      const next = sections[sectionIndex + 1];
+      if (next?.kind === 'drop' && section.kind !== 'drop' && section.bars > 0) {
+        const riserBars = Math.min(2, section.bars);
+        events.push({
+          track: 'fx',
+          transition: 'riser',
+          step: (barInSong - riserBars) * STEPS_PER_CHORD,
+          durationSteps: riserBars * STEPS_PER_CHORD,
+          offset: 0,
+          velocity: 0.32,
+        });
+      }
+      if (section.kind === 'drop' && previous?.kind !== 'drop') {
+        events.push({
+          track: 'fx',
+          transition: 'impact',
+          step: sectionStartBar * STEPS_PER_CHORD,
+          durationSteps: 4,
+          offset: 0,
+          velocity: 0.9,
+        });
+      }
+      if (section.kind === 'break' || section.kind === 'outro') {
+        events.push({
+          track: 'fx',
+          transition: 'downlifter',
+          step: sectionStartBar * STEPS_PER_CHORD,
+          durationSteps: 32,
+          offset: 0,
+          velocity: 0.28,
+        });
+      }
+    });
   } else {
     const tracks = new Set(ALL_TRACKS);
     for (let bar = 0; bar < input.chords.length; bar++) {
@@ -274,6 +310,10 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
   const scaled: ScheduleEvent[] = [];
 
   for (const event of uniqueEvents) {
+    if (event.track === 'fx') {
+      scaled.push(event);
+      continue;
+    }
     const trackId: TrackId = event.track === 'arp' ? 'chord' : event.track;
     const scale = timeScales[trackId] ?? 1;
 
