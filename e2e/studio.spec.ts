@@ -60,6 +60,16 @@ test('generates a progression and opens the voicing engine', async ({ page }) =>
   await expect(page.getByRole('dialog', { name: 'Voicing engine' })).toBeVisible();
 });
 
+test('opens the Idea Lab and applies a motif', async ({ page }) => {
+  await openStudio(page);
+  await page.getByRole('button', { name: 'Idea lab' }).click();
+  await expect(page.getByRole('dialog', { name: 'Idea lab' })).toBeVisible();
+  await page.getByRole('button', { name: 'Apply motif to lead' }).click();
+  await page.getByRole('button', { name: 'Mutate unlocked' }).click();
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByRole('dialog', { name: 'Idea lab' })).toBeHidden();
+});
+
 test('no serious or critical accessibility violations', async ({ page }) => {
   await openStudio(page);
   // Color-contrast is tracked separately as a design-token task; this gate

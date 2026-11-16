@@ -28,6 +28,7 @@ import { generateDrums, type DrumPattern } from '../utils/drumGenerator';
 import { deleteArrangement, duplicateArrangement, getSavedArrangements, renameArrangement, saveArrangement, serializeProject, type SavedArrangement } from '../utils/persistence';
 import type { MelodyState, MixerState, ProjectSnapshot, SongSection, TrackMix } from '../types';
 import { Modal } from './Modal';
+import { IdeaDrawer } from './IdeaDrawer';
 import { ChordLane, DrumGrid, EditablePianoRoll, PianoRollLane, VelocityLane } from './lanes';
 import { useToast } from '../hooks/useToast';
 import { SectionsTimeline } from './SectionsTimeline';
@@ -300,6 +301,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const [rendering, setRendering] = useState(false);
   const [renderingStems, setRenderingStems] = useState(false);
   const [exportProgress, setExportProgress] = useState<{ label: string; percent: number } | null>(null);
+  const [ideaOpen, setIdeaOpen] = useState(false);
   const exportTimer = useRef<number | null>(null);
   const [history, setHistory] = useState<MelodyHistory>({ list: [melody], index: 0 });
   const [saveDialog, setSaveDialog] = useState(false);
@@ -864,11 +866,20 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
   return (
     <div id="tracks" className="flex flex-col gap-2">
-      <div>
-        <h2 className="text-lg font-semibold text-white">Tracks</h2>
-        <p className="text-xs text-gray-400">
-          {bars} {bars === 1 ? 'bar' : 'bars'}{melody.sections.length > 0 ? ` · ${laneBars}-bar pattern` : ''} · {bpm} BPM · {genresLabel(genreId)} · edits are saved in the project
-        </p>
+      <div className="flex flex-wrap items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-semibold text-white">Tracks</h2>
+          <p className="text-xs text-gray-400">
+            {bars} {bars === 1 ? 'bar' : 'bars'}{melody.sections.length > 0 ? ` · ${laneBars}-bar pattern` : ''} · {bpm} BPM · {genresLabel(genreId)} · edits are saved in the project
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIdeaOpen(true)}
+          className="h-9 rounded-md border border-purple-500/40 bg-purple-500/10 px-3 text-[11px] font-semibold text-purple-200 hover:bg-purple-500/20"
+        >
+          Idea lab
+        </button>
       </div>
 
       <SectionsTimeline sections={melody.sections} bpm={bpm} onChange={handleSectionsChange} />
@@ -1428,6 +1439,24 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           <DrumGrid pattern={drumPattern} activeStep={laneStep} onToggle={handleToggleDrumNote} />
         </div>
       </section>
+
+      {ideaOpen && (
+        <IdeaDrawer
+          onClose={() => setIdeaOpen(false)}
+          bassNotes={bassMelody.notes}
+          leadNotes={leadMelody.notes}
+          bars={bars}
+          seeds={{ bass: melody.bassSeed, lead: melody.leadSeed, drums: melody.drumSeed }}
+          seedLocks={melody.seedLocks ?? { bass: false, lead: false, drums: false }}
+          arpEnabled={melody.arpEnabled}
+          arpSettings={melody.arpSettings}
+          arpSeed={melody.arpSeed}
+          onApplyNotes={(track, notes) => apply(track === 'bass' ? { bassNotes: notes } : { leadNotes: notes })}
+          onSeedsChange={seeds => apply({ bassSeed: seeds.bass, leadSeed: seeds.lead, drumSeed: seeds.drums })}
+          onSeedLocksChange={seedLocks => apply({ seedLocks })}
+          onArpChange={(arpEnabled, arpSettings, arpSeed) => apply({ arpEnabled, arpSettings, arpSeed })}
+        />
+      )}
 
       {saveDialog && (
         <Modal

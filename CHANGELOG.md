@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.8.0] — 2026-11-16
+
+### Phase 2: Idea Lab
+
+- **Motif Lab** (Idea lab drawer): capture the first bar of Bass/Lead, apply Original/Invert/Retrograde/Augment/Diminish, transpose ±5/±12, and optionally repeat the motif across the song.
+- **Seed Lock & Mutate**: lock Bass, Lead or Drums independently; Mutate unlocked changes only unlocked seeds. Locks persist in the project/share.
+- **Arp Designer**: enable/disable, pattern, rate, octaves, gate and a new arp seed in the drawer.
+- One Idea lab button above the tracks keeps the studio uncluttered; Guide has a new entry and targets.
+- 105 unit tests, 6 Playwright/axe tests.
+
 ## [2.7.1] — 2026-11-16
 
 ### Harmony-tool polish
