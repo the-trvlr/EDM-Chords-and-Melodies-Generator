@@ -464,7 +464,7 @@ footer 40
 
 **Сделано в 2.0.0–2.1.2:** song mode; Sketch/Song шаблоны; arrangement MIDI с instrument tracks + section markers; дедуп барабанных событий.
 
-**Сделано в 2.2.0–2.8.0:** всё выше + Motif Lab, seed lock/mutate и Arp Designer.
+**Сделано в 2.2.0–2.9.0:** всё выше + Idea Lab, per-track groove и energy curve.
 
 **Осталось:** Safari, MusicXML/PDF, per-section generators, MIDI recording.
 

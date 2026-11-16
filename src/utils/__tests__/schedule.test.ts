@@ -259,6 +259,23 @@ describe('buildSchedule', () => {
     expect(lowKick.velocity).toBeLessThan(highKick.velocity);
   });
 
+  it('applies per-track groove overrides', () => {
+    const drums = {
+      kick: [1, ...new Array(15).fill(0)],
+      snare: new Array(16).fill(0),
+      clap: new Array(16).fill(0),
+      hat: [0, 1, ...new Array(14).fill(0)],
+      lowHat: new Array(16).fill(0),
+      crash: new Array(16).fill(0),
+      ride: new Array(16).fill(0),
+    };
+    const events = buildSchedule({ chords, rhythm, drums, groove: { drums: 0.3, bass: 0 } });
+    const hat = events.find(event => event.track === 'drums' && event.instrument === 'hat')!;
+    const kick = events.find(event => event.track === 'drums' && event.instrument === 'kick')!;
+    expect(kick.offset).toBe(0);
+    expect(hat.offset).toBeCloseTo(0.15);
+  });
+
   it('carries note velocity into schedule events', () => {
     const bass = {
       notes: [{ midi: 40, step: 0, duration: 2, velocity: 0.35 }],

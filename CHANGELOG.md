@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.9.0] — 2026-11-16
+
+### Phase 3: Groove engine + Energy curve
+
+- **Groove engine** from the Groove button: per-track swing for Chords, Bass, Lead and Drums, with Tight/Pocket/Loose/Shuffle presets and Reset to global. Per-track groove is persisted in project/share and used by playback, WAV, stems and MIDI.
+- **Energy curve** from Song sections: a bar per section, Low/Medium/High controls, Auto shape and Apply curve. Applying writes section energy as one Undo step.
+- Guide and README updated; Coming next now only Reference Analysis.
+- 106 unit tests, 7 Playwright/axe tests.
+
 ## [2.8.1] — 2026-11-16
 
 ### Motif clarity + Idea Lab previews

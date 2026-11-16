@@ -71,6 +71,19 @@ test('opens the Idea Lab and applies a motif', async ({ page }) => {
   await expect(page.getByRole('dialog', { name: 'Idea lab' })).toBeHidden();
 });
 
+test('opens Groove and Energy curve drawers', async ({ page }) => {
+  await openStudio(page);
+  await page.getByRole('button', { name: 'Groove', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Groove engine' })).toBeVisible();
+  await page.getByRole('button', { name: 'Apply groove' }).click();
+  await page.getByRole('button', { name: 'Create structure' }).click();
+  await page.getByRole('button', { name: 'Energy curve' }).click();
+  await expect(page.getByRole('dialog', { name: 'Energy curve' })).toBeVisible();
+  await page.getByRole('button', { name: 'Auto shape' }).click();
+  await page.getByRole('button', { name: 'Apply curve' }).click();
+  await expect(page.getByRole('dialog', { name: 'Energy curve' })).toBeHidden();
+});
+
 test('no serious or critical accessibility violations', async ({ page }) => {
   await openStudio(page);
   // Color-contrast is tracked separately as a design-token task; this gate
