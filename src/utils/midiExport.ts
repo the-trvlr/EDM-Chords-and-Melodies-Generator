@@ -231,6 +231,7 @@ export interface ArrangementMidiOptions {
   timeScales?: Record<'chord' | 'bass' | 'lead' | 'drums', number>;
   bassGlide?: boolean;
   synthIds?: { chord: SynthPresetId; bass: SynthPresetId; lead: SynthPresetId };
+  callResponse?: boolean;
 }
 
 
@@ -268,6 +269,7 @@ export function buildArrangementMidiTracks(
     humanize: options.humanize,
     timeScales: options.timeScales,
     bassGlide: options.bassGlide,
+    callResponse: options.callResponse,
   });
   if (events.length === 0) return [];
 

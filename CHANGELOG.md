@@ -3,6 +3,26 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.5.0] — 2026-11-16
+
+### Drum energy, per-section call/response, export reliability
+
+- **Drum energy** per section (Low/Medium/High), independent of the section energy: scales only drum velocity, so a hard drop can have light drums or a quiet break can have punchy drums.
+- **Call & response per section**:
+  - Call: Inherit / On / Off (inherits the global button by default);
+  - Invert swaps who starts — bass on odd bars, lead on even bars.
+  - Bass/lead are now generated as full lines and filtered by the scheduler, so a section can turn call/response on/off without losing the other bars.
+- **Stems/DAW pack export fixed and made lighter**:
+  - stems render dry (no reverb/transition FX), which is what a DAW pack should contain;
+  - progress toasts report `Rendering stem 1/4…` through `4/4`;
+  - the same export path now succeeds for Stems and the DAW pack in browser testing.
+- Call/drum settings persist in projects/share links.
+
+### Verification
+
+- 101 unit tests (call/response, inversion, drum energy), 3 Playwright/axe tests, lint/tsc/build clean.
+- Browser: Stems ZIP and DAW pack ZIP both downloaded for a 3-section arrangement.
+
 ## [2.4.0] — 2026-11-16
 
 ### Section transitions

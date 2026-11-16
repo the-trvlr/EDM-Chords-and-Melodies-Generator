@@ -259,6 +259,46 @@ export function SectionsTimeline({ sections, bpm, onChange }: SectionsTimelinePr
                 Fill
               </button>
 
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] uppercase tracking-wide text-gray-400">Drum energy</span>
+                <select
+                  value={selected.drumEnergy ?? selected.energy ?? 'medium'}
+                  onChange={event => patchSelected({ drumEnergy: event.target.value as SongSection['drumEnergy'] })}
+                  aria-label="Drum energy"
+                  className="h-11 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-200 sm:h-8"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] uppercase tracking-wide text-gray-400">Call</span>
+                <select
+                  value={selected.callResponse ?? 'inherit'}
+                  onChange={event => patchSelected({ callResponse: event.target.value as SongSection['callResponse'] })}
+                  aria-label="Call and response"
+                  className="h-11 rounded-md border border-gray-700 bg-gray-900 px-2 text-xs text-gray-200 sm:h-8"
+                >
+                  <option value="inherit">Inherit</option>
+                  <option value="on">On</option>
+                  <option value="off">Off</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => patchSelected({ callInvert: !selected.callInvert })}
+                aria-pressed={selected.callInvert === true}
+                title="Swap who starts: bass on odd bars instead of even"
+                className={`h-11 rounded-md px-2 text-[11px] font-medium transition-colors sm:h-8 ${
+                  selected.callInvert
+                    ? 'bg-purple-500/20 text-purple-200 ring-1 ring-purple-500/60'
+                    : 'border border-gray-700 text-gray-400 hover:border-gray-500'
+                }`}
+              >
+                Invert
+              </button>
+
               <button
                 type="button"
                 onClick={() => patchSelected({ fx: selected.fx === false })}

@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 2.4
+- **Version:** 2.5
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -165,7 +165,7 @@ Seven editable lanes: **Kick, Snare, Clap, Hi-Hat, Low Hat, Crash, Ride**.
 
 ### Song sections
 
-Build Intro / Build / Drop / Break / Outro blocks with bar lengths, per-section track gating, **energy** (Low / Medium / High), **melody density**, **octave shift**, **drum density** and an optional **Fill** in the last bar. Energy scales chord, bass, lead and drum velocity; energy, density and octave apply only inside that section; fills add a snare/hat roll and kick pickup on the section's final bar.
+Build Intro / Build / Drop / Break / Outro blocks with bar lengths, per-section track gating, **energy** (Low / Medium / High), **melody density**, **octave shift**, **drum density**, **drum energy**, **call/response** (Inherit / On / Off, plus Invert) and an optional **Fill** in the last bar. Energy scales chord, bass, lead and drum velocity; energy, density and octave apply only inside that section; fills add a snare/hat roll and kick pickup on the section's final bar.
 
 Templates come in two levels, and the picker shows the duration at the current BPM:
 
@@ -179,7 +179,7 @@ Templates come in two levels, and the picker shows the duration at the current B
 - **Club · 128 bars** — ~3:25 at 150 BPM.
 - **Festival · 160 bars** — ~4:16 at 150 BPM.
 
-Sections drive playback, WAV, MIDI markers and song length. Melody density Low keeps eighth-note positions; drum density Low removes hats/ride, High adds quarter-note ride accents.
+Sections drive playback, WAV, MIDI markers and song length. Melody density Low keeps eighth-note positions; drum density Low removes hats/ride, High adds quarter-note ride accents. Drum energy scales only drum velocity. Call/response can be overridden per section; Invert swaps bass-first/lead-first.
 
 **Transitions:** each section has an **FX** toggle. A build/break before a drop gets a two-bar riser, a drop gets an impact, and break/outro get a downlifter. Transitions are synth-generated, play on the master bus in live/WAV, and are not baked into stems.
 
@@ -228,8 +228,8 @@ A metronome click is accented on the first beat of each bar. Count-in clicks are
 | **Chord progression MIDI** | Chords only, absolute ticks, no empty bar between chords |
 | **Arrangement MIDI** | Chords, bass, lead, separate drum tracks, section markers |
 | **WAV mix** | Offline render of the full song, sample instruments included |
-| **Stems (.zip)** | Chords, bass, lead and drums as separate WAVs |
-| **DAW pack (.zip)** | `midi/arrangement.mid` + separate `midi/chords.mid`, `bass.mid`, `lead.mid`, `drums.mid`, `stems/*.wav`, `project.json`, `README.txt` |
+| **Stems (.zip)** | Chords, bass, lead and drums as separate dry WAVs (no reverb/FX) |
+| **DAW pack (.zip)** | `midi/arrangement.mid` + separate `midi/chords.mid`, `bass.mid`, `lead.mid`, `drums.mid`, dry `stems/*.wav`, `project.json`, `README.txt` |
 | **Project JSON** | Full project, reopen with Save → Open project |
 
 The DAW pack is the recommended hand-off: import the MIDI at bar 1, 4/4, route drums to a GM kit, and use the stems as a reference or for further processing.
@@ -338,7 +338,7 @@ All generation, editing and export happen locally. The app has no accounts, anal
 
 ## Roadmap
 
-- **2.2.x:** per-section generator overrides, transitions/risers, MIDI recording, MusicXML/PDF.
+- **2.5.x:** MIDI recording, MusicXML/PDF, export performance.
 - **2.1:** more section-level generator parameters and transition automation.
 
 See [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md) for the full backlog.

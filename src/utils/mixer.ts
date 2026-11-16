@@ -364,6 +364,7 @@ interface ArrangementInput {
   humanize?: boolean;
   timeScales?: Record<TrackId, number>;
   bassGlide?: boolean;
+  callResponse?: boolean;
   soundVariant?: SoundVariant;
   metronome?: boolean;
   countInBars?: number;
@@ -586,7 +587,11 @@ export interface RenderOptions {
   humanize?: boolean;
   timeScales?: Record<TrackId, number>;
   bassGlide?: boolean;
+  callResponse?: boolean;
   soundVariant?: SoundVariant;
+  /** Dry render for stems: skip reverb and transition FX. */
+  dry?: boolean;
+  includeFx?: boolean;
 }
 
 function audioBufferToWav(buffer: AudioBuffer): Blob {
@@ -683,12 +688,13 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
   const rendered = await Tone.Offline(async () => {
     if (typeof opts.masterVolume === 'number') Tone.getDestination().volume.value = opts.masterVolume;
     const limiter = new Tone.Limiter(-1).toDestination();
-    const reverb = new Tone.Freeverb({ roomSize: 0.7, dampening: 3000, wet: 0.25 }).connect(limiter);
+    const reverb = opts.dry ? null : new Tone.Freeverb({ roomSize: 0.7, dampening: 3000, wet: 0.25 }).connect(limiter);
+    const bus = reverb ?? limiter;
     const channels: Record<TrackId, Tone.Channel> = {
-      chord: new Tone.Channel({ volume: opts.tracks.chord.volume }).connect(reverb),
-      bass: new Tone.Channel({ volume: opts.tracks.bass.volume }).connect(reverb),
-      lead: new Tone.Channel({ volume: opts.tracks.lead.volume }).connect(reverb),
-      drums: new Tone.Channel({ volume: opts.tracks.drums.volume }).connect(reverb),
+      chord: new Tone.Channel({ volume: opts.tracks.chord.volume }).connect(bus),
+      bass: new Tone.Channel({ volume: opts.tracks.bass.volume }).connect(bus),
+      lead: new Tone.Channel({ volume: opts.tracks.lead.volume }).connect(bus),
+      drums: new Tone.Channel({ volume: opts.tracks.drums.volume }).connect(bus),
     };
     const synths = {
       chord: (await createRenderSynth('chord', opts)).connect(channels.chord),
@@ -696,11 +702,11 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
       lead: (await createRenderSynth('lead', opts)).connect(channels.lead),
     };
     const drums = createDrumSynths(opts.drumKitId ?? currentKitId, channels.drums);
-    const fx = createFx(limiter);
+    const fx = opts.includeFx === false ? null : createFx(limiter);
 
     for (const event of events) {
       if (event.track === 'fx') {
-        triggerFx(fx, event.transition, secPer16, event.durationSteps, (event.step + event.offset) * secPer16, event.velocity);
+        if (fx) triggerFx(fx, event.transition, secPer16, event.durationSteps, (event.step + event.offset) * secPer16, event.velocity);
         continue;
       }
       if (!trackIsAudible(event.track, opts.tracks)) continue;

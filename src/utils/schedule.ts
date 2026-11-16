@@ -36,6 +36,8 @@ export interface ScheduleInput {
   timeScales?: Record<TrackId, number>;
   /** Legato/portamento bass: holds each bass note until the next onset. */
   bassGlide?: boolean;
+  /** Global call/response default; sections may override. */
+  callResponse?: boolean;
 }
 
 const ALL_TRACKS: TrackId[] = ['chord', 'bass', 'lead', 'drums'];
@@ -116,6 +118,8 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
     const melodyDensity = section?.density ?? 'medium';
     const octaveShift = section?.octaveShift ?? 0;
     const drumDensity = section?.drumDensity ?? 'medium';
+    const drumEnergy = section?.drumEnergy ?? section?.energy ?? 'medium';
+    const drumEnergyScale = section ? (drumEnergy === 'low' ? 0.7 : drumEnergy === 'medium' ? 0.9 : 1.05) : 1;
     const keepMelody = (localStep: number) => melodyDensity !== 'low' || localStep % 2 === 0;
 
     if (input.arpMelody) {
@@ -159,6 +163,13 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
       for (const note of melody.notes) {
         const barOfNote = Math.floor(note.step / STEPS_PER_CHORD);
         if (barOfNote !== barInProg) continue;
+        const callOn = section
+          ? section.callResponse === 'on' || (section.callResponse !== 'off' && input.callResponse === true)
+          : input.callResponse === true;
+        const callBar = section?.callInvert
+          ? (track === 'bass' ? 1 : 0)
+          : (track === 'bass' ? 0 : 1);
+        if (callOn && barOfNote % 2 !== callBar) continue;
         const localStep = note.step % STEPS_PER_CHORD;
         if (!keepMelody(localStep)) continue;
         events.push({
@@ -193,7 +204,7 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
               : instrument === 'crash' ? 0.7
               : instrument === 'ride' ? 0.55
               : instrument === 'lowHat' ? 0.62
-              : 0.6) * energyScale,
+              : 0.6) * drumEnergyScale,
           });
         }
       }

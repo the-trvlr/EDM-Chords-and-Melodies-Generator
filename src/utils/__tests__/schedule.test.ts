@@ -212,6 +212,53 @@ describe('buildSchedule', () => {
     expect(muted.some(event => event.track === 'fx' && event.transition === 'riser')).toBe(false);
   });
 
+  it('supports per-section call/response and inversion', () => {
+    const bass = {
+      notes: [
+        { midi: 40, step: 0, duration: 2, velocity: 0.8 },
+        { midi: 41, step: 16, duration: 2, velocity: 0.8 },
+      ],
+      type: 'bass' as const,
+      styleId: 't',
+      stepsPerChord: 16,
+    };
+    const lead = {
+      notes: [
+        { midi: 64, step: 0, duration: 2, velocity: 0.8 },
+        { midi: 65, step: 16, duration: 2, velocity: 0.8 },
+      ],
+      type: 'lead' as const,
+      styleId: 't',
+      stepsPerChord: 16,
+    };
+    const sections: SongSection[] = [
+      { id: 'a', kind: 'drop', bars: 2, tracks: ['bass', 'lead'], callResponse: 'on' },
+    ];
+    const normal = buildSchedule({ chords, rhythm, bass, lead, sections });
+    expect(normal.filter(event => event.track === 'bass').map(event => event.step)).toEqual([0]);
+    expect(normal.filter(event => event.track === 'lead').map(event => event.step)).toEqual([16]);
+    const inverted = buildSchedule({ chords, rhythm, bass, lead, sections: [{ ...sections[0], callInvert: true }] });
+    expect(inverted.filter(event => event.track === 'bass').map(event => event.step)).toEqual([16]);
+    expect(inverted.filter(event => event.track === 'lead').map(event => event.step)).toEqual([0]);
+  });
+
+  it('applies drum energy independently of section energy', () => {
+    const drums = {
+      kick: [1, ...new Array(15).fill(0)],
+      snare: [0, 0, 0, 0, 1, ...new Array(11).fill(0)],
+      clap: new Array(16).fill(0),
+      hat: new Array(16).fill(0),
+      lowHat: new Array(16).fill(0),
+      crash: new Array(16).fill(0),
+      ride: new Array(16).fill(0),
+    };
+    const low = buildSchedule({ chords, rhythm, drums, sections: [{ id: 'a', kind: 'drop', bars: 1, tracks: ['drums'], energy: 'high', drumEnergy: 'low' }] });
+    const high = buildSchedule({ chords, rhythm, drums, sections: [{ id: 'a', kind: 'drop', bars: 1, tracks: ['drums'], energy: 'low', drumEnergy: 'high' }] });
+    const lowKick = low.find(event => event.track === 'drums' && event.instrument === 'kick')!;
+    const highKick = high.find(event => event.track === 'drums' && event.instrument === 'kick')!;
+    expect(lowKick.velocity).toBeLessThan(highKick.velocity);
+  });
+
   it('carries note velocity into schedule events', () => {
     const bass = {
       notes: [{ midi: 40, step: 0, duration: 2, velocity: 0.35 }],
