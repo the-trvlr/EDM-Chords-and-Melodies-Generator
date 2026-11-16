@@ -90,7 +90,7 @@ export function SectionsTimeline({ sections, bpm, onChange }: SectionsTimelinePr
   };
 
   return (
-    <section className="min-w-0 rounded-xl border border-gray-800 bg-gray-900/50 p-2 sm:p-3">
+    <section id="arrangement" className="min-w-0 rounded-xl border border-gray-800 bg-gray-900/50 p-2 sm:p-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold text-white">Song sections</h2>
         <span className="text-xs text-gray-400">

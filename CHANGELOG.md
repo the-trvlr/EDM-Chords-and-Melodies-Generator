@@ -3,6 +3,24 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.6.0] — 2026-11-16
+
+### Workflow shell + in-app Guide (Phase 0)
+
+- **WorkflowPill** under the Project Bar: Harmony → Idea → Groove → Arrange → Export. It scrolls to and highlights the relevant area; it is a guide, not a tab switch.
+- **Guide drawer** with:
+  - five-step Quick start;
+  - searchable entries for harmony, tracks, sections, groove, export, shortcuts and troubleshooting;
+  - **Show me** actions that close the guide and scroll/highlight the target;
+  - a “Coming next” section for the planned generator tools.
+- **First-run welcome** after audio start: open the guide, start at a template, go to harmony, or skip. Dismissal is stored locally.
+- Reusable **Drawer** component with Escape/focus trap/scroll lock; first-run uses the existing Modal.
+- E2E covers first-run → Guide, and all existing tests dismiss onboarding cleanly.
+
+### Verification
+
+- 101 unit tests, 4 Playwright/axe tests, lint/tsc/build clean.
+
 ## [2.5.1] — 2026-11-16
 
 ### One-pass stem export + persistent progress

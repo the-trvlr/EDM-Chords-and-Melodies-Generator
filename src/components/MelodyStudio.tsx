@@ -863,7 +863,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   );
 
   return (
-    <div className="flex flex-col gap-2">
+    <div id="tracks" className="flex flex-col gap-2">
       <div>
         <h2 className="text-lg font-semibold text-white">Tracks</h2>
         <p className="text-xs text-gray-400">
@@ -873,7 +873,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
       <SectionsTimeline sections={melody.sections} bpm={bpm} onChange={handleSectionsChange} />
 
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-800 bg-gray-900/50 p-2">
+      <div id="groove" className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-800 bg-gray-900/50 p-2">
         <label className="flex items-center gap-2 text-xs text-gray-300">
           Swing
           <input
