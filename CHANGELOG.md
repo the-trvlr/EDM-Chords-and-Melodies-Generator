@@ -3,6 +3,20 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.5.1] — 2026-11-16
+
+### One-pass stem export + persistent progress
+
+- Stems and the DAW pack now render **all four dry stems in one offline pass** using a four-channel merger, instead of four separate full-song renders. A 3-bar test produces four audible mono WAVs; render time scales once, not four times.
+- A **fixed, always-visible progress bar** at the bottom shows the current export label and percent while WAV/Stems/DAW pack work. It animates during the render and switches to packing/writing stages.
+- DAW pack zip generation, MIDI and README happen after the one render; progress reaches 100% before hiding.
+- README export section notes the progress bar and dry stems.
+
+### Verification
+
+- 101 unit tests, 3 Playwright/axe tests, lint/tsc/build clean.
+- Browser: Stems ZIP and DAW pack ZIP downloaded; all four stem WAVs have non-zero RMS.
+
 ## [2.5.0] — 2026-11-16
 
 ### Drum energy, per-section call/response, export reliability

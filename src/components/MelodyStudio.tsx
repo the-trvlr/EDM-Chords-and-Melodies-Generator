@@ -8,6 +8,7 @@ import {
   playArrangement,
   playTrackPreview,
   renderArrangementToWav,
+  renderStemsToWavs,
   setArrangementBpm,
   setArrangementLoop,
   setTrackMute,
@@ -298,6 +299,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const [previewingTrack, setPreviewingTrack] = useState<TrackId | null>(null);
   const [rendering, setRendering] = useState(false);
   const [renderingStems, setRenderingStems] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ label: string; percent: number } | null>(null);
+  const exportTimer = useRef<number | null>(null);
   const [history, setHistory] = useState<MelodyHistory>({ list: [melody], index: 0 });
   const [saveDialog, setSaveDialog] = useState(false);
   const [loadDialog, setLoadDialog] = useState(false);
@@ -305,6 +308,36 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const [savedArrangements, setSavedArrangements] = useState<SavedArrangement[]>([]);
   const [renameTarget, setRenameTarget] = useState<SavedArrangement | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const stopExportTimer = useCallback(() => {
+    if (exportTimer.current !== null) {
+      window.clearInterval(exportTimer.current);
+      exportTimer.current = null;
+    }
+  }, []);
+
+  const startExportProgress = useCallback((label: string) => {
+    stopExportTimer();
+    setExportProgress({ label, percent: 6 });
+    exportTimer.current = window.setInterval(() => {
+      setExportProgress(current => current && current.percent < 82
+        ? { ...current, percent: Math.min(82, current.percent + 2) }
+        : current);
+    }, 700);
+  }, [stopExportTimer]);
+
+  const finishExportProgress = useCallback((label = 'Done') => {
+    stopExportTimer();
+    setExportProgress({ label, percent: 100 });
+    window.setTimeout(() => setExportProgress(null), 900);
+  }, [stopExportTimer]);
+
+  const cancelExportProgress = useCallback(() => {
+    stopExportTimer();
+    setExportProgress(null);
+  }, [stopExportTimer]);
+
+  useEffect(() => () => stopExportTimer(), [stopExportTimer]);
+
   const liveRef = useRef({ bpm, loop, drumKitId: melody.drumKitId, metronome, countInBars });
   useEffect(() => {
     liveRef.current = { bpm, loop, drumKitId: melody.drumKitId, metronome, countInBars };
@@ -552,41 +585,35 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
   const handleExportStems = useCallback(async () => {
     setRenderingStems(true);
+    startExportProgress('Rendering 4 stems');
     try {
+      const stemBlobs = await renderStemsToWavs({
+        chords: progression,
+        rhythm,
+        bass: bassMelody,
+        lead: leadMelody,
+        arpMelody,
+        drums: drumPattern,
+        synthIds: melody.synthIds,
+        callResponse: melody.callResponse,
+        bpm,
+        tracks: melody.mixer,
+        drumKitId: melody.drumKitId,
+        masterVolume,
+        sections: melody.sections,
+        octaves: melody.octaves,
+        swing: melody.swing,
+        humanize: melody.humanize,
+        timeScales: melody.timeScales,
+        bassGlide: melody.bassGlide,
+        soundVariant: melody.soundVariant,
+      });
+      setExportProgress({ label: 'Packing stems', percent: 90 });
       const files: Record<string, Uint8Array> = {};
-      let stemIndex = 0;
       for (const track of ['chord', 'bass', 'lead', 'drums'] as TrackId[]) {
-        stemIndex++;
-        toast.show(`Rendering stem ${stemIndex}/4 (${track})…`, 'success');
-        const tracks = { ...melody.mixer };
-        for (const id of Object.keys(tracks) as TrackId[]) {
-          tracks[id] = { ...tracks[id], mute: false, solo: id === track };
-        }
-        const blob = await renderArrangementToWav({
-          chords: progression,
-          rhythm,
-          bass: bassMelody,
-          lead: leadMelody,
-          arpMelody,
-          drums: drumPattern,
-          synthIds: melody.synthIds,
-          callResponse: melody.callResponse,
-          bpm,
-          tracks,
-          drumKitId: melody.drumKitId,
-          masterVolume,
-          sections: melody.sections,
-          octaves: melody.octaves,
-          swing: melody.swing,
-          humanize: melody.humanize,
-          timeScales: melody.timeScales,
-          bassGlide: melody.bassGlide,
-          soundVariant: melody.soundVariant,
-          dry: true,
-          includeFx: false,
-        });
-        files[`${track}.wav`] = new Uint8Array(await blob.arrayBuffer());
+        files[`${track}.wav`] = new Uint8Array(await stemBlobs[track].arrayBuffer());
       }
+      setExportProgress({ label: 'Writing DAW pack', percent: 94 });
       const zipped = zipSync(files, { level: 0 });
       const blob = new Blob([zipped], { type: 'application/zip' });
       const url = URL.createObjectURL(blob);
@@ -595,14 +622,16 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       link.download = `edm-stems-${rootKey}-${scaleType}-${bpm}bpm.zip`;
       link.click();
       URL.revokeObjectURL(url);
+      finishExportProgress('Stems ready');
       toast.show('Stems exported (chords, bass, lead, drums)', 'success');
     } catch (error) {
+      cancelExportProgress();
       console.error('Stem render failed', error);
       toast.show('Could not render stems. Try again.', 'error');
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
 
   const handleExportMidi = useCallback(() => {
     exportArrangementToMidi(
@@ -614,6 +643,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
   const handleExportWav = useCallback(async () => {
     setRendering(true);
+    startExportProgress('Rendering WAV mix');
     try {
       const blob = await renderArrangementToWav({
         chords: progression,
@@ -636,57 +666,53 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         bassGlide: melody.bassGlide,
         soundVariant: melody.soundVariant,
       });
+      setExportProgress({ label: 'Writing WAV', percent: 92 });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = `edm-mix-${rootKey}-${scaleType}-${bpm}bpm.wav`;
       link.click();
       URL.revokeObjectURL(url);
+      finishExportProgress('WAV ready');
       toast.show('WAV mix rendered', 'success');
     } catch (error) {
+      cancelExportProgress();
       console.error('WAV render failed', error);
       toast.show('Could not render WAV. Try again.', 'error');
     } finally {
       setRendering(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
 
   const handleExportDawPack = useCallback(async () => {
     setRenderingStems(true);
+    startExportProgress('Rendering 4 stems');
     try {
+      const stemBlobs = await renderStemsToWavs({
+        chords: progression,
+        rhythm,
+        bass: bassMelody,
+        lead: leadMelody,
+        arpMelody,
+        drums: drumPattern,
+        synthIds: melody.synthIds,
+        callResponse: melody.callResponse,
+        bpm,
+        tracks: melody.mixer,
+        drumKitId: melody.drumKitId,
+        masterVolume,
+        sections: melody.sections,
+        octaves: melody.octaves,
+        swing: melody.swing,
+        humanize: melody.humanize,
+        timeScales: melody.timeScales,
+        bassGlide: melody.bassGlide,
+        soundVariant: melody.soundVariant,
+      });
+      setExportProgress({ label: 'Building MIDI and project', percent: 84 });
       const files: Record<string, Uint8Array> = {};
-      let stemIndex = 0;
       for (const track of ['chord', 'bass', 'lead', 'drums'] as TrackId[]) {
-        stemIndex++;
-        toast.show(`Rendering stem ${stemIndex}/4 (${track})…`, 'success');
-        const tracks = { ...melody.mixer };
-        for (const id of Object.keys(tracks) as TrackId[]) {
-          tracks[id] = { ...tracks[id], mute: false, solo: id === track };
-        }
-        const blob = await renderArrangementToWav({
-          chords: progression,
-          rhythm,
-          bass: bassMelody,
-          lead: leadMelody,
-          arpMelody,
-          drums: drumPattern,
-          synthIds: melody.synthIds,
-          callResponse: melody.callResponse,
-          bpm,
-          tracks,
-          drumKitId: melody.drumKitId,
-          masterVolume,
-          sections: melody.sections,
-          octaves: melody.octaves,
-          swing: melody.swing,
-          humanize: melody.humanize,
-          timeScales: melody.timeScales,
-          bassGlide: melody.bassGlide,
-          soundVariant: melody.soundVariant,
-          dry: true,
-          includeFx: false,
-        });
-        files[`stems/${track}.wav`] = new Uint8Array(await blob.arrayBuffer());
+        files[`stems/${track}.wav`] = new Uint8Array(await stemBlobs[track].arrayBuffer());
       }
 
       const midi = buildArrangementMidiBytes(
@@ -720,7 +746,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         `Sound: ${melody.soundVariant}`,
         '',
         'Files:',
-        '- midi/arrangement.mid — section regions (Intro, Build, Drop…), each track starts at bar 1 and is named with its song start bar',
+        '- midi/arrangement.mid — full arrangement with section markers on the Sections track',
         '- midi/chords.mid, bass.mid, lead.mid, drums.mid — separate files for DAWs (e.g. FL Studio) that struggle with multi-track import',
         '- stems/*.wav — chords, bass, lead, drums',
         '- project.json — reopen in ∞ Melodies',
@@ -729,6 +755,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         'Instrument samples: CC-BY 3.0, see docs/SAMPLES.md in the app repository.',
       ].join('\n'));
 
+      setExportProgress({ label: 'Writing DAW pack', percent: 94 });
       const zipped = zipSync(files, { level: 0 });
       const blob = new Blob([zipped], { type: 'application/zip' });
       const url = URL.createObjectURL(blob);
@@ -738,14 +765,16 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       link.download = `${slug || 'infinite-melodies'}-${bpm}bpm.zip`;
       link.click();
       URL.revokeObjectURL(url);
+      finishExportProgress('DAW pack ready');
       toast.show('DAW pack exported (MIDI, stems, project, README)', 'success');
     } catch (error) {
+      cancelExportProgress();
       console.error('DAW pack failed', error);
       toast.show('Could not build the DAW pack. Try again.', 'error');
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, projectName, bars, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, projectName, bars, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
 
   const handleSaveArrangement = useCallback(() => {
     const saved = saveArrangement(saveName, project);
@@ -1559,6 +1588,29 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
             />
           </label>
         </Modal>
+      )}
+
+      {exportProgress && (
+        <div className="fixed inset-x-0 bottom-0 z-[60] border-t border-purple-500/40 bg-gray-950/95 px-3 py-2 shadow-2xl backdrop-blur" role="status" aria-live="polite">
+          <div className="mx-auto flex max-w-4xl items-center gap-3">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-purple-400" aria-hidden="true" />
+            <span className="min-w-0 flex-1 truncate text-xs text-gray-200">{exportProgress.label}</span>
+            <span className="text-xs tabular-nums text-purple-200">{exportProgress.percent}%</span>
+          </div>
+          <div
+            className="mx-auto mt-1.5 h-1.5 max-w-4xl overflow-hidden rounded-full bg-gray-800"
+            role="progressbar"
+            aria-label={exportProgress.label}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={exportProgress.percent}
+          >
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-400 transition-[width] duration-500"
+              style={{ width: `${exportProgress.percent}%` }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

@@ -464,7 +464,7 @@ footer 40
 
 **Сделано в 2.0.0–2.1.2:** song mode; Sketch/Song шаблоны; arrangement MIDI с instrument tracks + section markers; дедуп барабанных событий.
 
-**Сделано в 2.2.0–2.5.0:** contrast, round-robin, per-section density/octave/drums, transitions, per-section call/response, dry stems.
+**Сделано в 2.2.0–2.5.1:** contrast, round-robin, per-section density/octave/drums, transitions, call/response, one-pass stems + progress bar.
 
 **Осталось:** Safari, MusicXML/PDF, per-section generators, MIDI recording.
 

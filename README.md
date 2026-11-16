@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 2.5
+- **Version:** 2.5.1
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -228,11 +228,13 @@ A metronome click is accented on the first beat of each bar. Count-in clicks are
 | **Chord progression MIDI** | Chords only, absolute ticks, no empty bar between chords |
 | **Arrangement MIDI** | Chords, bass, lead, separate drum tracks, section markers |
 | **WAV mix** | Offline render of the full song, sample instruments included |
-| **Stems (.zip)** | Chords, bass, lead and drums as separate dry WAVs (no reverb/FX) |
-| **DAW pack (.zip)** | `midi/arrangement.mid` + separate `midi/chords.mid`, `bass.mid`, `lead.mid`, `drums.mid`, dry `stems/*.wav`, `project.json`, `README.txt` |
+| **Stems (.zip)** | Chords, bass, lead and drums as separate dry WAVs (no reverb/FX), rendered in one pass |
+| **DAW pack (.zip)** | `midi/arrangement.mid` + separate `midi/chords.mid`, `bass.mid`, `lead.mid`, `drums.mid`, dry `stems/*.wav`, `project.json`, `README.txt`; one render pass |
 | **Project JSON** | Full project, reopen with Save → Open project |
 
 The DAW pack is the recommended hand-off: import the MIDI at bar 1, 4/4, route drums to a GM kit, and use the stems as a reference or for further processing.
+
+During WAV, Stems and DAW-pack export a fixed progress bar stays visible at the bottom of the screen with the current stage and percentage.
 
 MIDI itself has no clip/region object. Arrangement MIDI therefore stays as full-song instrument tracks with section markers: import it as one arrangement and slice the tracks at the markers in your DAW. The full-song per-instrument files in the DAW pack remain available for FL-style workflows.
 

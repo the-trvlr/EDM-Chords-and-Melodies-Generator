@@ -594,8 +594,8 @@ export interface RenderOptions {
   includeFx?: boolean;
 }
 
-function audioBufferToWav(buffer: AudioBuffer): Blob {
-  const numCh = buffer.numberOfChannels;
+function audioBufferToWav(buffer: AudioBuffer, channelIndex?: number): Blob {
+  const numCh = channelIndex === undefined ? buffer.numberOfChannels : 1;
   const sampleRate = buffer.sampleRate;
   const numFrames = buffer.length;
   const blockAlign = numCh * 2;
@@ -619,7 +619,11 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
   writeStr(36, 'data');
   view.setUint32(40, dataSize, true);
   const channels: Float32Array[] = [];
-  for (let c = 0; c < numCh; c++) channels.push(buffer.getChannelData(c));
+  if (channelIndex === undefined) {
+    for (let c = 0; c < numCh; c++) channels.push(buffer.getChannelData(c));
+  } else {
+    channels.push(buffer.getChannelData(channelIndex));
+  }
   let offset = 44;
   for (let i = 0; i < numFrames; i++) {
     for (let c = 0; c < numCh; c++) {
@@ -732,6 +736,62 @@ export async function renderArrangementToWav(opts: RenderOptions): Promise<Blob>
   }, duration);
 
   return audioBufferToWav(rendered.get() as unknown as AudioBuffer);
+}
+
+/** Render all four dry stems in one offline pass, routed to four output channels. */
+export async function renderStemsToWavs(opts: RenderOptions): Promise<Record<TrackId, Blob>> {
+  const steps = songSteps(opts);
+  const secPer16 = 60 / opts.bpm / 4;
+  const duration = steps * secPer16 + 2.5;
+  const events = buildSchedule(opts);
+
+  const rendered = await Tone.Offline(async () => {
+    const raw = Tone.getContext().rawContext;
+    const merger = raw.createChannelMerger(4);
+    merger.connect(raw.destination);
+    const channels = {} as Record<TrackId, Tone.Channel>;
+    (['chord', 'bass', 'lead', 'drums'] as TrackId[]).forEach((id, index) => {
+      const mono = new Tone.Mono();
+      channels[id] = new Tone.Channel({ volume: opts.tracks[id].volume }).connect(mono);
+      mono.connect(merger, 0, index);
+    });
+    const synths = {
+      chord: (await createRenderSynth('chord', opts)).connect(channels.chord),
+      bass: (await createRenderSynth('bass', opts)).connect(channels.bass),
+      lead: (await createRenderSynth('lead', opts)).connect(channels.lead),
+    };
+    const drums = createDrumSynths(opts.drumKitId ?? currentKitId, channels.drums);
+
+    for (const event of events) {
+      if (event.track === 'fx') continue;
+      const time = (event.step + event.offset) * secPer16;
+      switch (event.track) {
+        case 'chord':
+          triggerChord(synths.chord, event.midis.map(midiNoteToToneName), secPer16 * event.durationSteps * GATE, time, event.velocity);
+          break;
+        case 'arp':
+          triggerSingle(synths.chord, midiNoteToToneName(event.midi), secPer16 * event.durationSteps * GATE, time, event.velocity);
+          break;
+        case 'bass':
+          triggerSingle(synths.bass, midiNoteToToneName(event.midi), secPer16 * event.durationSteps * GATE, time, event.velocity);
+          break;
+        case 'lead':
+          triggerSingle(synths.lead, midiNoteToToneName(event.midi), secPer16 * event.durationSteps * GATE, time, event.velocity);
+          break;
+        case 'drums':
+          triggerDrum(drums, event.instrument, secPer16, time, event.velocity);
+          break;
+      }
+    }
+  }, duration, 4);
+
+  const buffer = rendered.get() as unknown as AudioBuffer;
+  return {
+    chord: audioBufferToWav(buffer, 0),
+    bass: audioBufferToWav(buffer, 1),
+    lead: audioBufferToWav(buffer, 2),
+    drums: audioBufferToWav(buffer, 3),
+  };
 }
 
 export function getCurrentDrumKit(): DrumKitId {
