@@ -23,7 +23,7 @@ import {
 } from '../utils/mixer';
 import { buildArrangementMidiBytes, buildDrumTracks, buildMelodyTrack, buildProgressionTracks, exportArrangementToMidi, exportDrumsToMidi, exportMelodyToMidi, midiBytesFromTracks } from '../utils/midiExport';
 import { stopPlayback } from '../utils/audioEngine';
-import { arpeggiate, type ArpPattern, type ArpRate } from '../utils/arpeggiator';
+import { arpeggiate, type ArpPattern, type ArpRate, type ArpSettings } from '../utils/arpeggiator';
 import { generateDrums, type DrumPattern } from '../utils/drumGenerator';
 import { deleteArrangement, duplicateArrangement, getSavedArrangements, renameArrangement, saveArrangement, serializeProject, type SavedArrangement } from '../utils/persistence';
 import type { MelodyState, MixerState, ProjectSnapshot, SongSection, TrackMix } from '../types';
@@ -539,6 +539,55 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       },
     });
   }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, bpm, onStepChange, onStopOtherPlayback]);
+
+  const previewNotes = useCallback((track: 'bass' | 'lead' | 'arp', notes: MelodyNote[]) => {
+    if (notes.length === 0) return;
+    stopPlayback();
+    onStopOtherPlayback?.();
+    stopArrangement();
+    stopTrackPreview();
+    const target: TrackId = track === 'arp' ? 'chord' : track;
+    const previewMelody: GeneratedMelody = {
+      notes,
+      type: track === 'bass' ? 'bass' : 'lead',
+      styleId: 'preview',
+      stepsPerChord: 16,
+    };
+    setPreviewingTrack(target);
+    playTrackPreview({
+      chords: progression,
+      rhythm,
+      bass: track === 'bass' ? previewMelody : bassMelody,
+      lead: track === 'lead' ? previewMelody : leadMelody,
+      arpMelody: track === 'arp' ? previewMelody : null,
+      drums: drumPattern,
+      synthIds: melody.synthIds,
+      bpm,
+      drumKitId: melody.drumKitId,
+      octaves: melody.octaves,
+      swing: melody.swing,
+      humanize: melody.humanize,
+      timeScales: melody.timeScales,
+      bassGlide: melody.bassGlide,
+      soundVariant: melody.soundVariant,
+      trackId: target,
+      onStop: () => {
+        setPreviewingTrack(null);
+        setActiveStep(null);
+        onStepChange?.(null);
+      },
+    });
+  }, [progression, rhythm, bassMelody, leadMelody, drumPattern, melody.synthIds, melody.drumKitId, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, bpm, onStepChange, onStopOtherPlayback]);
+
+  const previewArp = useCallback((settings: ArpSettings, seed: number) => {
+    previewNotes('arp', arpeggiate(progression, settings, seed).notes);
+  }, [progression, previewNotes]);
+
+  const closeIdea = useCallback(() => {
+    stopTrackPreview();
+    setPreviewingTrack(null);
+    setIdeaOpen(false);
+  }, []);
 
   const handleToggleDrumNote = useCallback((instrument: keyof DrumPattern, step: number) => {
     const base = melody.customDrumPattern ?? generateDrums(genreId, melody.drumSeed);
@@ -1442,7 +1491,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
       {ideaOpen && (
         <IdeaDrawer
-          onClose={() => setIdeaOpen(false)}
+          onClose={closeIdea}
           bassNotes={bassMelody.notes}
           leadNotes={leadMelody.notes}
           bars={bars}
@@ -1452,6 +1501,9 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           arpSettings={melody.arpSettings}
           arpSeed={melody.arpSeed}
           onApplyNotes={(track, notes) => apply(track === 'bass' ? { bassNotes: notes } : { leadNotes: notes })}
+          onPreviewNotes={previewNotes}
+          onPreviewTrack={handlePreview}
+          onPreviewArp={previewArp}
           onSeedsChange={seeds => apply({ bassSeed: seeds.bass, leadSeed: seeds.lead, drumSeed: seeds.drums })}
           onSeedLocksChange={seedLocks => apply({ seedLocks })}
           onArpChange={(arpEnabled, arpSettings, arpSeed) => apply({ arpEnabled, arpSettings, arpSeed })}

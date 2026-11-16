@@ -64,7 +64,8 @@ test('opens the Idea Lab and applies a motif', async ({ page }) => {
   await openStudio(page);
   await page.getByRole('button', { name: 'Idea lab' }).click();
   await expect(page.getByRole('dialog', { name: 'Idea lab' })).toBeVisible();
-  await page.getByRole('button', { name: 'Apply motif to lead' }).click();
+  await page.getByRole('button', { name: 'Preview variation' }).click();
+  await page.getByRole('button', { name: 'Apply to lead' }).click();
   await page.getByRole('button', { name: 'Mutate unlocked' }).click();
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('dialog', { name: 'Idea lab' })).toBeHidden();
