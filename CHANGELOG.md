@@ -3,6 +3,20 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [2.7.0] — 2026-11-16
+
+### Phase 1: progression generator, key explorer, voicing
+
+- **Generate progression** in the harmony strip: mood (Uplifting/Dark/Deep/Energetic/Emotional), 4/8 bars, voice-leading toggle, three A/B/C candidates; audition each chord and Apply as one Undo step.
+- **Key & scale explorer** from the Keys button: 12 keys, 9 scales, live diatonic chord preview with Roman numerals; Apply changes key and scale together.
+- **Voicing engine** from the Inspector: Close / Open / Drop 2 / Spread, audition each and apply without changing root or chord type.
+- All three use the Phase 0 Drawer pattern; Guide has new entries and Show me targets.
+- README updated with the Harmony workflow.
+
+### Verification
+
+- 101 unit tests, 5 Playwright/axe tests (including Generate → Apply → Keys → Voicing), lint/tsc/build clean.
+
 ## [2.6.0] — 2026-11-16
 
 ### Workflow shell + in-app Guide (Phase 0)

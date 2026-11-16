@@ -31,6 +31,24 @@ const ENTRIES: GuideEntry[] = [
     ],
   },
   {
+    id: 'generate',
+    title: 'Generate a progression',
+    target: 'harmony',
+    body: 'Generate opens a drawer with mood, 4/8-bar length and voice-leading. Three options are shown as A/B/C; audition any chord, then Apply. It replaces the current progression as one Undo step.',
+  },
+  {
+    id: 'keys',
+    title: 'Key & scale explorer',
+    target: 'harmony',
+    body: 'Keys opens the tonality drawer: pick any key and scale, inspect the seven diatonic chords, then apply both at once. Custom progressions stay in their current voicing unless you change the key.',
+  },
+  {
+    id: 'voicing',
+    title: 'Voicing engine',
+    target: 'inspector',
+    body: 'Select a chord and open Voicing in the Inspector. Close, Open, Drop 2 and Spread move the same chord tones without changing root or chord type; Audition compares them.',
+  },
+  {
     id: 'tracks',
     title: 'Bass, lead and drums',
     target: 'tracks',
@@ -90,7 +108,7 @@ const ENTRIES: GuideEntry[] = [
   {
     id: 'next',
     title: 'Coming next',
-    body: 'The generator roadmap adds progression generation, Motif Lab, Arp Designer, Voicing Engine, Energy/Mood Curve, Seed Lock & Mutate, Groove Engine, Scale/Modulation Explorer and Reference Analysis. Each will open in this same drawer pattern and appear here with a Show me action.',
+    body: 'Progression generation, Key & Scale Explorer and Voicing Engine are now live in the Harmony workflow. Next: Motif Lab, Arp Designer, Energy/Mood Curve, Seed Lock & Mutate, Groove Engine and Reference Analysis — all using the same drawer pattern and Show me actions.',
   },
 ];
 

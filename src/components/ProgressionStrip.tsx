@@ -25,6 +25,7 @@ interface ProgressionStripProps {
   suggestions: HarmonySuggestion[];
   onAddSuggestion: (suggestion: HarmonySuggestion) => void;
   onDetectKey: () => void;
+  onGenerate: () => void;
 }
 
 export function ProgressionStrip({
@@ -48,6 +49,7 @@ export function ProgressionStrip({
   suggestions,
   onAddSuggestion,
   onDetectKey,
+  onGenerate,
 }: ProgressionStripProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const degreeOf = (chord: ChordInfo): string => {
@@ -60,6 +62,13 @@ export function ProgressionStrip({
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Progression</span>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
+          <button
+            type="button"
+            onClick={onGenerate}
+            className="h-9 rounded-md bg-purple-600 px-2 text-[11px] font-semibold text-white transition-colors hover:bg-purple-500 sm:h-8"
+          >
+            Generate
+          </button>
           <button
             type="button"
             onClick={onTogglePreview}
