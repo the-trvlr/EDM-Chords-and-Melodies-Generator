@@ -320,16 +320,16 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     : leadStyles[0]?.id ?? '';
 
   const generatedBass = useMemo(
-    () => generateMelody(progression, 'bass', bassStyleId, rootKey, scaleType, melody.bassSeed, melody.rangeSpans.bass, { density: melody.bassDensity, idea: melody.bassIdea, contour: melody.bassContour, variation: melody.bassVariation, barFilter: melody.callResponse ? 0 : undefined }),
+    () => generateMelody(progression, 'bass', bassStyleId, rootKey, scaleType, melody.bassSeed, melody.rangeSpans.bass, { density: melody.bassDensity, idea: melody.bassIdea, contour: melody.bassContour, variation: melody.bassVariation }),
     // Melodies are pure functions of these values; memoisation keeps the
     // playhead (16 updates per bar) from regenerating them on every tick.
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
-    [progression, bassStyleId, rootKey, scaleType, melody.bassSeed, melody.rangeSpans.bass, melody.bassDensity, melody.bassIdea, melody.bassContour, melody.bassVariation, melody.callResponse],
+    [progression, bassStyleId, rootKey, scaleType, melody.bassSeed, melody.rangeSpans.bass, melody.bassDensity, melody.bassIdea, melody.bassContour, melody.bassVariation],
   );
   const generatedLead = useMemo(
-    () => generateMelody(progression, 'lead', leadStyleId, rootKey, scaleType, melody.leadSeed, melody.rangeSpans.lead, { density: melody.leadDensity, idea: melody.leadIdea, contour: melody.leadContour, variation: melody.leadVariation, barFilter: melody.callResponse ? 1 : undefined }),
+    () => generateMelody(progression, 'lead', leadStyleId, rootKey, scaleType, melody.leadSeed, melody.rangeSpans.lead, { density: melody.leadDensity, idea: melody.leadIdea, contour: melody.leadContour, variation: melody.leadVariation }),
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
-    [progression, leadStyleId, rootKey, scaleType, melody.leadSeed, melody.rangeSpans.lead, melody.leadDensity, melody.leadIdea, melody.leadContour, melody.leadVariation, melody.callResponse],
+    [progression, leadStyleId, rootKey, scaleType, melody.leadSeed, melody.rangeSpans.lead, melody.leadDensity, melody.leadIdea, melody.leadContour, melody.leadVariation],
   );
   const bassMelody: GeneratedMelody = useMemo(() => (
     melody.bassNotes
@@ -388,6 +388,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       arpMelody,
       drums: drumPattern,
       synthIds: melody.synthIds,
+      callResponse: melody.callResponse,
       bpm: liveRef.current.bpm,
       loop: liveRef.current.loop,
       drumKitId: liveRef.current.drumKitId,
@@ -409,7 +410,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     });
   // Restart when the sounding configuration changes (structure, octaves, groove),
   // but not when unrelated melody state (e.g. preview dialogs) changes.
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, loopBars, onPlayingChange, onStepChange, onStopOtherPlayback]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.soundVariant, loopBars, onPlayingChange, onStepChange, onStopOtherPlayback]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -553,7 +554,10 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     setRenderingStems(true);
     try {
       const files: Record<string, Uint8Array> = {};
+      let stemIndex = 0;
       for (const track of ['chord', 'bass', 'lead', 'drums'] as TrackId[]) {
+        stemIndex++;
+        toast.show(`Rendering stem ${stemIndex}/4 (${track})…`, 'success');
         const tracks = { ...melody.mixer };
         for (const id of Object.keys(tracks) as TrackId[]) {
           tracks[id] = { ...tracks[id], mute: false, solo: id === track };
@@ -566,6 +570,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           arpMelody,
           drums: drumPattern,
           synthIds: melody.synthIds,
+          callResponse: melody.callResponse,
           bpm,
           tracks,
           drumKitId: melody.drumKitId,
@@ -577,6 +582,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           timeScales: melody.timeScales,
           bassGlide: melody.bassGlide,
           soundVariant: melody.soundVariant,
+          dry: true,
+          includeFx: false,
         });
         files[`${track}.wav`] = new Uint8Array(await blob.arrayBuffer());
       }
@@ -595,15 +602,15 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, toast]);
 
   const handleExportMidi = useCallback(() => {
     exportArrangementToMidi(
       progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds },
+      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, callResponse: melody.callResponse },
     );
     toast.show('Arrangement MIDI exported', 'success');
-  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.synthIds, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.synthIds, melody.callResponse, toast]);
 
   const handleExportWav = useCallback(async () => {
     setRendering(true);
@@ -616,6 +623,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         arpMelody,
         drums: drumPattern,
         synthIds: melody.synthIds,
+        callResponse: melody.callResponse,
         bpm,
         tracks: melody.mixer,
         drumKitId: melody.drumKitId,
@@ -641,13 +649,16 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRendering(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, toast]);
 
   const handleExportDawPack = useCallback(async () => {
     setRenderingStems(true);
     try {
       const files: Record<string, Uint8Array> = {};
+      let stemIndex = 0;
       for (const track of ['chord', 'bass', 'lead', 'drums'] as TrackId[]) {
+        stemIndex++;
+        toast.show(`Rendering stem ${stemIndex}/4 (${track})…`, 'success');
         const tracks = { ...melody.mixer };
         for (const id of Object.keys(tracks) as TrackId[]) {
           tracks[id] = { ...tracks[id], mute: false, solo: id === track };
@@ -660,6 +671,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           arpMelody,
           drums: drumPattern,
           synthIds: melody.synthIds,
+          callResponse: melody.callResponse,
           bpm,
           tracks,
           drumKitId: melody.drumKitId,
@@ -671,13 +683,15 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           timeScales: melody.timeScales,
           bassGlide: melody.bassGlide,
           soundVariant: melody.soundVariant,
+          dry: true,
+          includeFx: false,
         });
         files[`stems/${track}.wav`] = new Uint8Array(await blob.arrayBuffer());
       }
 
       const midi = buildArrangementMidiBytes(
         progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds },
+        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, callResponse: melody.callResponse },
       );
       if (midi) files['midi/arrangement.mid'] = midi;
 
@@ -731,7 +745,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, projectName, bars, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, projectName, bars, toast]);
 
   const handleSaveArrangement = useCallback(() => {
     const saved = saveArrangement(saveName, project);

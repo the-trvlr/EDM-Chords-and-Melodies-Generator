@@ -70,6 +70,9 @@ export function sanitizeSections(value: unknown): SongSection[] {
       octaveShift: clampIn(raw.octaveShift, -1, 1, 0),
       drumDensity: (['low', 'medium', 'high'] as string[]).includes(String(raw.drumDensity)) ? raw.drumDensity as SongSection['drumDensity'] : 'medium',
       fx: raw.fx !== false,
+      drumEnergy: (['low', 'medium', 'high'] as string[]).includes(String(raw.drumEnergy)) ? raw.drumEnergy as SongSection['drumEnergy'] : undefined,
+      callResponse: (['inherit', 'on', 'off'] as string[]).includes(String(raw.callResponse)) ? raw.callResponse as SongSection['callResponse'] : 'inherit',
+      callInvert: raw.callInvert === true,
     }];
   });
 }

@@ -36,6 +36,12 @@ export interface SongSection {
   drumDensity?: 'low' | 'medium' | 'high';
   /** Automatic transition FX at section boundaries (default true). */
   fx?: boolean;
+  /** Drum-only energy; overrides the section energy for drum velocity. */
+  drumEnergy?: 'low' | 'medium' | 'high';
+  /** Call/response override: inherit the global switch, or force on/off. */
+  callResponse?: 'inherit' | 'on' | 'off';
+  /** Swap call/response: bass starts on odd bars instead of even. */
+  callInvert?: boolean;
 }
 
 export interface MelodyRangeSpans {
