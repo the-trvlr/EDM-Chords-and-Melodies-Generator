@@ -117,6 +117,8 @@ export interface MelodyState {
   /** Edited notes; null means "use the generated melody". */
   bassNotes: MelodyNote[] | null;
   leadNotes: MelodyNote[] | null;
+  /** Optional per-section note clips, keyed by SongSection.id. */
+  sectionNotes?: Record<string, { bass?: MelodyNote[]; lead?: MelodyNote[] }>;
 }
 
 /** Full project snapshot: harmony + arranger, used by files, share links and storage. */

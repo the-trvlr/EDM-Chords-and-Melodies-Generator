@@ -47,6 +47,20 @@ function quantizeNotes(notes: MelodyNote[], grid = 2): MelodyNote[] {
   return [...byKey.values()].sort((a, b) => a.step - b.step);
 }
 
+
+function repeatNotesForBars(notes: MelodyNote[], bars: number, patternBars: number): MelodyNote[] {
+  const result: MelodyNote[] = [];
+  const sourceBars = Math.max(1, patternBars);
+  for (let bar = 0; bar < Math.max(1, bars); bar++) {
+    const sourceBar = bar % sourceBars;
+    for (const note of notes) {
+      if (Math.floor(note.step / 16) !== sourceBar) continue;
+      result.push({ ...note, step: (note.step % 16) + bar * 16 });
+    }
+  }
+  return result.sort((a, b) => a.step - b.step);
+}
+
 function repeatFirstBar(notes: MelodyNote[], bars: number): MelodyNote[] {
   const first = notes.filter(note => note.step < 16);
   if (first.length === 0) return notes;
@@ -306,6 +320,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const [ideaOpen, setIdeaOpen] = useState(false);
   const [grooveOpen, setGrooveOpen] = useState(false);
   const [energyCurveOpen, setEnergyCurveOpen] = useState(false);
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const exportTimer = useRef<number | null>(null);
   const [history, setHistory] = useState<MelodyHistory>({ list: [melody], index: 0 });
   const [saveDialog, setSaveDialog] = useState(false);
@@ -392,6 +407,26 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const bars = Math.max(1, songBars({ chords: progression, sections: melody.sections }));
   const laneBars = Math.max(1, progression.length);
   const laneSteps = laneBars * 16;
+  const selectedSection = selectedSectionId ? melody.sections.find(section => section.id === selectedSectionId) ?? null : null;
+  const sectionStartStep = selectedSection
+    ? melody.sections.slice(0, melody.sections.findIndex(section => section.id === selectedSection.id)).reduce((sum, section) => sum + section.bars, 0) * 16
+    : 0;
+  const sectionSteps = selectedSection ? selectedSection.bars * 16 : 0;
+  const viewBars = selectedSection?.bars ?? laneBars;
+  const viewSteps = selectedSection ? sectionSteps : laneSteps;
+  const sectionChords = selectedSection
+    ? Array.from({ length: selectedSection.bars }, (_, index) => progression[index % progression.length])
+    : progression;
+  const bassLaneNotes = selectedSection
+    ? (melody.sectionNotes?.[selectedSection.id]?.bass ?? repeatNotesForBars(bassMelody.notes, selectedSection.bars, progression.length))
+    : bassMelody.notes;
+  const leadLaneNotes = selectedSection
+    ? (melody.sectionNotes?.[selectedSection.id]?.lead ?? repeatNotesForBars(leadMelody.notes, selectedSection.bars, progression.length))
+    : leadMelody.notes;
+  const arpLaneNotes = selectedSection && arpMelody
+    ? repeatNotesForBars(arpMelody.notes, selectedSection.bars, progression.length)
+    : arpMelody?.notes ?? [];
+
 
   const apply = useCallback((patch: Partial<MelodyState>) => {
     const next: MelodyState = { ...melody, ...patch };
@@ -429,6 +464,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       synthIds: melody.synthIds,
       callResponse: melody.callResponse,
         groove: melody.groove,
+        sectionNotes: melody.sectionNotes,
       bpm: liveRef.current.bpm,
       loop: liveRef.current.loop,
       drumKitId: liveRef.current.drumKitId,
@@ -450,7 +486,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     });
   // Restart when the sounding configuration changes (structure, octaves, groove),
   // but not when unrelated melody state (e.g. preview dialogs) changes.
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.soundVariant, loopBars, onPlayingChange, onStepChange, onStopOtherPlayback]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.sectionNotes, melody.soundVariant, loopBars, onPlayingChange, onStepChange, onStopOtherPlayback]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -605,15 +641,36 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
   const handleSectionsChange = useCallback((sections: SongSection[]) => {
     apply({ sections });
+    setSelectedSectionId(current => current && sections.some(section => section.id === current) ? current : null);
   }, [apply]);
+
+  const setSectionClip = useCallback((track: 'bass' | 'lead', notes: MelodyNote[]) => {
+    if (!selectedSection) {
+      apply(track === 'bass' ? { bassNotes: notes } : { leadNotes: notes });
+      return;
+    }
+    const all = melody.sectionNotes ?? {};
+    const existing = all[selectedSection.id] ?? {};
+    apply({ sectionNotes: { ...all, [selectedSection.id]: { ...existing, [track]: notes } } });
+  }, [apply, selectedSection, melody.sectionNotes]);
+
+  const resetSectionClip = useCallback((track: 'bass' | 'lead') => {
+    if (!selectedSection || !melody.sectionNotes) return;
+    const next = { ...melody.sectionNotes };
+    const clip = { ...(next[selectedSection.id] ?? {}) };
+    delete clip[track];
+    if (clip.bass || clip.lead) next[selectedSection.id] = clip;
+    else delete next[selectedSection.id];
+    apply({ sectionNotes: Object.keys(next).length ? next : undefined });
+  }, [apply, selectedSection, melody.sectionNotes]);
 
   const handleBassNotes = useCallback((notes: MelodyNote[]) => {
-    apply({ bassNotes: notes });
-  }, [apply]);
+    setSectionClip('bass', notes);
+  }, [setSectionClip]);
 
   const handleLeadNotes = useCallback((notes: MelodyNote[]) => {
-    apply({ leadNotes: notes });
-  }, [apply]);
+    setSectionClip('lead', notes);
+  }, [setSectionClip]);
 
   const handleSpanChange = useCallback((track: 'bass' | 'lead', span: number) => {
     const fitEdited = (notes: MelodyNote[] | null) => notes ? fitNotesToSpan(notes, track, span) : null;
@@ -653,6 +710,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         synthIds: melody.synthIds,
         callResponse: melody.callResponse,
         groove: melody.groove,
+        sectionNotes: melody.sectionNotes,
         bpm,
         tracks: melody.mixer,
         drumKitId: melody.drumKitId,
@@ -688,15 +746,15 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.sectionNotes, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
 
   const handleExportMidi = useCallback(() => {
     exportArrangementToMidi(
       progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, callResponse: melody.callResponse, groove: melody.groove },
+      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, callResponse: melody.callResponse, groove: melody.groove, sectionNotes: melody.sectionNotes },
     );
     toast.show('Arrangement MIDI exported', 'success');
-  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.synthIds, melody.callResponse, melody.groove, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.synthIds, melody.callResponse, melody.groove, melody.sectionNotes, toast]);
 
   const handleExportWav = useCallback(async () => {
     setRendering(true);
@@ -712,6 +770,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         synthIds: melody.synthIds,
         callResponse: melody.callResponse,
         groove: melody.groove,
+        sectionNotes: melody.sectionNotes,
         bpm,
         tracks: melody.mixer,
         drumKitId: melody.drumKitId,
@@ -740,7 +799,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRendering(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.sectionNotes, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
 
   const handleExportDawPack = useCallback(async () => {
     setRenderingStems(true);
@@ -756,6 +815,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         synthIds: melody.synthIds,
         callResponse: melody.callResponse,
         groove: melody.groove,
+        sectionNotes: melody.sectionNotes,
         bpm,
         tracks: melody.mixer,
         drumKitId: melody.drumKitId,
@@ -776,7 +836,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
       const midi = buildArrangementMidiBytes(
         progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, callResponse: melody.callResponse, groove: melody.groove },
+        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, callResponse: melody.callResponse, groove: melody.groove, sectionNotes: melody.sectionNotes },
       );
       if (midi) files['midi/arrangement.mid'] = midi;
 
@@ -833,7 +893,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, projectName, bars, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.sectionNotes, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, projectName, bars, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
 
   const handleSaveArrangement = useCallback(() => {
     const saved = saveArrangement(saveName, project);
@@ -891,6 +951,10 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const busy = isPlaying;
   const displayStep = isPlaying || previewingTrack !== null ? activeStep : null;
   const laneStep = displayStep !== null ? displayStep % laneSteps : null;
+  const sectionStep = selectedSection && displayStep !== null && displayStep >= sectionStartStep && displayStep < sectionStartStep + sectionSteps
+    ? displayStep - sectionStartStep
+    : null;
+  const viewStep = selectedSection ? sectionStep : laneStep;
 
   const styleChips = (styles: MelodyStyle[], selected: string, onPick: (id: string) => void, onRegenerate: () => void, label: string) => (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -927,7 +991,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-semibold text-white">Tracks</h2>
           <p className="text-xs text-gray-400">
-            {bars} {bars === 1 ? 'bar' : 'bars'}{melody.sections.length > 0 ? ` · ${laneBars}-bar pattern` : ''} · {bpm} BPM · {genresLabel(genreId)} · edits are saved in the project
+            {selectedSection ? `Editing ${selectedSection.kind} · ${selectedSection.bars} bars` : `${bars} ${bars === 1 ? 'bar' : 'bars'}${melody.sections.length > 0 ? ` · ${laneBars}-bar pattern` : ''}`} · {bpm} BPM · {genresLabel(genreId)} · edits are saved in the project
           </p>
         </div>
         <button
@@ -939,7 +1003,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         </button>
       </div>
 
-      <SectionsTimeline sections={melody.sections} bpm={bpm} onChange={handleSectionsChange} onOpenEnergyCurve={() => setEnergyCurveOpen(true)} />
+      <SectionsTimeline sections={melody.sections} bpm={bpm} onChange={handleSectionsChange} onOpenEnergyCurve={() => setEnergyCurveOpen(true)} selectedId={selectedSectionId} onSelect={setSelectedSectionId} />
 
       <div id="groove" className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-800 bg-gray-900/50 p-2">
         <label className="flex items-center gap-2 text-xs text-gray-300">
@@ -1045,16 +1109,16 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         <div className="mt-2">
           {arpMelody ? (
             <PianoRollLane
-              notes={arpMelody.notes}
-              activeStep={displayStep}
-              totalSteps={laneSteps}
-              bars={laneBars}
+              notes={arpLaneNotes}
+              activeStep={viewStep}
+              totalSteps={viewSteps}
+              bars={viewBars}
               color="bg-purple-400/80"
               activeColor="bg-purple-300"
               label="Arpeggiated chords"
             />
           ) : (
-            <ChordLane chords={progression} activeStep={laneStep} totalSteps={laneSteps} bars={laneBars} />
+            <ChordLane chords={sectionChords} activeStep={viewStep} totalSteps={viewSteps} bars={viewBars} />
           )}
         </div>
         {melody.arpEnabled && (
@@ -1177,22 +1241,32 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         />
         <div className="mt-2">
           <EditablePianoRoll
-            notes={bassMelody.notes}
+            notes={bassLaneNotes}
             onChange={handleBassNotes}
-            activeStep={laneStep}
-            totalSteps={laneSteps}
-            bars={laneBars}
+            activeStep={viewStep}
+            totalSteps={viewSteps}
+            bars={viewBars}
             color="bg-orange-400/80"
             activeColor="bg-orange-300"
             label="Bass"
           />
           <VelocityLane
-            notes={bassMelody.notes}
+            notes={bassLaneNotes}
             onChange={handleBassNotes}
-            totalSteps={laneSteps}
+            totalSteps={viewSteps}
             label="Bass"
             color="bg-orange-400/80"
           />
+          {selectedSection && (
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-gray-400">
+              <span className={`rounded px-1.5 py-0.5 ${melody.sectionNotes?.[selectedSection.id]?.bass ? 'bg-orange-400/15 text-orange-200' : 'bg-gray-800'}`}>
+                {melody.sectionNotes?.[selectedSection.id]?.bass ? 'Section bass clip' : 'Bass follows global'}
+              </span>
+              {melody.sectionNotes?.[selectedSection.id]?.bass && (
+                <button type="button" onClick={() => resetSectionClip('bass')} className="rounded border border-gray-700 px-1.5 py-0.5 text-gray-300 hover:border-gray-500">Reset to global</button>
+              )}
+            </div>
+          )}
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-1">
               <span className="text-[10px] uppercase tracking-wide text-gray-400">Density</span>
@@ -1339,22 +1413,32 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         />
         <div className="mt-2">
           <EditablePianoRoll
-            notes={leadMelody.notes}
+            notes={leadLaneNotes}
             onChange={handleLeadNotes}
-            activeStep={laneStep}
-            totalSteps={laneSteps}
-            bars={laneBars}
+            activeStep={viewStep}
+            totalSteps={viewSteps}
+            bars={viewBars}
             color="bg-cyan-400/80"
             activeColor="bg-cyan-300"
             label="Lead"
           />
           <VelocityLane
-            notes={leadMelody.notes}
+            notes={leadLaneNotes}
             onChange={handleLeadNotes}
-            totalSteps={laneSteps}
+            totalSteps={viewSteps}
             label="Lead"
             color="bg-cyan-400/80"
           />
+          {selectedSection && (
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-gray-400">
+              <span className={`rounded px-1.5 py-0.5 ${melody.sectionNotes?.[selectedSection.id]?.lead ? 'bg-cyan-400/15 text-cyan-200' : 'bg-gray-800'}`}>
+                {melody.sectionNotes?.[selectedSection.id]?.lead ? 'Section lead clip' : 'Lead follows global'}
+              </span>
+              {melody.sectionNotes?.[selectedSection.id]?.lead && (
+                <button type="button" onClick={() => resetSectionClip('lead')} className="rounded border border-gray-700 px-1.5 py-0.5 text-gray-300 hover:border-gray-500">Reset to global</button>
+              )}
+            </div>
+          )}
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-1">
               <span className="text-[10px] uppercase tracking-wide text-gray-400">Density</span>
@@ -1525,15 +1609,16 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       {ideaOpen && (
         <IdeaDrawer
           onClose={closeIdea}
-          bassNotes={bassMelody.notes}
-          leadNotes={leadMelody.notes}
-          bars={bars}
+          bassNotes={bassLaneNotes}
+          leadNotes={leadLaneNotes}
+          bars={viewBars}
+          contextLabel={selectedSection ? `${selectedSection.kind} · ${selectedSection.bars} bars` : 'Whole song'}
           seeds={{ bass: melody.bassSeed, lead: melody.leadSeed, drums: melody.drumSeed }}
           seedLocks={melody.seedLocks ?? { bass: false, lead: false, drums: false }}
           arpEnabled={melody.arpEnabled}
           arpSettings={melody.arpSettings}
           arpSeed={melody.arpSeed}
-          onApplyNotes={(track, notes) => apply(track === 'bass' ? { bassNotes: notes } : { leadNotes: notes })}
+          onApplyNotes={(track, notes) => setSectionClip(track, notes)}
           onPreviewNotes={previewNotes}
           onPreviewTrack={handlePreview}
           onPreviewArp={previewArp}

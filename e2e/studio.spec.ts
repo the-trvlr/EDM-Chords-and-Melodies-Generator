@@ -65,7 +65,7 @@ test('opens the Idea Lab and applies a motif', async ({ page }) => {
   await page.getByRole('button', { name: 'Idea lab' }).click();
   await expect(page.getByRole('dialog', { name: 'Idea lab' })).toBeVisible();
   await page.getByRole('button', { name: 'Preview variation' }).click();
-  await page.getByRole('button', { name: 'Apply to lead' }).click();
+  await page.getByRole('button', { name: 'Apply to bass' }).click();
   await page.getByRole('button', { name: 'Mutate unlocked' }).click();
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('dialog', { name: 'Idea lab' })).toBeHidden();
@@ -89,6 +89,14 @@ test('opens reference analysis', async ({ page }) => {
   await page.getByRole('button', { name: 'Reference' }).click();
   await expect(page.getByRole('dialog', { name: 'Reference analysis' })).toBeVisible();
   await page.getByRole('button', { name: 'Close panel' }).click();
+});
+
+test('selects a section and shows section clip context', async ({ page }) => {
+  await openStudio(page);
+  await page.getByRole('button', { name: 'Create structure' }).click();
+  await page.getByRole('button', { name: /Intro/ }).first().click();
+  await expect(page.getByText(/Editing intro/)).toBeVisible();
+  await expect(page.getByText('Bass follows global')).toBeVisible();
 });
 
 test('no serious or critical accessibility violations', async ({ page }) => {

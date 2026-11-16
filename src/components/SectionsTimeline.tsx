@@ -1,4 +1,4 @@
-import { useState } from 'react';
+
 import type { SectionEnergy, SectionKind, SongSection } from '../types';
 import { ARRANGEMENT_TEMPLATES, type TemplateSection } from '../data/arrangementTemplates';
 import type { TrackId } from '../utils/schedule';
@@ -53,6 +53,8 @@ interface SectionsTimelineProps {
   bpm: number;
   onChange: (sections: SongSection[]) => void;
   onOpenEnergyCurve: () => void;
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
 }
 
 function durationLabel(bars: number, bpm: number): string {
@@ -60,10 +62,9 @@ function durationLabel(bars: number, bpm: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-export function SectionsTimeline({ sections, bpm, onChange, onOpenEnergyCurve }: SectionsTimelineProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(sections[0]?.id ?? null);
+export function SectionsTimeline({ sections, bpm, onChange, onOpenEnergyCurve, selectedId, onSelect }: SectionsTimelineProps) {
   const totalBars = sections.reduce((sum, section) => sum + section.bars, 0);
-  const selected = sections.find(section => section.id === selectedId) ?? sections[0] ?? null;
+  const selected = sections.find(section => section.id === selectedId) ?? null;
 
   const update = (next: SongSection[]) => onChange(next);
 
@@ -111,7 +112,7 @@ export function SectionsTimeline({ sections, bpm, onChange, onOpenEnergyCurve }:
               const template = ARRANGEMENT_TEMPLATES.find(item => item.name === event.target.value);
               if (template) {
                 update(buildTemplate(template.sections));
-                setSelectedId(null);
+                onSelect(null);
               }
             }}
             aria-label="Arrangement template"
@@ -145,7 +146,7 @@ export function SectionsTimeline({ sections, bpm, onChange, onOpenEnergyCurve }:
               onClick={() => {
                 const section = newSection('drop', 4, ['chord', 'bass', 'lead', 'drums']);
                 update([...sections, section]);
-                setSelectedId(section.id);
+                onSelect(section.id);
               }}
               className="h-11 rounded-md border border-gray-700 px-2 text-[11px] font-medium text-gray-200 hover:border-gray-500 sm:h-8"
             >
@@ -158,13 +159,24 @@ export function SectionsTimeline({ sections, bpm, onChange, onOpenEnergyCurve }:
       {sections.length > 0 && (
         <>
           <div className="mt-2 flex gap-1 overflow-x-auto pb-1">
+            <button
+              type="button"
+              onClick={() => onSelect(null)}
+              aria-pressed={selectedId === null}
+              className={`min-h-11 min-w-[5rem] rounded-md border px-2 text-left text-[11px] transition-colors ${
+                selectedId === null ? 'border-cyan-500 bg-cyan-500/15 text-cyan-100' : 'border-gray-700 bg-gray-800/50 text-gray-300 hover:border-gray-500'
+              }`}
+            >
+              <span className="block font-semibold">Whole song</span>
+              <span className="block text-gray-400">global edit</span>
+            </button>
             {sections.map(section => {
               const kind = KINDS.find(item => item.id === section.kind) ?? KINDS[2];
               return (
                 <button
                   key={section.id}
                   type="button"
-                  onClick={() => setSelectedId(section.id)}
+                  onClick={() => onSelect(section.id)}
                   aria-pressed={selected?.id === section.id}
                   style={{ flexGrow: section.bars }}
                   className={`min-h-11 min-w-[4.5rem] rounded-md border px-2 text-left text-[11px] transition-colors ${
@@ -364,7 +376,7 @@ export function SectionsTimeline({ sections, bpm, onChange, onOpenEnergyCurve }:
                     const next = [...sections];
                     next.splice(index + 1, 0, section);
                     update(next);
-                    setSelectedId(section.id);
+                    onSelect(section.id);
                   }}
                   className="h-11 rounded-md border border-gray-700 px-2 text-[11px] text-gray-200 hover:border-gray-500 sm:h-8"
                 >
@@ -374,7 +386,7 @@ export function SectionsTimeline({ sections, bpm, onChange, onOpenEnergyCurve }:
                   type="button"
                   onClick={() => {
                     update(sections.filter(item => item.id !== selected.id));
-                    setSelectedId(null);
+                    onSelect(null);
                   }}
                   className="h-11 rounded-md border border-rose-700/60 px-2 text-[11px] text-rose-300 hover:border-rose-500 sm:h-8"
                 >

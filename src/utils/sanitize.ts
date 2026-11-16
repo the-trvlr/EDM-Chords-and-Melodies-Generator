@@ -164,6 +164,18 @@ export function sanitizeMixer(value: unknown): MixerState {
  * Accepts the legacy flat melody shape (bs/ls/ae/...) used by old share links,
  * saved arrangements and localStorage, and returns a fully populated state.
  */
+function sanitizeSectionNotes(value: unknown): MelodyState['sectionNotes'] {
+  if (!isRecord(value)) return undefined;
+  const result: NonNullable<MelodyState['sectionNotes']> = {};
+  for (const [id, raw] of Object.entries(value).slice(0, 32)) {
+    if (!isRecord(raw)) continue;
+    const bass = sanitizeNotes(raw.bass ?? raw.b);
+    const lead = sanitizeNotes(raw.lead ?? raw.l);
+    if (bass || lead) result[id] = { ...(bass ? { bass } : {}), ...(lead ? { lead } : {}) };
+  }
+  return Object.keys(result).length ? result : undefined;
+}
+
 export function sanitizeMelody(value: unknown): MelodyState {
   const melody = defaultMelodyState();
   if (!isRecord(value)) return melody;
@@ -250,6 +262,7 @@ export function sanitizeMelody(value: unknown): MelodyState {
     humanize: boolOr(value.humanize ?? value.hu, false),
     bassNotes: sanitizeNotes(value.bassNotes ?? value.bn),
     leadNotes: sanitizeNotes(value.leadNotes ?? value.ln),
+    sectionNotes: sanitizeSectionNotes(value.sectionNotes ?? value.sn),
   };
 }
 
