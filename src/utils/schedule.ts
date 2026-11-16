@@ -36,6 +36,8 @@ export interface ScheduleInput {
   timeScales?: Record<TrackId, number>;
   /** Legato/portamento bass: holds each bass note until the next onset. */
   bassGlide?: boolean;
+  /** Per-track swing override; undefined falls back to global swing. */
+  groove?: Partial<Record<TrackId, number>>;
   /** Global call/response default; sections may override. */
   callResponse?: boolean;
 }
@@ -374,7 +376,9 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
   }
 
   for (const event of scaled) {
-    event.offset = eventOffset(event.step, event.track, swing, humanize);
+    const trackId = event.track === 'arp' ? 'chord' : event.track === 'fx' ? null : event.track;
+    const trackSwing = (trackId ? input.groove?.[trackId] : undefined) ?? swing;
+    event.offset = eventOffset(event.step, event.track, trackSwing, humanize);
   }
 
   return scaled.sort((a, b) => (a.step + a.offset) - (b.step + b.offset));

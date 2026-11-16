@@ -168,6 +168,7 @@ export function sanitizeMelody(value: unknown): MelodyState {
   const melody = defaultMelodyState();
   if (!isRecord(value)) return melody;
   const rawSeedLocks = isRecord(value.seedLocks) ? value.seedLocks : isRecord(value.sl) ? value.sl : null;
+  const rawGroove = isRecord(value.groove) ? value.groove : isRecord(value.gr) ? value.gr : null;
 
   const arp = isRecord(value.as)
     ? value.as
@@ -235,6 +236,14 @@ export function sanitizeMelody(value: unknown): MelodyState {
     seedLocks: rawSeedLocks
       ? { bass: rawSeedLocks.bass === true, lead: rawSeedLocks.lead === true, drums: rawSeedLocks.drums === true }
       : { bass: false, lead: false, drums: false },
+    groove: rawGroove
+      ? {
+          chord: clampNum(rawGroove.chord, 0, 0.6, 0),
+          bass: clampNum(rawGroove.bass, 0, 0.6, 0),
+          lead: clampNum(rawGroove.lead, 0, 0.6, 0),
+          drums: clampNum(rawGroove.drums, 0, 0.6, 0),
+        }
+      : undefined,
     soundVariant: sanitizeSoundVariant(value.soundVariant ?? value.sv),
     sections: sanitizeSections(value.sections ?? value.sc),
     swing: clampNum(value.swing ?? value.sw, 0, 0.6, 0),

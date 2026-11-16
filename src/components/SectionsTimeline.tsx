@@ -52,6 +52,7 @@ interface SectionsTimelineProps {
   sections: SongSection[];
   bpm: number;
   onChange: (sections: SongSection[]) => void;
+  onOpenEnergyCurve: () => void;
 }
 
 function durationLabel(bars: number, bpm: number): string {
@@ -59,7 +60,7 @@ function durationLabel(bars: number, bpm: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-export function SectionsTimeline({ sections, bpm, onChange }: SectionsTimelineProps) {
+export function SectionsTimeline({ sections, bpm, onChange, onOpenEnergyCurve }: SectionsTimelineProps) {
   const [selectedId, setSelectedId] = useState<string | null>(sections[0]?.id ?? null);
   const totalBars = sections.reduce((sum, section) => sum + section.bars, 0);
   const selected = sections.find(section => section.id === selectedId) ?? sections[0] ?? null;
@@ -97,6 +98,13 @@ export function SectionsTimeline({ sections, bpm, onChange }: SectionsTimelinePr
           {sections.length === 0 ? 'Looping the progression' : `${totalBars} bars · ~${durationLabel(totalBars, bpm)}`}
         </span>
         <div className="ml-auto flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={onOpenEnergyCurve}
+            className="h-11 rounded-md border border-fuchsia-600/40 bg-fuchsia-500/10 px-2 text-[11px] font-medium text-fuchsia-200 hover:bg-fuchsia-500/20 sm:h-8"
+          >
+            Energy curve
+          </button>
           <select
             value=""
             onChange={event => {

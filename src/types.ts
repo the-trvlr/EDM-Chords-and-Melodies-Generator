@@ -44,6 +44,13 @@ export interface SongSection {
   callInvert?: boolean;
 }
 
+export interface TrackGroove {
+  chord: number;
+  bass: number;
+  lead: number;
+  drums: number;
+}
+
 export interface MelodyRangeSpans {
   /** Width of the allowed range in octaves (1..3). */
   bass: number;
@@ -98,6 +105,8 @@ export interface MelodyState {
   bassGlide: boolean;
   /** Seed locks for the Idea Lab mutate action. */
   seedLocks?: { bass: boolean; lead: boolean; drums: boolean };
+  /** Per-track swing override in 0..0.6; undefined falls back to global swing. */
+  groove?: TrackGroove;
   /** Sound character: sampled/acoustic or electronic. */
   soundVariant: SoundVariant;
   /** Song structure; empty means "loop the progression". */

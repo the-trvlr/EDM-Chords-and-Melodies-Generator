@@ -102,6 +102,18 @@ const ENTRIES: GuideEntry[] = [
     ],
   },
   {
+    id: 'groove-engine',
+    title: 'Groove engine',
+    target: 'groove',
+    body: 'Groove opens per-track swing controls. Give drums a tighter grid and chords more swing for a human pocket; presets Tight/Pocket/Loose/Shuffle set all four tracks at once.',
+  },
+  {
+    id: 'energy-curve',
+    title: 'Energy curve',
+    target: 'arrangement',
+    body: 'Energy curve opens from Song sections. Set each section Low/Medium/High, use Auto shape for a classic intro→build→drop arc, then Apply curve.',
+  },
+  {
     id: 'shortcuts',
     title: 'Keyboard and MIDI',
     body: 'Space starts/stops. Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z undo/redo. Cmd/Ctrl+S saves a project JSON, Cmd/Ctrl+O opens one. A–K plays notes from C4; connect a MIDI controller with the MIDI button.',
@@ -114,7 +126,7 @@ const ENTRIES: GuideEntry[] = [
   {
     id: 'next',
     title: 'Coming next',
-    body: 'Harmony tools and the Idea Lab (Motif, Seeds, Arp) are live. Next: Energy/Mood Curve, Groove Engine and Reference Analysis — all using the same drawer pattern and Show me actions.',
+    body: 'Harmony, Idea Lab, Groove engine and Energy curve are live. Next: Reference Analysis, then final polish.',
   },
 ];
 

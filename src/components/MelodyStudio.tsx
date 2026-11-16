@@ -29,6 +29,8 @@ import { deleteArrangement, duplicateArrangement, getSavedArrangements, renameAr
 import type { MelodyState, MixerState, ProjectSnapshot, SongSection, TrackMix } from '../types';
 import { Modal } from './Modal';
 import { IdeaDrawer } from './IdeaDrawer';
+import { GrooveEngine } from './GrooveEngine';
+import { EnergyCurve } from './EnergyCurve';
 import { ChordLane, DrumGrid, EditablePianoRoll, PianoRollLane, VelocityLane } from './lanes';
 import { useToast } from '../hooks/useToast';
 import { SectionsTimeline } from './SectionsTimeline';
@@ -302,6 +304,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const [renderingStems, setRenderingStems] = useState(false);
   const [exportProgress, setExportProgress] = useState<{ label: string; percent: number } | null>(null);
   const [ideaOpen, setIdeaOpen] = useState(false);
+  const [grooveOpen, setGrooveOpen] = useState(false);
+  const [energyCurveOpen, setEnergyCurveOpen] = useState(false);
   const exportTimer = useRef<number | null>(null);
   const [history, setHistory] = useState<MelodyHistory>({ list: [melody], index: 0 });
   const [saveDialog, setSaveDialog] = useState(false);
@@ -424,6 +428,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       drums: drumPattern,
       synthIds: melody.synthIds,
       callResponse: melody.callResponse,
+        groove: melody.groove,
       bpm: liveRef.current.bpm,
       loop: liveRef.current.loop,
       drumKitId: liveRef.current.drumKitId,
@@ -445,7 +450,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     });
   // Restart when the sounding configuration changes (structure, octaves, groove),
   // but not when unrelated melody state (e.g. preview dialogs) changes.
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.soundVariant, loopBars, onPlayingChange, onStepChange, onStopOtherPlayback]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.soundVariant, loopBars, onPlayingChange, onStepChange, onStopOtherPlayback]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -647,6 +652,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         drums: drumPattern,
         synthIds: melody.synthIds,
         callResponse: melody.callResponse,
+        groove: melody.groove,
         bpm,
         tracks: melody.mixer,
         drumKitId: melody.drumKitId,
@@ -682,15 +688,15 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
 
   const handleExportMidi = useCallback(() => {
     exportArrangementToMidi(
       progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, callResponse: melody.callResponse },
+      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, callResponse: melody.callResponse, groove: melody.groove },
     );
     toast.show('Arrangement MIDI exported', 'success');
-  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.synthIds, melody.callResponse, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.synthIds, melody.callResponse, melody.groove, toast]);
 
   const handleExportWav = useCallback(async () => {
     setRendering(true);
@@ -705,6 +711,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         drums: drumPattern,
         synthIds: melody.synthIds,
         callResponse: melody.callResponse,
+        groove: melody.groove,
         bpm,
         tracks: melody.mixer,
         drumKitId: melody.drumKitId,
@@ -733,7 +740,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRendering(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
 
   const handleExportDawPack = useCallback(async () => {
     setRenderingStems(true);
@@ -748,6 +755,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         drums: drumPattern,
         synthIds: melody.synthIds,
         callResponse: melody.callResponse,
+        groove: melody.groove,
         bpm,
         tracks: melody.mixer,
         drumKitId: melody.drumKitId,
@@ -768,7 +776,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
       const midi = buildArrangementMidiBytes(
         progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, callResponse: melody.callResponse },
+        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, callResponse: melody.callResponse, groove: melody.groove },
       );
       if (midi) files['midi/arrangement.mid'] = midi;
 
@@ -825,7 +833,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, projectName, bars, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, projectName, bars, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
 
   const handleSaveArrangement = useCallback(() => {
     const saved = saveArrangement(saveName, project);
@@ -931,7 +939,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         </button>
       </div>
 
-      <SectionsTimeline sections={melody.sections} bpm={bpm} onChange={handleSectionsChange} />
+      <SectionsTimeline sections={melody.sections} bpm={bpm} onChange={handleSectionsChange} onOpenEnergyCurve={() => setEnergyCurveOpen(true)} />
 
       <div id="groove" className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-800 bg-gray-900/50 p-2">
         <label className="flex items-center gap-2 text-xs text-gray-300">
@@ -959,6 +967,13 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           }`}
         >
           Humanize
+        </button>
+        <button
+          type="button"
+          onClick={() => setGrooveOpen(true)}
+          className="h-11 rounded-md border border-purple-600/40 bg-purple-500/10 px-2 text-[11px] font-medium text-purple-200 hover:bg-purple-500/20 sm:h-8"
+        >
+          Groove
         </button>
         <button
           type="button"
@@ -1489,6 +1504,24 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         </div>
       </section>
 
+      {grooveOpen && (
+        <GrooveEngine
+          open={grooveOpen}
+          onClose={() => setGrooveOpen(false)}
+          globalSwing={melody.swing}
+          groove={melody.groove}
+          onApply={groove => { apply({ groove }); setGrooveOpen(false); }}
+        />
+      )}
+      {energyCurveOpen && (
+        <EnergyCurve
+          open={energyCurveOpen}
+          onClose={() => setEnergyCurveOpen(false)}
+          sections={melody.sections}
+          bpm={bpm}
+          onApply={sections => { handleSectionsChange(sections); setEnergyCurveOpen(false); }}
+        />
+      )}
       {ideaOpen && (
         <IdeaDrawer
           onClose={closeIdea}

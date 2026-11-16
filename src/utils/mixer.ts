@@ -365,6 +365,7 @@ interface ArrangementInput {
   timeScales?: Record<TrackId, number>;
   bassGlide?: boolean;
   callResponse?: boolean;
+  groove?: Partial<Record<TrackId, number>>;
   soundVariant?: SoundVariant;
   metronome?: boolean;
   countInBars?: number;
@@ -588,6 +589,7 @@ export interface RenderOptions {
   timeScales?: Record<TrackId, number>;
   bassGlide?: boolean;
   callResponse?: boolean;
+  groove?: Partial<Record<TrackId, number>>;
   soundVariant?: SoundVariant;
   /** Dry render for stems: skip reverb and transition FX. */
   dry?: boolean;
