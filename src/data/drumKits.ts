@@ -44,4 +44,6 @@ export const DEFAULT_DRUM_KIT_BY_GENRE: Record<string, DrumKitId> = {
   futureBass: '808',
   progressiveHouse: '909',
   hardstyle: 'acoustic',
+  lofi: 'breakbeat',
+  synthwave: '909',
 };

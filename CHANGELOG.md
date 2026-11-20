@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [3.2.0] — 2026-11-20
+
+### LoFi Hip-hop + Synthwave
+
+- **LoFi Hip-hop** (70–90 BPM, default 80): dusty boom-bap/ late-night progressions, lazy keys and swung 16th rhythms; breakbeat kit.
+- **Synthwave** (100–118 BPM, default 110): neon minor progressions, eighth-note pulse / gated rhythm choices; 909 kit with 16th hats.
+- Dedicated melody styles for both genres (bass + lead), drum presets and default kits.
+- Project genre selector now lists 10 genres; README updated.
+- 109 unit tests, 10 Playwright/axe tests.
+
 ## [3.1.0] — 2026-11-16
 
 ### Section-scoped editing + source→target Motif Lab

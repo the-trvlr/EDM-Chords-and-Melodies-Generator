@@ -193,6 +193,30 @@ const GENRE_STYLES: Record<string, GenreMelodyDef> = {
       { id: 'hs-piano', name: 'Piano', description: 'Hardstyle piano melody' },
     ],
   },
+  lofi: {
+    bass: [
+      { id: 'lofi-warm', name: 'Warm Sub', description: 'Round sub under dusty keys' },
+      { id: 'lofi-walk', name: 'Walking', description: 'Laid-back walking bass' },
+      { id: 'lofi-dust', name: 'Dusty', description: 'Sparse dusty bass' },
+    ],
+    lead: [
+      { id: 'lofi-dreamy', name: 'Dreamy Keys', description: 'Soft dreamy keys' },
+      { id: 'lofi-pluck', name: 'Pluck', description: 'Muted plucked melody' },
+      { id: 'lofi-hook', name: 'Lo-fi Hook', description: 'Simple memorable hook' },
+    ],
+  },
+  synthwave: {
+    bass: [
+      { id: 'synth-rolling', name: 'Rolling', description: 'Driving 80s rolling bass' },
+      { id: 'synth-octave', name: 'Octave', description: 'Octave-jumping bass' },
+      { id: 'synth-drive', name: 'Drive', description: 'Eighth-note drive bass' },
+    ],
+    lead: [
+      { id: 'synth-arp', name: 'Neon Arp', description: 'Arpeggiated synth lead' },
+      { id: 'synth-hook', name: 'Retro Hook', description: 'Anthemic 80s hook' },
+      { id: 'synth-pad', name: 'Pad Lead', description: 'Sustained pad melody' },
+    ],
+  },
 };
 
 const DEFAULT_STYLES: GenreMelodyDef = GENRE_STYLES.house;
