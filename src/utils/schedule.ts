@@ -42,6 +42,8 @@ export interface ScheduleInput {
   callResponse?: boolean;
   /** Per-section note clips, keyed by SongSection.id. */
   sectionNotes?: Record<string, { bass?: MelodyNote[]; lead?: MelodyNote[] }>;
+  sectionDrums?: Record<string, DrumPattern>;
+  sectionChords?: Record<string, ChordInfo[]>;
 }
 
 const ALL_TRACKS: TrackId[] = ['chord', 'bass', 'lead', 'drums'];
@@ -117,7 +119,8 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
     barInSection = 0,
   ) => {
     const stepBase = barInSong * STEPS_PER_CHORD;
-    const chord = input.chords[barInProg];
+    const sectionChordList = section ? input.sectionChords?.[section.id] : undefined;
+    const chord = sectionChordList?.length ? sectionChordList[barInSection % sectionChordList.length] : input.chords[barInProg];
     const energy = section?.energy ?? 'medium';
     const energyScale = section ? (energy === 'low' ? 0.7 : energy === 'medium' ? 0.88 : 1) : 1;
     const melodyDensity = section?.density ?? 'medium';
@@ -209,11 +212,13 @@ export function buildSchedule(input: ScheduleInput): ScheduleEvent[] {
     pushMelody(input.bass, 'bass', octaves.bass);
     pushMelody(input.lead, 'lead', octaves.lead);
 
-    if (input.drums && tracks.has('drums')) {
+    const sectionDrumPattern = section ? input.sectionDrums?.[section.id] : undefined;
+    const drums = sectionDrumPattern ?? input.drums;
+    if (drums && tracks.has('drums')) {
       const instruments: DrumInstrument[] = ['kick', 'snare', 'clap', 'hat', 'lowHat', 'crash', 'ride'];
       for (let sic = 0; sic < STEPS_PER_CHORD; sic++) {
         for (const instrument of instruments) {
-          if (!input.drums[instrument][sic]) continue;
+          if (!drums[instrument][sic]) continue;
           if (drumDensity === 'low' && (instrument === 'hat' || instrument === 'lowHat' || instrument === 'ride')) continue;
           events.push({
             track: 'drums',

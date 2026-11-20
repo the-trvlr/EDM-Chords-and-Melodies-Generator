@@ -234,6 +234,8 @@ export interface ArrangementMidiOptions {
   callResponse?: boolean;
   groove?: Partial<Record<'chord' | 'bass' | 'lead' | 'drums', number>>;
   sectionNotes?: Record<string, { bass?: import('./melodyGenerator').MelodyNote[]; lead?: import('./melodyGenerator').MelodyNote[] }>;
+  sectionDrums?: Record<string, import('./drumGenerator').DrumPattern>;
+  sectionChords?: Record<string, import('./musicTheory').ChordInfo[]>;
 }
 
 
@@ -274,6 +276,8 @@ export function buildArrangementMidiTracks(
     callResponse: options.callResponse,
     groove: options.groove,
     sectionNotes: options.sectionNotes,
+    sectionDrums: options.sectionDrums,
+    sectionChords: options.sectionChords,
   });
   if (events.length === 0) return [];
 

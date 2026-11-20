@@ -176,6 +176,27 @@ function sanitizeSectionNotes(value: unknown): MelodyState['sectionNotes'] {
   return Object.keys(result).length ? result : undefined;
 }
 
+function sanitizeSectionDrums(value: unknown): MelodyState['sectionDrums'] {
+  if (!isRecord(value)) return undefined;
+  const result: NonNullable<MelodyState['sectionDrums']> = {};
+  for (const [id, raw] of Object.entries(value).slice(0, 32)) {
+    const pattern = normalizeDrumPattern(raw);
+    if (pattern) result[id] = pattern;
+  }
+  return Object.keys(result).length ? result : undefined;
+}
+
+function sanitizeSectionChords(value: unknown): MelodyState['sectionChords'] {
+  if (!isRecord(value)) return undefined;
+  const result: NonNullable<MelodyState['sectionChords']> = {};
+  for (const [id, raw] of Object.entries(value).slice(0, 32)) {
+    if (!Array.isArray(raw)) continue;
+    const chords = raw.filter(isChordInfo).slice(0, 16);
+    if (chords.length) result[id] = chords;
+  }
+  return Object.keys(result).length ? result : undefined;
+}
+
 export function sanitizeMelody(value: unknown): MelodyState {
   const melody = defaultMelodyState();
   if (!isRecord(value)) return melody;
@@ -263,6 +284,8 @@ export function sanitizeMelody(value: unknown): MelodyState {
     bassNotes: sanitizeNotes(value.bassNotes ?? value.bn),
     leadNotes: sanitizeNotes(value.leadNotes ?? value.ln),
     sectionNotes: sanitizeSectionNotes(value.sectionNotes ?? value.sn),
+    sectionDrums: sanitizeSectionDrums(value.sectionDrums ?? value.sd),
+    sectionChords: sanitizeSectionChords(value.sectionChords ?? value.sch),
   };
 }
 

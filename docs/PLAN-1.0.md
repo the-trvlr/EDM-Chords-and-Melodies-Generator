@@ -464,7 +464,7 @@ footer 40
 
 **Сделано в 2.0.0–2.1.2:** song mode; Sketch/Song шаблоны; arrangement MIDI с instrument tracks + section markers; дедуп барабанных событий.
 
-**Сделано в 2.2.0–3.2.0:** всё выше + section clips, Motif source→target, Reference Analysis, LoFi Hip-hop и Synthwave.
+**Сделано в 2.2.0–3.3.0:** всё выше + section clips для bass/lead/drums/chords, Motif source→target, Reference Analysis, LoFi/Synthwave, Section clips export.
 
 **Осталось:** Safari, MusicXML/PDF, per-section generators, MIDI recording.
 

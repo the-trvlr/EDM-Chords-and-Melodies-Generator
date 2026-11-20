@@ -97,6 +97,11 @@ test('selects a section and shows section clip context', async ({ page }) => {
   await page.getByRole('button', { name: /Intro/ }).first().click();
   await expect(page.getByText(/Editing intro/)).toBeVisible();
   await expect(page.getByText('Bass follows global')).toBeVisible();
+  await page.getByRole('button', { name: 'Kick, step 1' }).first().click();
+  await expect(page.getByText('Section drum clip')).toBeVisible();
+  await page.getByRole('button', { name: 'Edit chords' }).click();
+  await expect(page.getByRole('dialog', { name: 'Section chords' })).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).click();
 });
 
 test('loads LoFi and Synthwave genre defaults', async ({ page }) => {

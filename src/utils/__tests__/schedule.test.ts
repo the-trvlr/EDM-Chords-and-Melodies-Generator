@@ -294,6 +294,27 @@ describe('buildSchedule', () => {
     expect(bassEvents[0].velocity).toBeCloseTo(0.79, 2);
   });
 
+  it('uses per-section chord and drum clips', () => {
+    const sections: SongSection[] = [
+      { id: 'drop', kind: 'drop', bars: 1, tracks: ['chord', 'drums'] },
+    ];
+    const sectionChords = { drop: [getChordNotes('F', 'major', 4, false)] };
+    const drums = {
+      kick: [1, ...new Array(15).fill(0)],
+      snare: new Array(16).fill(0),
+      clap: new Array(16).fill(0),
+      hat: new Array(16).fill(0),
+      lowHat: new Array(16).fill(0),
+      crash: new Array(16).fill(0),
+      ride: new Array(16).fill(0),
+    };
+    const events = buildSchedule({ chords, rhythm, drums, sections, sectionChords, sectionDrums: { drop: drums } });
+    const chordsOut = events.filter(event => event.track === 'chord') as Array<Extract<ScheduleEvent, { midis: number[] }>>;
+    expect(chordsOut[0].midis.length).toBeGreaterThan(0);
+    const kick = events.find(event => event.track === 'drums' && event.instrument === 'kick');
+    expect(kick).toBeDefined();
+  });
+
   it('carries note velocity into schedule events', () => {
     const bass = {
       notes: [{ midi: 40, step: 0, duration: 2, velocity: 0.35 }],

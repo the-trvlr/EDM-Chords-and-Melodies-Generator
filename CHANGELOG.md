@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [3.3.0] — 2026-11-20
+
+### Section clips for chords/drums + DAW section export
+
+- **Section drum clips:** selecting a section switches the drum grid to that section’s pattern; edits store a section clip, with Reset to global. Section drum clips drive playback/WAV/stems/MIDI.
+- **Section chord clips:** Edit chords opens an editor for the selected section (add/remove/reorder); the section chord timeline is used by the scheduler and can be reset.
+- **Section clips (.zip)** export: one local MIDI file per section, all instruments, named by index/kind with a README of start bars for DAW placement.
+- Section chord/drum clips persist in project JSON; README/Guide updated.
+- 110 unit tests, 10 Playwright/axe tests.
+
 ## [3.2.0] — 2026-11-20
 
 ### LoFi Hip-hop + Synthwave

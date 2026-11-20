@@ -860,6 +860,7 @@ function Studio() {
                   { label: 'WAV mix', onSelect: () => studioRef.current?.exportWav() },
                   { label: 'Stems (.zip)', hint: 'Chords, bass, lead and drums as separate WAVs', onSelect: () => studioRef.current?.exportStems() },
                   { label: 'DAW pack (.zip)', hint: 'MIDI + stems + project.json + README', onSelect: () => studioRef.current?.exportDawPack() },
+                  { label: 'Section clips (.zip)', hint: 'One local MIDI per section for the DAW', onSelect: () => studioRef.current?.exportSectionClips() },
                   { label: 'Project JSON', onSelect: handleSaveProjectFile },
                 ]}
               />
@@ -962,6 +963,7 @@ function Studio() {
             <MelodyStudio
               ref={studioRef}
               progression={progression}
+              availableChords={availableChords}
               rhythm={selectedRhythm}
               rhythms={selectedGenre.rhythmPatterns}
               onRhythmChange={rhythm => {

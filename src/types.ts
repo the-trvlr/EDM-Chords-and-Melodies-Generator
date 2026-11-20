@@ -119,6 +119,10 @@ export interface MelodyState {
   leadNotes: MelodyNote[] | null;
   /** Optional per-section note clips, keyed by SongSection.id. */
   sectionNotes?: Record<string, { bass?: MelodyNote[]; lead?: MelodyNote[] }>;
+  /** Optional per-section drum/pattern clips. */
+  sectionDrums?: Record<string, DrumPattern>;
+  /** Optional per-section chord progression clips. */
+  sectionChords?: Record<string, ChordInfo[]>;
 }
 
 /** Full project snapshot: harmony + arranger, used by files, share links and storage. */
