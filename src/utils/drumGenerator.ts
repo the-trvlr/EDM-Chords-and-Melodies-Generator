@@ -223,6 +223,61 @@ const DRUM_PRESETS: DrumPatternPreset[] = [
     genreId: 'hardstyle',
     pattern: p(FOUR_ON_FLOOR, EMPTY, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1]),
   },
+  // LoFi Hip-hop
+  {
+    id: 'lofi-boom-bap',
+    name: 'Dusty Boom Bap',
+    genreId: 'lofi',
+    pattern: p(
+      [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
+      BACKBEAT,
+      EMPTY,
+      [0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+      [1, ...new Array(15).fill(0)],
+    ),
+  },
+  {
+    id: 'lofi-late',
+    name: 'Late Night Loop',
+    genreId: 'lofi',
+    pattern: p(
+      [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      EMPTY,
+      [0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1],
+      EMPTY,
+      [1, ...new Array(15).fill(0)],
+    ),
+  },
+  // Synthwave
+  {
+    id: 'synthwave-neon',
+    name: 'Neon Drive',
+    genreId: 'synthwave',
+    pattern: p(
+      FOUR_ON_FLOOR,
+      BACKBEAT,
+      EMPTY,
+      HATS_16,
+      EMPTY,
+      [1, ...new Array(15).fill(0)],
+    ),
+  },
+  {
+    id: 'synthwave-outrun',
+    name: 'Outrun',
+    genreId: 'synthwave',
+    pattern: p(
+      [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1],
+      BACKBEAT,
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+      HATS_16,
+      EMPTY,
+      [1, ...new Array(15).fill(0)],
+    ),
+  },
+
 ];
 
 const FALLBACK_PATTERN = p(FOUR_ON_FLOOR, BACKBEAT, empty(), OFFBEAT_HATS);

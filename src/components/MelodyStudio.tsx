@@ -1825,6 +1825,8 @@ function genresLabel(genreId: string): string {
     futureBass: 'Future Bass',
     progressiveHouse: 'Progressive House',
     hardstyle: 'Hardstyle',
+    lofi: 'LoFi Hip-hop',
+    synthwave: 'Synthwave',
   };
   return labels[genreId] ?? genreId;
 }

@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 3.1
+- **Version:** 3.2
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -82,7 +82,7 @@ Select a chord card to see:
 
 ## Harmony
 
-- **8 genres:** House, Techno, Trance, Drum & Bass, Dubstep, Future Bass, Progressive House, Hardstyle.
+- **10 genres:** House, Techno, Trance, Drum & Bass, Dubstep, Future Bass, Progressive House, Hardstyle, **LoFi Hip-hop** (70–90 BPM) and **Synthwave** (100–118 BPM).
 - **5 progression templates per genre**, with genre defaults for BPM, scale, rhythm and synth.
 - **12 keys, 9 scales/modes**, flat/sharp spelling.
 - **4 complexity levels.**

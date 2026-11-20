@@ -99,6 +99,14 @@ test('selects a section and shows section clip context', async ({ page }) => {
   await expect(page.getByText('Bass follows global')).toBeVisible();
 });
 
+test('loads LoFi and Synthwave genre defaults', async ({ page }) => {
+  await openStudio(page);
+  await page.locator('select[aria-label="Project genre"]').selectOption('lofi');
+  await expect(page.getByRole('spinbutton', { name: 'BPM' })).toHaveValue('80');
+  await page.locator('select[aria-label="Project genre"]').selectOption('synthwave');
+  await expect(page.getByRole('spinbutton', { name: 'BPM' })).toHaveValue('110');
+});
+
 test('no serious or critical accessibility violations', async ({ page }) => {
   await openStudio(page);
   // Color-contrast is tracked separately as a design-token task; this gate
