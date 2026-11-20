@@ -31,6 +31,7 @@ import { Modal } from './Modal';
 import { IdeaDrawer } from './IdeaDrawer';
 import { GrooveEngine } from './GrooveEngine';
 import { EnergyCurve } from './EnergyCurve';
+import { SectionChords } from './SectionChords';
 import { ChordLane, DrumGrid, EditablePianoRoll, PianoRollLane, VelocityLane } from './lanes';
 import { useToast } from '../hooks/useToast';
 import { SectionsTimeline } from './SectionsTimeline';
@@ -82,10 +83,12 @@ export interface MelodyStudioHandle {
   exportWav: () => void;
   exportStems: () => void;
   exportDawPack: () => void;
+  exportSectionClips: () => void;
 }
 
 interface MelodyStudioProps {
   progression: ChordInfo[];
+  availableChords: ChordInfo[];
   rhythm: RhythmPattern;
   rhythms: RhythmPattern[];
   onRhythmChange: (rhythm: RhythmPattern) => void;
@@ -288,6 +291,7 @@ function OctaveStepper({ label, value, onChange }: { label: string; value: numbe
 
 export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(function MelodyStudio({
   progression,
+  availableChords,
   rhythm,
   rhythms,
   onRhythmChange,
@@ -321,6 +325,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const [grooveOpen, setGrooveOpen] = useState(false);
   const [energyCurveOpen, setEnergyCurveOpen] = useState(false);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [sectionChordsOpen, setSectionChordsOpen] = useState(false);
   const exportTimer = useRef<number | null>(null);
   const [history, setHistory] = useState<MelodyHistory>({ list: [melody], index: 0 });
   const [saveDialog, setSaveDialog] = useState(false);
@@ -415,8 +420,13 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   const viewBars = selectedSection?.bars ?? laneBars;
   const viewSteps = selectedSection ? sectionSteps : laneSteps;
   const sectionChords = selectedSection
-    ? Array.from({ length: selectedSection.bars }, (_, index) => progression[index % progression.length])
+    ? (melody.sectionChords?.[selectedSection.id]?.length
+      ? melody.sectionChords[selectedSection.id]
+      : Array.from({ length: selectedSection.bars }, (_, index) => progression[index % progression.length]))
     : progression;
+  const drumLanePattern = selectedSection
+    ? (melody.sectionDrums?.[selectedSection.id] ?? drumPattern)
+    : drumPattern;
   const bassLaneNotes = selectedSection
     ? (melody.sectionNotes?.[selectedSection.id]?.bass ?? repeatNotesForBars(bassMelody.notes, selectedSection.bars, progression.length))
     : bassMelody.notes;
@@ -465,6 +475,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
       callResponse: melody.callResponse,
         groove: melody.groove,
         sectionNotes: melody.sectionNotes,
+        sectionDrums: melody.sectionDrums,
+        sectionChords: melody.sectionChords,
       bpm: liveRef.current.bpm,
       loop: liveRef.current.loop,
       drumKitId: liveRef.current.drumKitId,
@@ -486,7 +498,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     });
   // Restart when the sounding configuration changes (structure, octaves, groove),
   // but not when unrelated melody state (e.g. preview dialogs) changes.
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.sectionNotes, melody.soundVariant, loopBars, onPlayingChange, onStepChange, onStopOtherPlayback]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.sectionNotes, melody.sectionDrums, melody.sectionChords, melody.soundVariant, loopBars, onPlayingChange, onStepChange, onStopOtherPlayback]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -631,13 +643,40 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
   }, []);
 
   const handleToggleDrumNote = useCallback((instrument: keyof DrumPattern, step: number) => {
-    const base = melody.customDrumPattern ?? generateDrums(genreId, melody.drumSeed);
+    const base = selectedSection
+      ? (melody.sectionDrums?.[selectedSection.id] ?? drumPattern)
+      : (melody.customDrumPattern ?? generateDrums(genreId, melody.drumSeed));
     const nextPattern: DrumPattern = {
       ...base,
       [instrument]: base[instrument].map((value, index) => index === step ? (value ? 0 : 1) : value),
     };
-    apply({ customDrumPattern: nextPattern });
-  }, [apply, genreId, melody.customDrumPattern, melody.drumSeed]);
+    if (selectedSection) {
+      const all = melody.sectionDrums ?? {};
+      apply({ sectionDrums: { ...all, [selectedSection.id]: nextPattern } });
+    } else {
+      apply({ customDrumPattern: nextPattern });
+    }
+  }, [apply, selectedSection, melody.sectionDrums, melody.customDrumPattern, melody.drumSeed, genreId, drumPattern]);
+
+  const resetSectionDrums = useCallback(() => {
+    if (!selectedSection || !melody.sectionDrums) return;
+    const next = { ...melody.sectionDrums };
+    delete next[selectedSection.id];
+    apply({ sectionDrums: Object.keys(next).length ? next : undefined });
+  }, [apply, selectedSection, melody.sectionDrums]);
+
+  const applySectionChords = useCallback((chords: ChordInfo[]) => {
+    if (!selectedSection) return;
+    const all = melody.sectionChords ?? {};
+    apply({ sectionChords: { ...all, [selectedSection.id]: chords } });
+  }, [apply, selectedSection, melody.sectionChords]);
+
+  const resetSectionChords = useCallback(() => {
+    if (!selectedSection || !melody.sectionChords) return;
+    const next = { ...melody.sectionChords };
+    delete next[selectedSection.id];
+    apply({ sectionChords: Object.keys(next).length ? next : undefined });
+  }, [apply, selectedSection, melody.sectionChords]);
 
   const handleSectionsChange = useCallback((sections: SongSection[]) => {
     apply({ sections });
@@ -711,6 +750,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         callResponse: melody.callResponse,
         groove: melody.groove,
         sectionNotes: melody.sectionNotes,
+        sectionDrums: melody.sectionDrums,
+        sectionChords: melody.sectionChords,
         bpm,
         tracks: melody.mixer,
         drumKitId: melody.drumKitId,
@@ -746,15 +787,15 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.sectionNotes, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.sectionNotes, melody.sectionDrums, melody.sectionChords, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
 
   const handleExportMidi = useCallback(() => {
     exportArrangementToMidi(
       progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, callResponse: melody.callResponse, groove: melody.groove, sectionNotes: melody.sectionNotes },
+      { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, callResponse: melody.callResponse, groove: melody.groove, sectionNotes: melody.sectionNotes, sectionDrums: melody.sectionDrums, sectionChords: melody.sectionChords },
     );
     toast.show('Arrangement MIDI exported', 'success');
-  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.synthIds, melody.callResponse, melody.groove, melody.sectionNotes, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.synthIds, melody.callResponse, melody.groove, melody.sectionNotes, melody.sectionDrums, melody.sectionChords, toast]);
 
   const handleExportWav = useCallback(async () => {
     setRendering(true);
@@ -771,6 +812,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         callResponse: melody.callResponse,
         groove: melody.groove,
         sectionNotes: melody.sectionNotes,
+        sectionDrums: melody.sectionDrums,
+        sectionChords: melody.sectionChords,
         bpm,
         tracks: melody.mixer,
         drumKitId: melody.drumKitId,
@@ -799,7 +842,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRendering(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.sectionNotes, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.sectionNotes, melody.sectionDrums, melody.sectionChords, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
 
   const handleExportDawPack = useCallback(async () => {
     setRenderingStems(true);
@@ -816,6 +859,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
         callResponse: melody.callResponse,
         groove: melody.groove,
         sectionNotes: melody.sectionNotes,
+        sectionDrums: melody.sectionDrums,
+        sectionChords: melody.sectionChords,
         bpm,
         tracks: melody.mixer,
         drumKitId: melody.drumKitId,
@@ -836,7 +881,7 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
 
       const midi = buildArrangementMidiBytes(
         progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
-        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, callResponse: melody.callResponse, groove: melody.groove, sectionNotes: melody.sectionNotes },
+        { sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize, timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds, callResponse: melody.callResponse, groove: melody.groove, sectionNotes: melody.sectionNotes, sectionDrums: melody.sectionDrums, sectionChords: melody.sectionChords },
       );
       if (midi) files['midi/arrangement.mid'] = midi;
 
@@ -893,7 +938,58 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     } finally {
       setRenderingStems(false);
     }
-  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.sectionNotes, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, projectName, bars, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
+  }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.sectionNotes, melody.sectionDrums, melody.sectionChords, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, projectName, bars, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
+
+  const handleExportSectionClips = useCallback(() => {
+    if (melody.sections.length === 0) {
+      toast.show('Create a section structure first.', 'error');
+      return;
+    }
+    startExportProgress('Building section clips');
+    try {
+      const files: Record<string, Uint8Array> = {};
+      const lines: string[] = [];
+      let startBar = 1;
+      melody.sections.forEach((section, index) => {
+        const bytes = buildArrangementMidiBytes(
+          progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
+          {
+            sections: [section], octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize,
+            timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds,
+            callResponse: melody.callResponse, groove: melody.groove,
+            sectionNotes: melody.sectionNotes, sectionDrums: melody.sectionDrums, sectionChords: melody.sectionChords,
+          },
+        );
+        if (!bytes) return;
+        const name = `${String(index + 1).padStart(2, '0')}-${section.kind}.mid`;
+        files[`sections/${name}`] = bytes;
+        lines.push(`- sections/${name} — ${section.kind}, ${section.bars} bars, starts at bar ${startBar}`);
+        startBar += section.bars;
+      });
+      const text = (value: string) => new TextEncoder().encode(value);
+      files['README.txt'] = text([
+        `∞ Melodies — section clips · ${projectName.trim() || 'Untitled project'}`,
+        '',
+        'Each file contains one section as local MIDI tracks (tick 0).',
+        'Place each clip at its listed bar in the DAW; track names identify the instrument.',
+        '',
+        ...lines,
+      ].join('\n'));
+      const zipped = zipSync(files, { level: 0 });
+      const url = URL.createObjectURL(new Blob([zipped], { type: 'application/zip' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `edm-section-clips-${rootKey}-${scaleType}-${bpm}bpm.zip`;
+      link.click();
+      URL.revokeObjectURL(url);
+      finishExportProgress('Section clips ready');
+      toast.show('Section clips exported', 'success');
+    } catch (error) {
+      cancelExportProgress();
+      console.error('Section clip export failed', error);
+      toast.show('Could not build section clips.', 'error');
+    }
+  }, [melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.synthIds, melody.callResponse, melody.groove, melody.sectionNotes, melody.sectionDrums, melody.sectionChords, progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, projectName, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
 
   const handleSaveArrangement = useCallback(() => {
     const saved = saveArrangement(saveName, project);
@@ -936,7 +1032,8 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     exportWav: handleExportWav,
     exportStems: handleExportStems,
     exportDawPack: handleExportDawPack,
-  }), [undo, redo, openSaveDialog, openLoadDialog, handleExportMidi, handleExportWav, handleExportStems, handleExportDawPack]);
+    exportSectionClips: handleExportSectionClips,
+  }), [undo, redo, openSaveDialog, openLoadDialog, handleExportMidi, handleExportWav, handleExportStems, handleExportDawPack, handleExportSectionClips]);
 
   if (progression.length === 0) {
     return (
@@ -1121,6 +1218,17 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
             <ChordLane chords={sectionChords} activeStep={viewStep} totalSteps={viewSteps} bars={viewBars} />
           )}
         </div>
+        {selectedSection && (
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-gray-400">
+            <span className={`rounded px-1.5 py-0.5 ${melody.sectionChords?.[selectedSection.id] ? 'bg-purple-400/15 text-purple-200' : 'bg-gray-800'}`}>
+              {melody.sectionChords?.[selectedSection.id] ? 'Section chord clip' : 'Chords follow global'}
+            </span>
+            <button type="button" onClick={() => setSectionChordsOpen(true)} className="rounded border border-gray-700 px-1.5 py-0.5 text-gray-300 hover:border-purple-500">Edit chords</button>
+            {melody.sectionChords?.[selectedSection.id] && (
+              <button type="button" onClick={resetSectionChords} className="rounded border border-gray-700 px-1.5 py-0.5 text-gray-300 hover:border-gray-500">Reset to global</button>
+            )}
+          </div>
+        )}
         {melody.arpEnabled && (
           <div className="mt-2 flex flex-wrap items-end gap-2">
             <label className="flex flex-col gap-1">
@@ -1584,10 +1692,30 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
           )}
         />
         <div className="mt-2">
-          <DrumGrid pattern={drumPattern} activeStep={laneStep} onToggle={handleToggleDrumNote} />
+          <DrumGrid pattern={drumLanePattern} activeStep={viewStep} onToggle={handleToggleDrumNote} />
+        {selectedSection && (
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-gray-400">
+            <span className={`rounded px-1.5 py-0.5 ${melody.sectionDrums?.[selectedSection.id] ? 'bg-rose-400/15 text-rose-200' : 'bg-gray-800'}`}>
+              {melody.sectionDrums?.[selectedSection.id] ? 'Section drum clip' : 'Drums follow global'}
+            </span>
+            {melody.sectionDrums?.[selectedSection.id] && (
+              <button type="button" onClick={resetSectionDrums} className="rounded border border-gray-700 px-1.5 py-0.5 text-gray-300 hover:border-gray-500">Reset to global</button>
+            )}
+          </div>
+        )}
         </div>
       </section>
 
+      {sectionChordsOpen && selectedSection && (
+        <SectionChords
+          open={sectionChordsOpen}
+          onClose={() => setSectionChordsOpen(false)}
+          sectionLabel={`${selectedSection.kind} · ${selectedSection.bars} bars`}
+          chords={sectionChords}
+          availableChords={availableChords}
+          onApply={applySectionChords}
+        />
+      )}
       {grooveOpen && (
         <GrooveEngine
           open={grooveOpen}

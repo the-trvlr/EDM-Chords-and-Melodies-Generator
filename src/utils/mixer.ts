@@ -367,6 +367,8 @@ interface ArrangementInput {
   callResponse?: boolean;
   groove?: Partial<Record<TrackId, number>>;
   sectionNotes?: Record<string, { bass?: import('./melodyGenerator').MelodyNote[]; lead?: import('./melodyGenerator').MelodyNote[] }>;
+  sectionDrums?: Record<string, import('./drumGenerator').DrumPattern>;
+  sectionChords?: Record<string, import('./musicTheory').ChordInfo[]>;
   soundVariant?: SoundVariant;
   metronome?: boolean;
   countInBars?: number;
@@ -592,6 +594,8 @@ export interface RenderOptions {
   callResponse?: boolean;
   groove?: Partial<Record<TrackId, number>>;
   sectionNotes?: Record<string, { bass?: import('./melodyGenerator').MelodyNote[]; lead?: import('./melodyGenerator').MelodyNote[] }>;
+  sectionDrums?: Record<string, import('./drumGenerator').DrumPattern>;
+  sectionChords?: Record<string, import('./musicTheory').ChordInfo[]>;
   soundVariant?: SoundVariant;
   /** Dry render for stems: skip reverb and transition FX. */
   dry?: boolean;

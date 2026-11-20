@@ -70,7 +70,7 @@ const ENTRIES: GuideEntry[] = [
     id: 'sections',
     title: 'Song sections and arrangement',
     target: 'arrangement',
-    body: 'Sections define bar length, active tracks, energy, melody density, octave, drum density/energy, call & response and transition FX. Select a section chip to edit it; the bass/lead lanes switch to that section clip (or the global line repeated), and edits stay inside the section.',
+    body: 'Sections define bar length, active tracks, energy, melody density, octave, drum density/energy, call & response and transition FX. Select a section chip to edit it; bass/lead notes, the drum grid and the chord timeline switch to that section clip (or the global pattern), and edits stay inside the section. Reset to global is available per track.',
     steps: [
       'Create structure or pick a Sketch/Song template.',
       'Select a section chip to edit its settings.',
@@ -93,7 +93,7 @@ const ENTRIES: GuideEntry[] = [
     id: 'export',
     title: 'Export and DAW hand-off',
     target: 'export-actions',
-    body: 'Export MIDI, a WAV mix, dry stems or a DAW pack. The bottom progress bar stays visible during rendering; stems are rendered in one pass and DAW pack includes MIDI, stems, project.json and README.',
+    body: 'Export MIDI, a WAV mix, dry stems, a DAW pack or Section clips. Section clips is a ZIP with one local MIDI per section and a README of start bars, ideal for placing individual regions in a DAW. The progress bar stays visible during rendering.',
     steps: [
       'DAW pack is the recommended hand-off.',
       'MIDI uses channels 1/2/3/10 plus GM programs; the Sections track carries markers.',

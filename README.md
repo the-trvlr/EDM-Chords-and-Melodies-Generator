@@ -5,7 +5,7 @@
 ∞ Melodies turns a genre, a key and a chord progression into a playable arrangement. Generate genre-specific parts, edit them on a piano roll, practise with tap tempo and MIDI, then export MIDI, WAV, stems or a ready-to-import DAW pack.
 
 - **Live app:** <https://the-trvlr.github.io/EDM-Chords-and-Melodies-Generator/>
-- **Version:** 3.2
+- **Version:** 3.3
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Design notes:** [`docs/PLAN-1.0.md`](docs/PLAN-1.0.md)
 - **Sample credits:** [`docs/SAMPLES.md`](docs/SAMPLES.md)
@@ -174,7 +174,7 @@ Open **Reference** in the header and drop a `.mid`/`.midi` or audio file (`.wav`
 
 ## Idea Lab
 
-Select a section chip in Song sections to switch the editor into that segment; choose **Whole song** to edit the global line. Section clips are stored separately and are used by playback, WAV, stems and MIDI.
+Select a section chip in Song sections to switch the editor into that segment; choose **Whole song** to edit the global line. Bass/lead notes, drums and chords have separate section clips, used by playback, WAV, stems and MIDI. **Edit chords** opens a section chord clip editor; **Reset to global** removes a clip.
 
 Open **Idea lab** above the tracks for three generator tools in one drawer:
 
@@ -249,6 +249,7 @@ A metronome click is accented on the first beat of each bar. Count-in clicks are
 | **WAV mix** | Offline render of the full song, sample instruments included |
 | **Stems (.zip)** | Chords, bass, lead and drums as separate dry WAVs (no reverb/FX), rendered in one pass |
 | **DAW pack (.zip)** | `midi/arrangement.mid` + separate `midi/chords.mid`, `bass.mid`, `lead.mid`, `drums.mid`, dry `stems/*.wav`, `project.json`, `README.txt`; one render pass |
+| **Section clips (.zip)** | One local MIDI per section with all instruments and a README of start bars |
 | **Project JSON** | Full project, reopen with Save → Open project |
 
 The DAW pack is the recommended hand-off: import the MIDI at bar 1, 4/4, route drums to a GM kit, and use the stems as a reference or for further processing.
