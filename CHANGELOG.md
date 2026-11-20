@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [3.3.1] — 2026-11-20
+
+### Share section clips + fast MIDI pack + mobile drawers
+
+- Share links now include **section note, drum and chord clips**; project JSON already did.
+- New **MIDI pack (.zip)** export: arrangement MIDI, separate instrument MIDI and project JSON, with **no audio render** — the fast path for long songs.
+- Drawer polish: dynamic viewport height, contained overscroll and safe-area footer padding on mobile.
+- 111 unit tests, 10 Playwright/axe tests.
+
 ## [3.3.0] — 2026-11-20
 
 ### Section clips for chords/drums + DAW section export

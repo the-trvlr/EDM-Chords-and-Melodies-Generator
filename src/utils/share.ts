@@ -72,6 +72,8 @@ interface SharePayloadV2 {
     bn?: [number, number, number, number][] | null;
     ln?: [number, number, number, number][] | null;
     sn?: Record<string, { bass?: [number, number, number, number][] | null; lead?: [number, number, number, number][] | null }>;
+    sd?: Record<string, DrumPattern>;
+    sch?: Record<string, ChordInfo[]>;
   };
 }
 
@@ -213,6 +215,8 @@ export function encodeShare(snapshot: ProjectSnapshot): string {
       sn: melody.sectionNotes
         ? Object.fromEntries(Object.entries(melody.sectionNotes).map(([id, clip]) => [id, { bass: compactNotes(clip.bass ?? null), lead: compactNotes(clip.lead ?? null) }]))
         : undefined,
+      sd: melody.sectionDrums,
+      sch: melody.sectionChords,
     },
   };
 
@@ -253,6 +257,8 @@ export function decodeShare(encoded: string): ProjectSnapshot | null {
         sn: parsed.m.sn
           ? Object.fromEntries(Object.entries(parsed.m.sn).map(([id, clip]) => [id, { bass: expandNotes(clip.bass), lead: expandNotes(clip.lead) }]))
           : undefined,
+        sd: parsed.m.sd,
+        sch: parsed.m.sch,
       }
     : parsed;
   const melody: MelodyState = sanitizeMelody(melodyValue);

@@ -74,7 +74,7 @@ export function Drawer({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`absolute inset-y-0 right-0 flex w-full flex-col border-l border-gray-700 bg-gray-950 shadow-2xl shadow-black/70 ${widthClassName}`}
+        className={`absolute inset-y-0 right-0 flex max-h-[100dvh] w-full flex-col border-l border-gray-700 bg-gray-950 shadow-2xl shadow-black/70 ${widthClassName}`}
       >
         <div className="flex items-start gap-3 border-b border-gray-800 px-4 py-3">
           <div className="min-w-0 flex-1">
@@ -90,8 +90,8 @@ export function Drawer({
             ×
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">{children}</div>
-        {footer && <div className="border-t border-gray-800 px-4 py-3">{footer}</div>}
+        <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto px-4 py-3">{children}</div>
+        {footer && <div className="shrink-0 border-t border-gray-800 bg-gray-950 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">{footer}</div>}
       </div>
     </div>
   );
