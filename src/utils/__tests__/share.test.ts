@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { decodeShare, encodeShare, chordTypeKey } from '../share';
-import { defaultMelodyState, emptyMixer, type ProjectSnapshot } from '../../types';
+import { defaultMelodyState, emptyMixer, type MelodyState, type ProjectSnapshot } from '../../types';
 import { getChordNotes } from '../musicTheory';
 
 function snapshot(overrides: Partial<ProjectSnapshot> = {}): ProjectSnapshot {
@@ -54,7 +54,7 @@ describe('share codec', () => {
   });
 
   it('keeps mixer settings and drum edits', () => {
-    const melody = {
+    const melody: MelodyState = {
       ...defaultMelodyState(),
       mixer: {
         ...emptyMixer(),
@@ -109,6 +109,23 @@ describe('share codec', () => {
     expect(decoded?.melody.drumKitId).toBe('909');
   });
 
+  it('round-trips section note, drum and chord clips', () => {
+    const empty = new Array(16).fill(0);
+    const drums = { kick: [1, ...new Array(15).fill(0)], snare: empty, clap: empty, hat: empty, lowHat: empty, crash: empty, ride: empty };
+    const chord = getChordNotes('F', 'major', 4, false);
+    const melody: MelodyState = {
+      ...defaultMelodyState(),
+      sections: [{ id: 'drop', kind: 'drop' as const, bars: 1, tracks: ['chord', 'bass', 'lead', 'drums'] }],
+      sectionNotes: { drop: { bass: [{ midi: 40, step: 0, duration: 2, velocity: 0.8 }] } },
+      sectionDrums: { drop: drums },
+      sectionChords: { drop: [chord] },
+    };
+    const decoded = decodeShare(encodeShare(snapshot({ melody })));
+    expect(decoded?.melody.sectionNotes?.drop.bass?.[0].midi).toBe(40);
+    expect(decoded?.melody.sectionDrums?.drop.kick[0]).toBe(1);
+    expect(decoded?.melody.sectionChords?.drop[0].root).toBe('F');
+  });
+
   it('rejects malformed input', () => {
     expect(decodeShare('')).toBeNull();
     expect(decodeShare('!!!not-base64!!!')).toBeNull();
@@ -119,7 +136,7 @@ describe('share codec', () => {
   });
 
   it('keeps sections, octaves, edited notes and groove', () => {
-    const melody = {
+    const melody: MelodyState = {
       ...defaultMelodyState(),
       octaves: { chord: 1, bass: -1, lead: 2 },
       rangeSpans: { bass: 2, lead: 3 },

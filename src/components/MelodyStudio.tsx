@@ -83,6 +83,7 @@ export interface MelodyStudioHandle {
   exportWav: () => void;
   exportStems: () => void;
   exportDawPack: () => void;
+  exportMidiPack: () => void;
   exportSectionClips: () => void;
 }
 
@@ -940,6 +941,48 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     }
   }, [progression, rhythm, bassMelody, leadMelody, arpMelody, drumPattern, melody.synthIds, melody.mixer, melody.drumKitId, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.callResponse, melody.groove, melody.sectionNotes, melody.sectionDrums, melody.sectionChords, melody.soundVariant, bpm, rootKey, scaleType, masterVolume, doubleTime, project, projectName, bars, startExportProgress, finishExportProgress, cancelExportProgress, toast]);
 
+  const handleExportMidiPack = useCallback(() => {
+    const files: Record<string, Uint8Array> = {};
+    const midi = buildArrangementMidiBytes(
+      progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern,
+      {
+        sections: melody.sections, octaves: melody.octaves, swing: melody.swing, humanize: melody.humanize,
+        timeScales: melody.timeScales, bassGlide: melody.bassGlide, synthIds: melody.synthIds,
+        callResponse: melody.callResponse, groove: melody.groove,
+        sectionNotes: melody.sectionNotes, sectionDrums: melody.sectionDrums, sectionChords: melody.sectionChords,
+      },
+    );
+    if (midi) files['midi/arrangement.mid'] = midi;
+    const separate = [
+      ['chords', buildProgressionTracks(progression, bpm, rhythm, doubleTime, melody.synthIds.chord, 1)],
+      ['bass', buildMelodyTrack(bassMelody, bpm, 'Bass', rootKey, scaleType, melody.synthIds.bass, 2)],
+      ['lead', buildMelodyTrack(leadMelody, bpm, 'Lead', rootKey, scaleType, melody.synthIds.lead, 3)],
+      ['drums', buildDrumTracks(drumPattern, bpm, bars)],
+    ] as const;
+    for (const [name, tracks] of separate) {
+      const bytes = midiBytesFromTracks([...tracks]);
+      if (bytes) files[`midi/${name}.mid`] = bytes;
+    }
+    const text = (value: string) => new TextEncoder().encode(value);
+    files['project.json'] = text(serializeProject(projectName.trim() || `${rootKey} ${scaleType} · ${bpm} BPM`, project));
+    files['README.txt'] = text([
+      `∞ Melodies — MIDI pack · ${projectName.trim() || 'Untitled project'}`,
+      '',
+      'MIDI only: no audio stems were rendered.',
+      'Import arrangement.mid or the separate instrument files at bar 1, 4/4.',
+      'The Sections track carries section markers.',
+    ].join('\n'));
+    const zipped = zipSync(files, { level: 0 });
+    const url = URL.createObjectURL(new Blob([zipped], { type: 'application/zip' }));
+    const link = document.createElement('a');
+    link.href = url;
+    const slug = (projectName.trim() || `infinite-melodies-${rootKey}-${scaleType}`).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+    link.download = `${slug || 'infinite-melodies'}-midi-${bpm}bpm.zip`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.show('MIDI pack exported (no audio render)', 'success');
+  }, [progression, rhythm, bassMelody, leadMelody, bpm, rootKey, scaleType, doubleTime, arpMelody, drumPattern, melody.sections, melody.octaves, melody.swing, melody.humanize, melody.timeScales, melody.bassGlide, melody.synthIds, melody.callResponse, melody.groove, melody.sectionNotes, melody.sectionDrums, melody.sectionChords, projectName, project, bars, toast]);
+
   const handleExportSectionClips = useCallback(() => {
     if (melody.sections.length === 0) {
       toast.show('Create a section structure first.', 'error');
@@ -1032,8 +1075,9 @@ export const MelodyStudio = forwardRef<MelodyStudioHandle, MelodyStudioProps>(fu
     exportWav: handleExportWav,
     exportStems: handleExportStems,
     exportDawPack: handleExportDawPack,
+    exportMidiPack: handleExportMidiPack,
     exportSectionClips: handleExportSectionClips,
-  }), [undo, redo, openSaveDialog, openLoadDialog, handleExportMidi, handleExportWav, handleExportStems, handleExportDawPack, handleExportSectionClips]);
+  }), [undo, redo, openSaveDialog, openLoadDialog, handleExportMidi, handleExportWav, handleExportStems, handleExportDawPack, handleExportMidiPack, handleExportSectionClips]);
 
   if (progression.length === 0) {
     return (
